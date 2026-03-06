@@ -64,7 +64,11 @@ textarea::-moz-selection {
   color: #003366;
 }
 
-/* Example: move AudioEye to left */
+/* ============================================
+   Widget positioning (when loaded)
+   ============================================ */
+
+/* AudioEye widget - left side */
 #audioeye-launcher,
 .audioeye-launcher,
 iframe[src*="audioeye"] {
@@ -72,7 +76,7 @@ iframe[src*="audioeye"] {
   right: auto !important;
 }
 
-/* Example: keep Chat widget on right */
+/* Webchat widget - right side */
 #webchat-launcher,
 .webchat-launcher,
 iframe[src*="apigateway"] {
@@ -81,96 +85,18 @@ iframe[src*="apigateway"] {
 }
 
 /* ============================================
-   CRITICAL: Protect page from widget overlays
+   Header z-index
    ============================================ */
-
-/* Force header to be above everything except Radix portals */
 header {
   z-index: 9999 !important;
-  position: sticky !important;
-  pointer-events: auto !important;
-}
-
-header * {
-  pointer-events: auto !important;
-}
-
-/* Ensure main app content is always interactive */
-#__next {
-  position: relative;
-  z-index: 1;
-}
-
-#__next main,
-#__next form,
-#__next input,
-#__next button,
-#__next a,
-#__next textarea,
-#__next select {
-  pointer-events: auto !important;
 }
 
 /* ============================================
-   Radix UI Portals - MUST remain interactive
+   Radix UI Portals - above everything
    (dropdowns, selects, toasts, dialogs, etc.)
    ============================================ */
 [data-radix-portal],
-[data-radix-popper-content-wrapper],
-[data-radix-menu-content],
-[data-radix-select-content],
-[data-radix-dropdown-menu-content],
-[data-radix-toast-viewport],
-[role="dialog"],
-[role="menu"],
-[role="listbox"] {
-  pointer-events: auto !important;
+[data-radix-popper-content-wrapper] {
   z-index: 10000 !important;
-}
-
-[data-radix-portal] *,
-[data-radix-popper-content-wrapper] * {
-  pointer-events: auto !important;
-}
-
-/* ============================================
-   Third-party widget blocking
-   ============================================ */
-
-/* AudioEye widget - block overlays but not Radix elements */
-div[id^="audioeye"]:not([data-radix-portal]):not([data-radix-popper-content-wrapper]),
-div[class^="audioeye"]:not([data-radix-portal]),
-div[id^="ae-"]:not([data-radix-portal]),
-div[class^="ae-"]:not([data-radix-portal]) {
-  pointer-events: none !important;
-  z-index: 999 !important;
-}
-
-/* AudioEye clickable elements */
-[id^="audioeye"] button,
-[id^="audioeye"] a,
-[class^="audioeye"] button,
-[id^="ae-"] button,
-button[id*="audioeye" i],
-a[id*="audioeye" i] {
-  pointer-events: auto !important;
-  z-index: 1000 !important;
-}
-
-/* Webchat widget - block overlays but not Radix elements */
-div[id*="webchat"]:not([data-radix-portal]):not([data-radix-popper-content-wrapper]),
-div[class*="webchat"]:not([data-radix-portal]) {
-  pointer-events: none !important;
-  z-index: 999 !important;
-}
-
-/* Webchat clickable elements */
-[id*="webchat"] button,
-[id*="webchat"] iframe,
-[class*="webchat"] button,
-[class*="webchat"] iframe,
-iframe[src*="apigateway"] {
-  pointer-events: auto !important;
-  z-index: 1000 !important;
 }
 

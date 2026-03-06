@@ -6,6 +6,7 @@ import { WalletProvider } from '@/contexts/WalletContext';
 import { PackageProvider } from '@/contexts/PackageContext';
 import NoSSR from '@/components/NoSSR';
 import { Toaster } from '@/components/ui/toaster';
+import { ThirdPartyWidgets } from '@/components/layout/ThirdPartyWidgets';
 
 export default function ClientWrapper({ children }: { children: React.ReactNode }) {
   return (
@@ -20,6 +21,7 @@ export default function ClientWrapper({ children }: { children: React.ReactNode 
             <PackageProvider>
               {children}
               <Toaster />
+              <ThirdPartyWidgets />
             </PackageProvider>
           </WalletProvider>
         </CreditProvider>

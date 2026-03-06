@@ -82,13 +82,13 @@ export function Header() {
                 <Button
                   variant="ghost"
                   onClick={() => router.push('/signin')}
-                  className="text-gray-600 hover:text-[#003366] cursor-pointer relative z-10"
+                  className="text-gray-600 hover:text-[#003366]"
                 >
                   Sign In
                 </Button>
                 <Button
                   onClick={() => router.push('/signup')}
-                  className="bg-[#003366] hover:bg-[#002244] text-white cursor-pointer relative z-10"
+                  className="bg-[#003366] hover:bg-[#002244] text-white"
                 >
                   Sign Up
                 </Button>

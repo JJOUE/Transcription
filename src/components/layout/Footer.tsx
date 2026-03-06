@@ -3,7 +3,6 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import Script from "next/script";
 import { usePathname } from "next/navigation";
 import { BRANDING_CONFIG } from "@/config/branding";
 
@@ -149,23 +148,6 @@ export function Footer() {
           <p>&copy; 2025 Talk To Text Canada. All rights reserved.</p>
         </div>
       </div>
-
-{/* Chat widget (right by default, usually) */}
-<Script
-  src="https://cdn.apigateway.co/webchat-client..prod/sdk.js"
-  data-widget-id="59f2ede3-bc12-11f0-b2ef-5a30acca1c57"
-  strategy="afterInteractive"
-/>
-
-{/* AudioEye (accessibility) */}
-<Script
-  id="audioeye-loader"
-  strategy="afterInteractive"
-  dangerouslySetInnerHTML={{
-    __html: `!function(){var b=function(){window.__AudioEyeSiteHash="381dc796c4bc43ced9c959b0c8b720ce";var a=document.createElement("script");a.src="https://wsmcdn.audioeye.com/aem.js";a.type="text/javascript";a.setAttribute("async","");document.getElementsByTagName("body")[0].appendChild(a)};"complete"!==document.readyState?window.addEventListener?window.addEventListener("load",b):window.attachEvent&&window.attachEvent("onload",b):b()}();`,
-  }}
-/>
-
     </footer>
   );
 }
