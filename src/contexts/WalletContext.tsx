@@ -100,6 +100,17 @@ interface WalletProviderProps {
   children: ReactNode;
 }
 
+// Helper to convert Firestore timestamps to JavaScript Dates
+// Handles: Firestore Timestamp, raw {_seconds} objects, Date objects, and numbers
+function toDate(value: any): Date {
+  if (!value) return new Date(0);
+  if (value instanceof Date) return value;
+  if (typeof value.toDate === 'function') return value.toDate();
+  if (value._seconds !== undefined) return new Date(value._seconds * 1000);
+  if (typeof value === 'number') return new Date(value);
+  return new Date(value);
+}
+
 export function WalletProvider({ children }: WalletProviderProps) {
   const { user, userData, updateUserData } = useAuth();
   // Initialize with userData's walletBalance if available (prevents showing 0 during load)
@@ -165,12 +176,16 @@ export function WalletProvider({ children }: WalletProviderProps) {
         if (data.packages && Array.isArray(data.packages)) {
           const now = new Date();
           const activePackages = data.packages
-            .map((pkg: any) => ({
-              ...pkg,
-              purchasedAt: pkg.purchasedAt?.toDate() || new Date(),
-              expiresAt: pkg.expiresAt?.toDate() || new Date(),
-              active: pkg.active && new Date(pkg.expiresAt?.toDate() || 0) > now
-            }))
+            .map((pkg: any) => {
+              const expiresAtDate = toDate(pkg.expiresAt);
+              const purchasedAtDate = toDate(pkg.purchasedAt);
+              return {
+                ...pkg,
+                purchasedAt: purchasedAtDate,
+                expiresAt: expiresAtDate,
+                active: pkg.active && expiresAtDate > now && pkg.minutesRemaining > 0
+              };
+            })
             .filter((pkg: Package) => pkg.active);
           setPackages(activePackages);
         }
@@ -239,12 +254,13 @@ export function WalletProvider({ children }: WalletProviderProps) {
     const now = new Date();
 
     // Find packages that match the mode and have minutes remaining
-    const eligiblePackages = packages.filter(pkg =>
-      pkg.type === mode &&
-      pkg.active &&
-      pkg.minutesRemaining > 0 &&
-      new Date(pkg.expiresAt) > now
-    );
+    const eligiblePackages = packages.filter(pkg => {
+      const expiresAt = toDate(pkg.expiresAt);
+      return pkg.type === mode &&
+        pkg.active &&
+        pkg.minutesRemaining > 0 &&
+        expiresAt > now;
+    });
 
     // Return package with best rate (lowest)
     if (eligiblePackages.length > 0) {
@@ -327,12 +343,13 @@ export function WalletProvider({ children }: WalletProviderProps) {
         const now = new Date();
 
         // Find best package for this mode
-        const eligiblePackages = currentPackages.filter((pkg: any) =>
-          pkg.type === mode &&
-          pkg.active &&
-          pkg.minutesRemaining > 0 &&
-          new Date(pkg.expiresAt?.toDate() || 0) > now
-        ).sort((a: any, b: any) => a.rate - b.rate); // Sort by best rate
+        const eligiblePackages = currentPackages.filter((pkg: any) => {
+          const expiresAt = toDate(pkg.expiresAt);
+          return pkg.type === mode &&
+            pkg.active &&
+            pkg.minutesRemaining > 0 &&
+            expiresAt > now;
+        }).sort((a: any, b: any) => a.rate - b.rate); // Sort by best rate
 
         let remainingMinutes = minutes;
         let totalCostDeducted = 0;
