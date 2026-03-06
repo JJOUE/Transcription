@@ -84,9 +84,9 @@ iframe[src*="apigateway"] {
    CRITICAL: Protect page from widget overlays
    ============================================ */
 
-/* Force header to be above everything */
+/* Force header to be above everything except Radix portals */
 header {
-  z-index: 2147483647 !important;
+  z-index: 9999 !important;
   position: sticky !important;
   pointer-events: auto !important;
 }
@@ -111,11 +111,37 @@ header * {
   pointer-events: auto !important;
 }
 
-/* AudioEye widget - only target their specific overlay patterns */
-div[id^="audioeye"]:not(button):not(a),
-div[class^="audioeye"]:not(button):not(a),
-div[id^="ae-"]:not(button):not(a),
-div[class^="ae-"]:not(button):not(a) {
+/* ============================================
+   Radix UI Portals - MUST remain interactive
+   (dropdowns, selects, toasts, dialogs, etc.)
+   ============================================ */
+[data-radix-portal],
+[data-radix-popper-content-wrapper],
+[data-radix-menu-content],
+[data-radix-select-content],
+[data-radix-dropdown-menu-content],
+[data-radix-toast-viewport],
+[role="dialog"],
+[role="menu"],
+[role="listbox"] {
+  pointer-events: auto !important;
+  z-index: 10000 !important;
+}
+
+[data-radix-portal] *,
+[data-radix-popper-content-wrapper] * {
+  pointer-events: auto !important;
+}
+
+/* ============================================
+   Third-party widget blocking
+   ============================================ */
+
+/* AudioEye widget - block overlays but not Radix elements */
+div[id^="audioeye"]:not([data-radix-portal]):not([data-radix-popper-content-wrapper]),
+div[class^="audioeye"]:not([data-radix-portal]),
+div[id^="ae-"]:not([data-radix-portal]),
+div[class^="ae-"]:not([data-radix-portal]) {
   pointer-events: none !important;
   z-index: 999 !important;
 }
@@ -131,9 +157,9 @@ a[id*="audioeye" i] {
   z-index: 1000 !important;
 }
 
-/* Webchat widget - only target their specific overlay patterns */
-div[id*="webchat"]:not(button):not(iframe),
-div[class*="webchat"]:not(button):not(iframe) {
+/* Webchat widget - block overlays but not Radix elements */
+div[id*="webchat"]:not([data-radix-portal]):not([data-radix-popper-content-wrapper]),
+div[class*="webchat"]:not([data-radix-portal]) {
   pointer-events: none !important;
   z-index: 999 !important;
 }
