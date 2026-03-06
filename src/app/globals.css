@@ -80,31 +80,68 @@ iframe[src*="apigateway"] {
   left: auto !important;
 }
 
-/* Prevent third-party widget overlays from blocking header/navigation */
-#audioeye_wrapper,
-#audioeye-overlay,
-[id^="audioeye"],
-[class*="audioeye-"] {
-  pointer-events: none;
+/* ============================================
+   CRITICAL: Protect header from widget overlays
+   ============================================ */
+
+/* Force header to be above everything */
+header {
+  z-index: 2147483647 !important; /* Max z-index value */
+  position: sticky !important;
+  pointer-events: auto !important;
 }
 
-#audioeye-launcher,
-.audioeye-launcher,
-[id^="audioeye"] button,
-[id^="audioeye"] a {
-  pointer-events: auto;
+/* Ensure all header children are clickable */
+header * {
+  pointer-events: auto !important;
 }
 
-/* Ensure webchat widget doesn't block page interactions */
-[id*="webchat"]:not([id*="webchat-launcher"]):not(button):not(iframe) {
-  pointer-events: none;
+/* Force all third-party injected elements to not block the page */
+body > div:not(#__next):not([id^="__"]),
+body > iframe,
+body > section,
+body > aside {
+  pointer-events: none !important;
 }
 
-#webchat-launcher,
-.webchat-launcher,
-iframe[src*="apigateway"],
-[id*="webchat"] button,
-[id*="webchat"] iframe {
-  pointer-events: auto;
+/* But allow clicks on visible widget buttons/iframes */
+body > div:not(#__next):not([id^="__"]) button,
+body > div:not(#__next):not([id^="__"]) a,
+body > div:not(#__next):not([id^="__"]) iframe,
+body > iframe {
+  pointer-events: auto !important;
+}
+
+/* AudioEye specific - prevent overlay blocking */
+[id*="audioeye" i],
+[class*="audioeye" i],
+[data-audioeye],
+#ae_launcher,
+.ae-wrapper {
+  pointer-events: none !important;
+  z-index: 999 !important;
+}
+
+[id*="audioeye" i] button,
+[id*="audioeye" i] a,
+[class*="audioeye" i] button,
+#ae_launcher button {
+  pointer-events: auto !important;
+}
+
+/* Webchat/apigateway specific */
+[id*="webchat" i],
+[class*="webchat" i],
+[id*="apigateway" i] {
+  pointer-events: none !important;
+  z-index: 999 !important;
+}
+
+[id*="webchat" i] button,
+[id*="webchat" i] iframe,
+[class*="webchat" i] button,
+[class*="webchat" i] iframe,
+iframe[src*="apigateway"] {
+  pointer-events: auto !important;
 }
 
