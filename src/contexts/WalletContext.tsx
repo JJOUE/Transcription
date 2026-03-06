@@ -219,12 +219,15 @@ export function WalletProvider({ children }: WalletProviderProps) {
   }, [loadWalletData]);
 
   // Sync wallet data with userData when it changes (ensures consistency across contexts)
+  // This runs immediately when userData becomes available, preventing the "0 balance" flash
   useEffect(() => {
     if (userData) {
-      if (userData.walletBalance !== undefined && userData.walletBalance !== walletBalance) {
+      // Sync wallet balance immediately
+      if (userData.walletBalance !== undefined) {
         setWalletBalance(userData.walletBalance);
       }
-      // Also sync free trial data
+
+      // Sync free trial data
       if (userData.freeTrialMinutes !== undefined) {
         setFreeTrialMinutes(userData.freeTrialMinutes);
       }
@@ -237,6 +240,27 @@ export function WalletProvider({ children }: WalletProviderProps) {
       if (userData.freeTrialMinutesTotal !== undefined) {
         setFreeTrialTotal(userData.freeTrialMinutesTotal);
       }
+
+      // Sync packages from userData (processes dates properly)
+      if (userData.packages && Array.isArray(userData.packages)) {
+        const now = new Date();
+        const activePackages = userData.packages
+          .map((pkg: any) => {
+            const expiresAtDate = toDate(pkg.expiresAt);
+            const purchasedAtDate = toDate(pkg.purchasedAt);
+            return {
+              ...pkg,
+              purchasedAt: purchasedAtDate,
+              expiresAt: expiresAtDate,
+              active: pkg.active && expiresAtDate > now && pkg.minutesRemaining > 0
+            };
+          })
+          .filter((pkg: Package) => pkg.active);
+        setPackages(activePackages);
+      }
+
+      // Mark as not loading once we have userData
+      setLoading(false);
     }
   }, [userData]);
 

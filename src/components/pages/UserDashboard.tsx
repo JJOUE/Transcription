@@ -26,7 +26,8 @@ export function UserDashboard() {
     freeTrialMinutes,
     freeTrialActive,
     freeTrialUsed,
-    freeTrialTotal
+    freeTrialTotal,
+    loading: walletLoading
   } = useWallet();
 
   const [allJobs, setAllJobs] = useState<TranscriptionJob[]>([]);
@@ -55,8 +56,8 @@ export function UserDashboard() {
 
   // Real transaction data now comes from CreditContext
 
-  // Use wallet balance from context (it already combines legacy credits)
-  const walletBalance = contextWalletBalance;
+  // Use wallet balance from context, with userData fallback while loading
+  const walletBalance = walletLoading ? (userData?.walletBalance || 0) : contextWalletBalance;
 
   // Get active packages
   const activePackages = packages.filter(pkg => pkg.active);
