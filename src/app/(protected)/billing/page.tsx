@@ -44,7 +44,7 @@ export default function BillingPage() {
   const { user, userData } = useAuth();
   const { transactions, purchaseCredits } = useCredits();
   const { activePackages, loading: packagesLoading } = usePackages();
-  const { freeTrialMinutes, freeTrialActive, freeTrialUsed, freeTrialTotal, refreshWallet } = useWallet();
+  const { walletBalance, freeTrialMinutes, freeTrialActive, freeTrialUsed, freeTrialTotal, refreshWallet } = useWallet();
   const { toast } = useToast();
   const [selectedTab, setSelectedTab] = useState('ai');
   const [scriptsLoaded, setScriptsLoaded] = useState(false);
@@ -161,8 +161,6 @@ export default function BillingPage() {
 
   // Extract user data
   const minutesUsed = userData?.minutesUsedThisMonth || 0;
-  // Get wallet balance (new system only)
-  const walletBalance = userData?.walletBalance || 0;
 
   // Calculate pagination
   const totalPages = Math.ceil(transactions.length / transactionsPerPage);

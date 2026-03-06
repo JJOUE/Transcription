@@ -102,7 +102,8 @@ interface WalletProviderProps {
 
 export function WalletProvider({ children }: WalletProviderProps) {
   const { user, userData, updateUserData } = useAuth();
-  const [walletBalance, setWalletBalance] = useState(0);
+  // Initialize with userData's walletBalance if available (prevents showing 0 during load)
+  const [walletBalance, setWalletBalance] = useState(userData?.walletBalance || 0);
   const [packages, setPackages] = useState<Package[]>([]);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -201,6 +202,28 @@ export function WalletProvider({ children }: WalletProviderProps) {
   useEffect(() => {
     loadWalletData();
   }, [loadWalletData]);
+
+  // Sync wallet data with userData when it changes (ensures consistency across contexts)
+  useEffect(() => {
+    if (userData) {
+      if (userData.walletBalance !== undefined && userData.walletBalance !== walletBalance) {
+        setWalletBalance(userData.walletBalance);
+      }
+      // Also sync free trial data
+      if (userData.freeTrialMinutes !== undefined) {
+        setFreeTrialMinutes(userData.freeTrialMinutes);
+      }
+      if (userData.freeTrialActive !== undefined) {
+        setFreeTrialActive(userData.freeTrialActive && (userData.freeTrialMinutes || 0) > 0);
+      }
+      if (userData.freeTrialMinutesUsed !== undefined) {
+        setFreeTrialUsed(userData.freeTrialMinutesUsed);
+      }
+      if (userData.freeTrialMinutesTotal !== undefined) {
+        setFreeTrialTotal(userData.freeTrialMinutesTotal);
+      }
+    }
+  }, [userData]);
 
   // Subscribe to pricing settings
   useEffect(() => {
