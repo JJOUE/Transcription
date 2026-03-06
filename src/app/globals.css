@@ -81,67 +81,70 @@ iframe[src*="apigateway"] {
 }
 
 /* ============================================
-   CRITICAL: Protect header from widget overlays
+   CRITICAL: Protect page from widget overlays
    ============================================ */
 
 /* Force header to be above everything */
 header {
-  z-index: 2147483647 !important; /* Max z-index value */
+  z-index: 2147483647 !important;
   position: sticky !important;
   pointer-events: auto !important;
 }
 
-/* Ensure all header children are clickable */
 header * {
   pointer-events: auto !important;
 }
 
-/* Force all third-party injected elements to not block the page */
-body > div:not(#__next):not([id^="__"]),
-body > iframe,
-body > section,
-body > aside {
-  pointer-events: none !important;
+/* Ensure main app content is always interactive */
+#__next {
+  position: relative;
+  z-index: 1;
 }
 
-/* But allow clicks on visible widget buttons/iframes */
-body > div:not(#__next):not([id^="__"]) button,
-body > div:not(#__next):not([id^="__"]) a,
-body > div:not(#__next):not([id^="__"]) iframe,
-body > iframe {
+#__next main,
+#__next form,
+#__next input,
+#__next button,
+#__next a,
+#__next textarea,
+#__next select {
   pointer-events: auto !important;
 }
 
-/* AudioEye specific - prevent overlay blocking */
-[id*="audioeye" i],
-[class*="audioeye" i],
-[data-audioeye],
-#ae_launcher,
-.ae-wrapper {
+/* AudioEye widget - only target their specific overlay patterns */
+div[id^="audioeye"]:not(button):not(a),
+div[class^="audioeye"]:not(button):not(a),
+div[id^="ae-"]:not(button):not(a),
+div[class^="ae-"]:not(button):not(a) {
   pointer-events: none !important;
   z-index: 999 !important;
 }
 
-[id*="audioeye" i] button,
-[id*="audioeye" i] a,
-[class*="audioeye" i] button,
-#ae_launcher button {
+/* AudioEye clickable elements */
+[id^="audioeye"] button,
+[id^="audioeye"] a,
+[class^="audioeye"] button,
+[id^="ae-"] button,
+button[id*="audioeye" i],
+a[id*="audioeye" i] {
   pointer-events: auto !important;
+  z-index: 1000 !important;
 }
 
-/* Webchat/apigateway specific */
-[id*="webchat" i],
-[class*="webchat" i],
-[id*="apigateway" i] {
+/* Webchat widget - only target their specific overlay patterns */
+div[id*="webchat"]:not(button):not(iframe),
+div[class*="webchat"]:not(button):not(iframe) {
   pointer-events: none !important;
   z-index: 999 !important;
 }
 
-[id*="webchat" i] button,
-[id*="webchat" i] iframe,
-[class*="webchat" i] button,
-[class*="webchat" i] iframe,
+/* Webchat clickable elements */
+[id*="webchat"] button,
+[id*="webchat"] iframe,
+[class*="webchat"] button,
+[class*="webchat"] iframe,
 iframe[src*="apigateway"] {
   pointer-events: auto !important;
+  z-index: 1000 !important;
 }
 
