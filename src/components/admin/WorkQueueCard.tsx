@@ -17,7 +17,8 @@ import {
   TranscriptionJob
 } from '@/lib/firebase/transcriptions';
 import { formatDuration } from '@/lib/utils';
-import mammoth from 'mammoth';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { doc, updateDoc, getFirestore, Timestamp } from 'firebase/firestore';
 
 interface WorkQueueCardProps {
   job: TranscriptionJob;
@@ -36,19 +37,19 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
   const { toast } = useToast();
   const { refundCredits } = useCredits();
 
-  // Handle file upload
+  // Handle file upload - uploads directly to Storage (no parsing)
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || !job.id) return;
 
     const fileName = file.name.toLowerCase();
-    const isDocx = fileName.endsWith('.docx');
-    const isTxt = fileName.endsWith('.txt');
+    const validExtensions = ['.docx', '.doc', '.txt', '.pdf', '.rtf'];
+    const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
 
-    if (!isDocx && !isTxt) {
+    if (!hasValidExtension) {
       toast({
         title: "Invalid file type",
-        description: "Please upload a .txt or .docx file.",
+        description: "Please upload a document file (.docx, .doc, .txt, .pdf, .rtf)",
         variant: "destructive",
       });
       return;
@@ -56,42 +57,41 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
 
     setUploadingFile(true);
     try {
-      let text = '';
+      // Upload file directly to Firebase Storage
+      const storage = getStorage();
+      const storagePath = `transcriptions/${job.userId}/${job.id}/admin-transcript/${file.name}`;
+      const storageRef = ref(storage, storagePath);
 
-      if (isTxt) {
-        // Read plain text file
-        text = await file.text();
-      } else if (isDocx) {
-        // Read .docx file using mammoth
-        const arrayBuffer = await file.arrayBuffer();
-        const result = await mammoth.extractRawText({ arrayBuffer });
-        text = result.value;
-      }
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
 
-      if (text.trim()) {
-        setTranscript(text);
-        setShowModal(true);
-        toast({
-          title: "File loaded",
-          description: `Loaded ${file.name}. Review and submit the transcript.`,
-        });
-      } else {
-        toast({
-          title: "Empty file",
-          description: "The uploaded file appears to be empty.",
-          variant: "destructive",
-        });
-      }
+      // Update Firestore document with admin transcript info and mark as complete
+      const db = getFirestore();
+      const jobRef = doc(db, 'transcriptions', job.id);
+      await updateDoc(jobRef, {
+        adminTranscriptPath: storagePath,
+        adminTranscriptURL: downloadURL,
+        adminTranscriptFilename: file.name,
+        status: 'complete',
+        completedAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
+      });
+
+      toast({
+        title: "Transcript Uploaded",
+        description: `${file.name} uploaded successfully. Job marked as complete.`,
+      });
+
+      onComplete();
     } catch (error) {
       console.error('File upload error:', error);
       toast({
-        title: "Error reading file",
-        description: "Failed to read the uploaded file. Please try again.",
+        title: "Upload failed",
+        description: "Failed to upload transcript file. Please try again.",
         variant: "destructive",
       });
     } finally {
       setUploadingFile(false);
-      // Reset the file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -343,7 +343,7 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".txt,.docx"
+                accept=".txt,.docx,.doc,.pdf,.rtf"
                 onChange={handleFileUpload}
                 className="hidden"
               />
@@ -454,31 +454,9 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
               {/* Transcript input for human transcription */}
               {job.status === 'pending-transcription' && (
                 <div className="mb-4">
-                  {/* File upload option */}
-                  <div className="mb-4 p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-400 transition-colors">
-                    <div className="flex items-center justify-center gap-3">
-                      <Upload className="h-5 w-5 text-gray-400" />
-                      <span className="text-sm text-gray-600">
-                        Upload a transcript file (.txt or .docx)
-                      </span>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-green-600 border-green-300 hover:bg-green-50"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={uploadingFile}
-                      >
-                        {uploadingFile ? 'Loading...' : 'Choose File'}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="flex-1 h-px bg-gray-300"></div>
-                    <span className="text-sm text-gray-500">or type/paste below</span>
-                    <div className="flex-1 h-px bg-gray-300"></div>
-                  </div>
-
+                  <p className="text-sm text-gray-600 mb-3">
+                    Type or paste the transcript below. Or use the <strong>Upload</strong> button to upload a document file directly.
+                  </p>
                   <Textarea
                     value={transcript}
                     onChange={(e) => setTranscript(e.target.value)}

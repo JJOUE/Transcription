@@ -61,6 +61,10 @@ export interface TranscriptionJob {
   templatePath?: string; // Path to template file in Storage
   templateURL?: string; // Download URL for template file
   templateFilename?: string; // Original template filename
+  // Admin-uploaded transcript file (served as-is to users)
+  adminTranscriptPath?: string; // Storage path for admin-uploaded transcript
+  adminTranscriptURL?: string; // Download URL for admin-uploaded transcript
+  adminTranscriptFilename?: string; // Original filename of admin-uploaded transcript
 }
 
 const TRANSCRIPTIONS_COLLECTION = 'transcriptions';

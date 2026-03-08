@@ -371,6 +371,19 @@ export default function TranscriptViewerPage() {
     }
   };
 
+  // Download admin-uploaded transcript directly
+  const downloadAdminTranscript = () => {
+    if (!transcription?.adminTranscriptURL) return;
+
+    // Open the download URL directly
+    window.open(transcription.adminTranscriptURL, '_blank');
+
+    toast({
+      title: 'Download started',
+      description: `Downloading ${transcription.adminTranscriptFilename || 'transcript'}`
+    });
+  };
+
   const exportTranscript = async (format: 'pdf' | 'docx') => {
     if (!transcription) return;
 
@@ -2090,24 +2103,36 @@ export default function TranscriptViewerPage() {
                 </Button>
               )}
 
-              <div className="flex w-full sm:w-auto">
+              {/* Download options - show admin transcript if available */}
+              {transcription.adminTranscriptURL ? (
                 <Button
-                  variant="outline"
-                  onClick={() => exportTranscript(selectedFormat)}
-                  className="border-gray-300 rounded-r-none border-r-0 flex-1 sm:flex-initial"
+                  variant="default"
+                  onClick={downloadAdminTranscript}
+                  className="bg-[#003366] hover:bg-[#004080] w-full sm:w-auto"
                 >
                   <Download className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">Export </span>{selectedFormat.toUpperCase()}
+                  Download Transcript
                 </Button>
-                <select
-                  value={selectedFormat}
-                  onChange={(e) => setSelectedFormat(e.target.value as 'pdf' | 'docx')}
-                  className="border border-gray-300 rounded-l-none rounded-r-md px-2 py-2 text-sm bg-white hover:bg-gray-50"
-                >
-                  <option value="pdf">PDF</option>
-                  <option value="docx">DOCX</option>
-                </select>
-              </div>
+              ) : (
+                <div className="flex w-full sm:w-auto">
+                  <Button
+                    variant="outline"
+                    onClick={() => exportTranscript(selectedFormat)}
+                    className="border-gray-300 rounded-r-none border-r-0 flex-1 sm:flex-initial"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">Export </span>{selectedFormat.toUpperCase()}
+                  </Button>
+                  <select
+                    value={selectedFormat}
+                    onChange={(e) => setSelectedFormat(e.target.value as 'pdf' | 'docx')}
+                    className="border border-gray-300 rounded-l-none rounded-r-md px-2 py-2 text-sm bg-white hover:bg-gray-50"
+                  >
+                    <option value="pdf">PDF</option>
+                    <option value="docx">DOCX</option>
+                  </select>
+                </div>
+              )}
             </div>
           </div>
         </div>
