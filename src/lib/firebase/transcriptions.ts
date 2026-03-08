@@ -203,8 +203,8 @@ export const getModeDetails = (mode: TranscriptionMode) => {
       turnaround: '3-5 business days'
     },
     human: {
-      name: 'Human Transcription',
-      description: 'Professional human transcription for highest accuracy',
+      name: 'Dictation & Human Transcription',
+      description: 'Professional human transcription for dictation and highest accuracy',
       creditsPerMinute: 200, // Legacy support
       costPerMinute: 2.50, // Pay as you go rate in CAD
       turnaround: '3-5 business days'

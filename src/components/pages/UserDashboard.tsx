@@ -469,7 +469,7 @@ export function UserDashboard() {
                           <span>
                             {job.mode === 'ai' ? 'AI Transcription' :
                              job.mode === 'hybrid' ? 'Hybrid Review' :
-                             job.mode === 'human' ? 'Human Transcription' : job.mode}
+                             job.mode === 'human' ? 'Dictation & Human' : job.mode}
                           </span>
                           <span>{Math.ceil(job.duration / 60)} min</span>
                           <span className="text-[#003366] font-medium">CA${((job.creditsUsed || 0) / 100).toFixed(2)}</span>

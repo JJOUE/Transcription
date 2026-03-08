@@ -191,8 +191,8 @@ export default function UploadPage() {
     },
     {
       id: 'human',
-      name: 'Human Transcription',
-      description: 'Professional human transcription for highest accuracy',
+      name: 'Dictation & Human Transcription',
+      description: 'Professional human transcription for dictation and highest accuracy',
       creditsPerMinute: 200, // Legacy support
       costPerMinute: pricingSettings?.payAsYouGo.human || 2.50, // CA$ per minute from database
       turnaround: '3-5 days',

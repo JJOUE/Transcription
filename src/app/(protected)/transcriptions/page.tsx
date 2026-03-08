@@ -89,7 +89,7 @@ export default function TranscriptionsPage() {
       // Convert mode to display name for filtering
       const modeDisplayName = transcription.mode === 'ai' ? 'AI Transcription' :
                              transcription.mode === 'hybrid' ? 'Hybrid Review' :
-                             transcription.mode === 'human' ? 'Human Transcription' : transcription.mode;
+                             transcription.mode === 'human' ? 'Dictation & Human' : transcription.mode;
       const matchesMode = modeFilter === 'all' || modeDisplayName === modeFilter;
 
       return matchesSearch && matchesStatus && matchesMode;
@@ -241,7 +241,7 @@ export default function TranscriptionsPage() {
                     <SelectItem value="all">All Modes</SelectItem>
                     <SelectItem value="AI Transcription">AI Transcription</SelectItem>
                     <SelectItem value="Hybrid Review">Hybrid Review</SelectItem>
-                    <SelectItem value="Human Transcription">Human Transcription</SelectItem>
+                    <SelectItem value="Dictation & Human">Dictation & Human</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -306,7 +306,7 @@ export default function TranscriptionsPage() {
                         <p className="text-[#003366]">
                           {transcription.mode === 'ai' ? 'AI Transcription' :
                            transcription.mode === 'hybrid' ? 'Hybrid Review' :
-                           transcription.mode === 'human' ? 'Human Transcription' : transcription.mode}
+                           transcription.mode === 'human' ? 'Dictation & Human' : transcription.mode}
                         </p>
                       </div>
                       <div>
