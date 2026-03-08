@@ -365,14 +365,28 @@ export class SpeechmaticsService {
 
       console.log(`[Speechmatics] Job config:`, JSON.stringify(jobConfig, null, 2));
 
-      // Submit job via JSON POST (no multipart needed with fetch_data)
+      // Speechmatics requires multipart/form-data even for fetch_data
+      const boundary = `----speechmatics${Date.now()}`;
+      const configJson = JSON.stringify(jobConfig);
+
+      const formParts = [
+        `--${boundary}`,
+        'Content-Disposition: form-data; name="config"',
+        'Content-Type: application/json',
+        '',
+        configJson,
+        `--${boundary}--`
+      ];
+
+      const formData = Buffer.from(formParts.join('\r\n'), 'utf8');
+
       const response = await fetch(`${this.apiUrl}/jobs`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
+          'Content-Type': `multipart/form-data; boundary=${boundary}`
         },
-        body: JSON.stringify(jobConfig)
+        body: formData
       });
 
       if (!response.ok) {
@@ -391,13 +405,25 @@ export class SpeechmaticsService {
             }
           };
 
+          const fallbackConfigJson = JSON.stringify(fallbackConfig);
+          const fallbackFormParts = [
+            `--${boundary}`,
+            'Content-Disposition: form-data; name="config"',
+            'Content-Type: application/json',
+            '',
+            fallbackConfigJson,
+            `--${boundary}--`
+          ];
+
+          const fallbackFormData = Buffer.from(fallbackFormParts.join('\r\n'), 'utf8');
+
           const fallbackResponse = await fetch(`${this.apiUrl}/jobs`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${this.apiKey}`,
-              'Content-Type': 'application/json'
+              'Content-Type': `multipart/form-data; boundary=${boundary}`
             },
-            body: JSON.stringify(fallbackConfig)
+            body: fallbackFormData
           });
 
           if (!fallbackResponse.ok) {
