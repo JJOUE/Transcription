@@ -56,10 +56,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if job can be processed - only allow reprocessing of failed jobs
-    if (!['failed'].includes(transcriptionJob.status)) {
+    // Check if job can be processed - allow reprocessing of failed or stuck processing jobs
+    if (!['failed', 'processing'].includes(transcriptionJob.status)) {
       return NextResponse.json(
-        { error: `Cannot manually process job with status: ${transcriptionJob.status}. Only failed jobs can be manually reprocessed.` },
+        { error: `Cannot manually process job with status: ${transcriptionJob.status}. Only failed or stuck processing jobs can be manually reprocessed.` },
         { status: 400 }
       );
     }
