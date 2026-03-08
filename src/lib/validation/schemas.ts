@@ -68,6 +68,7 @@ export const CreateTranscriptionJobSchema = z.object({
   status: TranscriptionStatusSchema,
   mode: TranscriptionModeSchema,
   domain: TranscriptionDomainSchema.optional(),
+  language: z.string().max(10).optional(), // Language code (e.g., 'en', 'fr')
   duration: z.number()
     .min(0, 'Duration cannot be negative')
     .max(86400, 'Duration cannot exceed 24 hours'), // 24 hours in seconds
@@ -97,6 +98,18 @@ export const CreateTranscriptionJobSchema = z.object({
   recordingTime: z.string()
     .max(50, 'Recording time too long')
     .optional(),
+  // Filler words option
+  includeFiller: z.boolean().optional(),
+  // Add-on options
+  rushDelivery: z.boolean().optional(),
+  multipleSpeakers: z.boolean().optional(),
+  speakerCount: z.number().int().min(2).max(20).optional(),
+  addOnCost: z.number().min(0).optional(),
+  hasPackage: z.boolean().optional(),
+  // Template file for human transcription
+  templatePath: z.string().max(500).optional(),
+  templateURL: z.string().url().max(1000).optional(),
+  templateFilename: z.string().max(255).optional(),
   userId: z.string().optional(), // Will be overridden by authenticated user
 });
 
