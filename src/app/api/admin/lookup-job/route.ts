@@ -58,11 +58,14 @@ export async function GET(request: NextRequest) {
         duration: data.duration,
         userId: data.userId,
         speechmaticsJobId: data.speechmaticsJobId || null,
+        downloadURL: data.downloadURL || null,
+        filePath: data.filePath || null,
         createdAt: data.createdAt?.toDate?.()?.toISOString() || null,
         updatedAt: data.updatedAt?.toDate?.()?.toISOString() || null,
         completedAt: data.completedAt?.toDate?.()?.toISOString() || null,
         error: data.specialInstructions || null,
         hasTranscript: !!data.transcript,
+        creditsUsed: data.creditsUsed || 0,
       };
     });
 
@@ -88,10 +91,31 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Add email to jobs
-    const jobsWithEmail = jobs.map(job => ({
-      ...job,
-      userEmail: userEmails[job.userId] || 'unknown'
+    // Add email to jobs and check file accessibility
+    const jobsWithEmail = await Promise.all(jobs.map(async (job) => {
+      let fileAccessible = null;
+      let fileSize = null;
+
+      // Check if file is accessible (only for first few jobs to avoid timeout)
+      if (job.downloadURL && jobs.indexOf(job) < 3) {
+        try {
+          const headResponse = await fetch(job.downloadURL, {
+            method: 'HEAD',
+            signal: AbortSignal.timeout(5000)
+          });
+          fileAccessible = headResponse.ok;
+          fileSize = headResponse.headers.get('content-length');
+        } catch (e) {
+          fileAccessible = false;
+        }
+      }
+
+      return {
+        ...job,
+        userEmail: userEmails[job.userId] || 'unknown',
+        fileAccessible,
+        fileSize: fileSize ? `${Math.round(parseInt(fileSize) / 1024 / 1024)} MB` : null,
+      };
     }));
 
     return NextResponse.json({
