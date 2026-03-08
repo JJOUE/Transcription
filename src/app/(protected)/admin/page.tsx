@@ -1,22 +1,19 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { Users, FileText, DollarSign, TrendingUp, Clock, Package, Wallet, ArrowRight, RefreshCw } from 'lucide-react';
+import { Users, FileText, TrendingUp, Clock, Package, Wallet, ArrowRight, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
-import { StatusBadge } from '@/components/ui/StatusBadge';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { WorkQueueCard } from '@/components/admin/WorkQueueCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCredits } from '@/contexts/CreditContext';
-import { useWallet } from '@/contexts/WalletContext';
 import { usePackages } from '@/contexts/PackageContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { TranscriptionJob } from '@/lib/firebase/transcriptions';
-import { UserData } from '@/lib/firebase/auth';
 import { collection, getDocs, query, orderBy, limit, getFirestore, where, doc, getDoc } from 'firebase/firestore';
 
 export default function AdminPage() {
@@ -25,9 +22,6 @@ export default function AdminPage() {
   const { packages } = usePackages();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [recentJobs, setRecentJobs] = useState<TranscriptionJob[]>([]);
-  const [recentUsers, setRecentUsers] = useState<UserData[]>([]);
-  const [, setAllUsers] = useState<UserData[]>([]);
   const [systemStats, setSystemStats] = useState({
     totalUsers: 0,
     activeJobs: 0,
@@ -124,8 +118,6 @@ export default function AdminPage() {
 
         // Fetch all users
         const users = await getAllUsers();
-        setAllUsers(users);
-        setRecentUsers(users.slice(0, 3));
 
         // Fetch recent transcription jobs from all users
         const db = getFirestore();
@@ -160,8 +152,6 @@ export default function AdminPage() {
             completedAt: convertToDate(data.completedAt)
           };
         });
-
-        setRecentJobs(jobs);
 
         // Get all transactions for revenue calculations
         const allTransactions = await getAllTransactions();
@@ -290,73 +280,6 @@ export default function AdminPage() {
           </p>
         </div>
 
-        {/* Your Work - Pending Jobs */}
-        <Card className="mb-8 border-2 border-[#b29dd9] shadow-md">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-xl font-semibold text-[#003366] flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Your Work
-                </CardTitle>
-                <p className="text-sm text-gray-600 mt-1">
-                  Jobs waiting for transcription or review
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={loadPendingJobs}
-                  disabled={pendingJobsLoading}
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-1"
-                >
-                  <RefreshCw className={`h-4 w-4 ${pendingJobsLoading ? 'animate-spin' : ''}`} />
-                  Refresh
-                </Button>
-                <Link href="/admin/queue">
-                  <Button variant="outline" size="sm" className="flex items-center gap-1">
-                    View All
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {pendingJobsLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <LoadingSpinner size="md" />
-                <span className="ml-2 text-gray-600">Loading pending jobs...</span>
-              </div>
-            ) : pendingJobs.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p className="text-lg font-medium">No pending jobs</p>
-                <p className="text-sm">You're all caught up! Check back later for new work.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {pendingJobs.map(job => (
-                  <WorkQueueCard
-                    key={job.id}
-                    job={job}
-                    userEmail={userEmails[job.userId]}
-                    onComplete={loadPendingJobs}
-                  />
-                ))}
-                {pendingJobs.length >= 10 && (
-                  <div className="text-center pt-2">
-                    <Link href="/admin/queue" className="text-sm text-[#003366] hover:underline">
-                      View all jobs in queue →
-                    </Link>
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
         {/* Key Metrics - Row 1 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6">
           <Card className="border-0 shadow-sm">
@@ -468,94 +391,72 @@ export default function AdminPage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Recent Jobs */}
-          <Card className="border-0 shadow-sm h-full">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-[#003366]">
-                Recent Jobs
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4 min-h-[320px]">
-                {recentJobs.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                    <p>No recent transcription jobs</p>
-                  </div>
-                )}
-                
-                {recentJobs.map((job) => (
-                  <div
+        {/* Your Work - Pending Jobs */}
+        <Card className="border-2 border-[#b29dd9] shadow-md">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl font-semibold text-[#003366] flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Your Work
+                </CardTitle>
+                <p className="text-sm text-gray-600 mt-1">
+                  Jobs waiting for transcription or review
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={loadPendingJobs}
+                  disabled={pendingJobsLoading}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1"
+                >
+                  <RefreshCw className={`h-4 w-4 ${pendingJobsLoading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+                <Link href="/admin/queue">
+                  <Button variant="outline" size="sm" className="flex items-center gap-1">
+                    View All
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {pendingJobsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <LoadingSpinner size="md" />
+                <span className="ml-2 text-gray-600">Loading pending jobs...</span>
+              </div>
+            ) : pendingJobs.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p className="text-lg font-medium">No pending jobs</p>
+                <p className="text-sm">You're all caught up! Check back later for new work.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {pendingJobs.map(job => (
+                  <WorkQueueCard
                     key={job.id}
-                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors h-[104px]"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <h3 className="font-medium text-[#003366] truncate">
-                          {job.filename || job.originalFilename}
-                        </h3>
-                        <StatusBadge status={job.status || 'queued'} />
-                      </div>
-                      <div className="flex items-center space-x-4 text-sm text-gray-600">
-                        <span>{job.userEmail || ''}</span>
-                        <span>{job.mode || 'AI'}</span>
-                        <span>{job.duration || 0} min</span>
-                        <span className="flex items-center gap-1">
-                          <DollarSign className="h-3 w-3" />
-                          {((job.creditsUsed || 0) / 100).toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                    job={job}
+                    userEmail={userEmails[job.userId]}
+                    onComplete={loadPendingJobs}
+                  />
                 ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Recent Users */}
-          <Card className="border-0 shadow-sm h-full">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-[#003366]">
-                Recent Users
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4 min-h-[320px]">
-                {recentUsers.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                    <p>No users found</p>
+                {pendingJobs.length >= 10 && (
+                  <div className="text-center pt-2">
+                    <Link href="/admin/queue" className="text-sm text-[#003366] hover:underline">
+                      View all jobs in queue →
+                    </Link>
                   </div>
                 )}
-
-                {recentUsers.map((user) => (
-                  <div
-                    key={user.id}
-                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors h-[104px]"
-                  >
-                    <div className="flex-1">
-                      <h3 className="font-medium text-[#003366] mb-1">
-                        {user.name || 'Unnamed User'}
-                      </h3>
-                      <p className="text-sm text-gray-600 mb-2">{user.email}</p>
-                      <div className="flex items-center space-x-4 text-sm text-gray-500">
-                        <span>Joined {user.joinedAt?.toLocaleDateString?.() || user.createdAt?.toDate?.()?.toLocaleDateString() || 'Unknown'}</span>
-                        <span>{user.totalJobs || 0} jobs</span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <span className="flex items-center gap-1 text-[#003366] font-medium">
-                        <DollarSign className="h-3 w-3" />
-                        {(user.walletBalance || 0).toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <Footer />
