@@ -15,7 +15,7 @@ function LandingPage() {
       <Header />
       
       {/* Hero Section */}
-      <section 
+      <section
         className="relative text-white"
         style={{
           backgroundImage: "url('/bg_1.jpg')",
@@ -26,36 +26,51 @@ function LandingPage() {
       >
         {/* Overlay for better text readability */}
         <div className="absolute inset-0 bg-gradient-to-br from-[#003366]/80 to-[#2c3e50]/80"></div>
-        
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">
-              Professional Transcription
-              <span className="block text-[#b29dd9]">Made Simple</span>
-            </h1>
-            <p className="text-lg md:text-xl text-gray-300 mb-8 max-w-3xl mx-auto">
-              Accurate, secure, and reliable transcription services for legal professionals, 
-              businesses, and individuals across Canada.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                asChild
-                size="lg"
-                className="bg-[#b29dd9] hover:bg-[#9d87c7] text-white text-lg px-15 py-4"
-              >
-                <Link href="/signup">
-                  Get Started Free
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                size="lg"
-                className="border-2 border-white !bg-white !text-[#003366] hover:!bg-gray-50 hover:!text-[#003366] text-lg px-8 py-4 font-medium opacity-100"
-              >
-                <Link href="/pricing">View Pricing</Link>
-              </Button>
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+            {/* Text Content */}
+            <div className="text-center lg:text-left">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
+                Professional Transcription
+                <span className="block text-[#b29dd9]">Made Simple</span>
+              </h1>
+              <p className="text-lg md:text-xl text-gray-300 mb-8 max-w-xl mx-auto lg:mx-0">
+                Accurate, secure, and reliable transcription services for legal professionals,
+                businesses, and individuals across Canada.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                <Button
+                  asChild
+                  size="lg"
+                  className="bg-[#b29dd9] hover:bg-[#9d87c7] text-white text-lg px-15 py-4"
+                >
+                  <Link href="/signup">
+                    Get Started Free
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  size="lg"
+                  className="border-2 border-white !bg-white !text-[#003366] hover:!bg-gray-50 hover:!text-[#003366] text-lg px-8 py-4 font-medium opacity-100"
+                >
+                  <Link href="/pricing">View Pricing</Link>
+                </Button>
+              </div>
+            </div>
+
+            {/* Mascot Image */}
+            <div className="hidden lg:flex justify-center lg:justify-end">
+              <Image
+                src="/mascot.png"
+                alt="Talk To Text Canada Mascot"
+                width={450}
+                height={450}
+                className="drop-shadow-2xl"
+                priority
+              />
             </div>
           </div>
         </div>
