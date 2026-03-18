@@ -26,7 +26,9 @@ import {
   X,
   ChevronDown,
   ChevronUp,
-  Replace
+  Replace,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -76,6 +78,7 @@ export default function TranscriptViewerPage() {
   const [speakerOrder, setSpeakerOrder] = useState<string[]>([]);
   const [draggedSpeaker, setDraggedSpeaker] = useState<string | null>(null);
   const [isEditingSpeakerSegments, setIsEditingSpeakerSegments] = useState(false);
+  const [highlightedSpeakers, setHighlightedSpeakers] = useState<Set<string>>(new Set());
   const [hoveredSegmentIndex, setHoveredSegmentIndex] = useState<number | null>(null);
   const [selectedSegments, setSelectedSegments] = useState<Set<number>>(new Set());
   const [panelPosition, setPanelPosition] = useState({ x: 16, y: window.innerHeight - 400 });
@@ -1149,6 +1152,32 @@ export default function TranscriptViewerPage() {
     }
   };
 
+  const toggleHighlightSpeaker = (speaker: string) => {
+    setHighlightedSpeakers(prev => {
+      const next = new Set(prev);
+      if (next.has(speaker)) {
+        next.delete(speaker);
+      } else {
+        next.add(speaker);
+      }
+      return next;
+    });
+  };
+
+  const clearHighlightedSpeakers = () => {
+    setHighlightedSpeakers(new Set());
+  };
+
+  const isSpeakerHighlighted = (speaker: string | undefined | null): boolean => {
+    if (highlightedSpeakers.size === 0) return false;
+    return highlightedSpeakers.has(speaker || '');
+  };
+
+  const shouldDim = (speaker: string | undefined | null): boolean => {
+    if (highlightedSpeakers.size === 0) return false;
+    return !highlightedSpeakers.has(speaker || '');
+  };
+
   // Get unique speakers from the transcript - calculate at component level
   const getOrderedSpeakers = () => {
     if (!transcription?.timestampedTranscript || transcription.timestampedTranscript.length === 0) {
@@ -1388,6 +1417,17 @@ export default function TranscriptViewerPage() {
                     Cancel
                   </Button>
                 )}
+                {highlightedSpeakers.size > 0 && (
+                  <Button
+                    onClick={clearHighlightedSpeakers}
+                    size="sm"
+                    variant="outline"
+                    className="border-gray-300 text-gray-600 hover:bg-gray-100 text-xs"
+                  >
+                    <EyeOff className="h-3 w-3 mr-1" />
+                    Clear filters
+                  </Button>
+                )}
                 <p className="text-xs text-gray-500 italic">
                   Click to edit names • Drag to reorder
                 </p>
@@ -1397,7 +1437,7 @@ export default function TranscriptViewerPage() {
               {orderedSpeakers.map(speaker => (
                 <div
                   key={speaker}
-                  className="relative group"
+                  className="relative group flex items-center gap-1"
                   draggable={editingSpeaker !== speaker}
                   onDragStart={(e) => handleDragStart(e, speaker)}
                   onDragOver={handleDragOver}
@@ -1434,13 +1474,23 @@ export default function TranscriptViewerPage() {
                   ) : (
                     <button
                       onClick={() => setEditingSpeaker(speaker)}
-                      className={`px-3 py-1 rounded-full text-xs font-semibold ${getSpeakerColor(speaker)} hover:ring-2 hover:ring-blue-400 transition-all ${draggedSpeaker === speaker ? 'opacity-50' : 'opacity-100'} ${editingSpeaker !== speaker ? 'cursor-move' : 'cursor-text'}`}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${getSpeakerColor(speaker)} hover:ring-2 hover:ring-blue-400 transition-all ${draggedSpeaker === speaker ? 'opacity-50' : 'opacity-100'} ${editingSpeaker !== speaker ? 'cursor-move' : 'cursor-text'} ${highlightedSpeakers.has(speaker) ? 'ring-2 ring-offset-1 ring-blue-500' : ''}`}
                       title="Click to edit • Drag to reorder"
                     >
                       {getSpeakerDisplayName(speaker)}
                       <Edit3 className="inline-block ml-1 h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </button>
                   )}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleHighlightSpeaker(speaker);
+                    }}
+                    className={`p-1 rounded-full transition-all ${highlightedSpeakers.has(speaker) ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
+                    title={highlightedSpeakers.has(speaker) ? 'Remove highlight' : 'Highlight this speaker'}
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               ))}
               {hasUnknownSpeakers && (
@@ -1492,11 +1542,11 @@ export default function TranscriptViewerPage() {
                     <div
                       key={index}
                       data-segment-index={index}
-                      className={`relative rounded-lg transition-all border-2 ${
+                      className={`relative rounded-lg transition-all duration-200 border-2 ${
                         isSelected
                           ? 'bg-indigo-50 border-indigo-400 shadow-md'
                           : 'border-transparent'
-                      } ${isNewSpeaker ? 'mt-4' : 'mt-1'}`}
+                      } ${isNewSpeaker ? 'mt-4' : 'mt-1'} ${shouldDim(segment.speaker) ? 'opacity-30 hover:opacity-50' : ''} ${isSpeakerHighlighted(segment.speaker) ? 'border-blue-400 bg-blue-50/30' : ''}`}
                     >
                       <div className="p-3">
                         {/* Show speaker label on new speaker blocks */}
@@ -1711,7 +1761,7 @@ export default function TranscriptViewerPage() {
                     <div
                       key={groupIndex}
                       id={`segment-${firstSegmentIndex}`}
-                      className="group rounded-lg border-2 border-gray-200 hover:border-blue-300 transition-all"
+                      className={`group rounded-lg border-2 transition-all duration-200 ${shouldDim(group.speaker) ? 'opacity-30 hover:opacity-50 border-gray-200' : isSpeakerHighlighted(group.speaker) ? 'border-blue-400 bg-blue-50/30 hover:border-blue-500' : 'border-gray-200 hover:border-blue-300'}`}
                     >
                       <div className="p-4">
                         {/* Speaker Label */}
@@ -1832,42 +1882,49 @@ export default function TranscriptViewerPage() {
             </div>
           ) : (
             // View mode: Normal grouped display
-            processedSpeakerSegments.map((speakerSegment, index) => (
-              <div key={index} className="group">
-                {/* Speaker Label */}
-                {speakerSegment.speaker && (
-                  <div className="flex items-center mb-4">
-                    <div className={`px-3 py-1 rounded-full text-xs font-semibold ${getSpeakerColor(speakerSegment.speaker)}`}>
-                      {getSpeakerDisplayName(speakerSegment.speaker)}
+            processedSpeakerSegments.map((speakerSegment, index) => {
+              const dimmed = shouldDim(speakerSegment.speaker);
+              const highlighted = isSpeakerHighlighted(speakerSegment.speaker);
+              return (
+                <div
+                  key={index}
+                  className={`group transition-all duration-200 ${dimmed ? 'opacity-30 hover:opacity-50' : ''} ${highlighted ? 'rounded-lg border-l-4 border-blue-400 bg-blue-50/30 pl-2' : ''}`}
+                >
+                  {/* Speaker Label */}
+                  {speakerSegment.speaker && (
+                    <div className="flex items-center mb-4">
+                      <div className={`px-3 py-1 rounded-full text-xs font-semibold ${getSpeakerColor(speakerSegment.speaker)}`}>
+                        {getSpeakerDisplayName(speakerSegment.speaker)}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Paragraphs with Inline Timestamps */}
-                <div className="pl-4 border-l-2 border-gray-200 space-y-4">
-                  {speakerSegment.paragraphs.map((paragraph, paragraphIndex) => (
-                    <div key={paragraphIndex} className="text-gray-800 leading-relaxed">
-                      {paragraph.map((part, partIndex) => (
-                        <span key={partIndex}>
-                          {part.type === 'text' ? (
-                            part.content
-                          ) : (
-                            <button
-                              onClick={() => jumpToTime(part.time)}
-                              className="inline-flex items-center mx-2 text-[#003366] hover:text-[#004080] font-mono text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded transition-colors cursor-pointer"
-                              title={`Jump to ${part.content}`}
-                            >
-                              [{part.content}]
-                            </button>
-                          )}
-                          {part.type === 'timestamp' && partIndex < paragraph.length - 1 && ' '}
-                        </span>
-                      ))}
-                    </div>
-                  ))}
+                  {/* Paragraphs with Inline Timestamps */}
+                  <div className={`pl-4 border-l-2 ${highlighted ? 'border-blue-300' : 'border-gray-200'} space-y-4`}>
+                    {speakerSegment.paragraphs.map((paragraph, paragraphIndex) => (
+                      <div key={paragraphIndex} className="text-gray-800 leading-relaxed">
+                        {paragraph.map((part, partIndex) => (
+                          <span key={partIndex}>
+                            {part.type === 'text' ? (
+                              part.content
+                            ) : (
+                              <button
+                                onClick={() => jumpToTime(part.time)}
+                                className="inline-flex items-center mx-2 text-[#003366] hover:text-[#004080] font-mono text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded transition-colors cursor-pointer"
+                                title={`Jump to ${part.content}`}
+                              >
+                                [{part.content}]
+                              </button>
+                            )}
+                            {part.type === 'timestamp' && partIndex < paragraph.length - 1 && ' '}
+                          </span>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>

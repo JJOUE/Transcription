@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { Users, FileText, TrendingUp, Clock, Package, Wallet, ArrowRight, RefreshCw } from 'lucide-react';
+import { Users, FileText, TrendingUp, Clock, Package, Wallet, ArrowRight, RefreshCw, BarChart3, Eye, Globe, Timer } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/layout/Header';
@@ -33,10 +33,42 @@ export default function AdminPage() {
     totalWalletTopups: 0
   });
 
+  // Analytics state
+  const [analytics, setAnalytics] = useState<{
+    configured: boolean;
+    today: { activeUsers: number; pageViews: number; sessions: number };
+    week: { totalUsers: number; pageViews: number; sessions: number; avgSessionDuration: string };
+    topPages: { path: string; views: number }[];
+  } | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+
   // Pending jobs for "Your Work" section
   const [pendingJobs, setPendingJobs] = useState<TranscriptionJob[]>([]);
   const [pendingJobsLoading, setPendingJobsLoading] = useState(true);
   const [userEmails, setUserEmails] = useState<{[key: string]: string}>({});
+
+  // Load GA4 analytics
+  const loadAnalytics = useCallback(async () => {
+    if (userData?.role !== 'admin') return;
+    setAnalyticsLoading(true);
+    try {
+      const response = await fetch('/api/admin/analytics');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.configured) {
+          setAnalytics(data);
+        } else {
+          setAnalytics(null);
+        }
+      } else {
+        setAnalytics(null);
+      }
+    } catch {
+      setAnalytics(null);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, [userData]);
 
   // Load pending jobs for "Your Work" section
   const loadPendingJobs = useCallback(async () => {
@@ -255,8 +287,9 @@ export default function AdminPage() {
     if (!authLoading) {
       loadAdminData();
       loadPendingJobs();
+      loadAnalytics();
     }
-  }, [userData, authLoading, router, loadPendingJobs]);
+  }, [userData, authLoading, router, loadPendingJobs, loadAnalytics]);
 
   // Prevent SSR hydration issues
   const [mounted, setMounted] = useState(false);
@@ -400,6 +433,93 @@ export default function AdminPage() {
             </Card>
           </Link>
         </div>
+
+        {/* Site Analytics */}
+        {!analyticsLoading && analytics && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <BarChart3 className="h-5 w-5 text-[#003366]" />
+              <h2 className="text-lg font-semibold text-[#003366]">Site Analytics</h2>
+              <span className="text-xs text-gray-500 ml-auto">Powered by Google Analytics</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+              <Card className="border-0 shadow-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Visitors Today</p>
+                      <p className="text-2xl font-bold text-[#003366]">{analytics.today.activeUsers.toLocaleString()}</p>
+                    </div>
+                    <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                      <Eye className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Page Views Today</p>
+                      <p className="text-2xl font-bold text-[#003366]">{analytics.today.pageViews.toLocaleString()}</p>
+                    </div>
+                    <div className="w-12 h-12 bg-indigo-500 rounded-lg flex items-center justify-center">
+                      <FileText className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Visitors This Week</p>
+                      <p className="text-2xl font-bold text-[#003366]">{analytics.week.totalUsers.toLocaleString()}</p>
+                      <p className="text-xs text-gray-500 mt-1">{analytics.week.sessions.toLocaleString()} sessions</p>
+                    </div>
+                    <div className="w-12 h-12 bg-cyan-500 rounded-lg flex items-center justify-center">
+                      <Globe className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Avg. Session Duration</p>
+                      <p className="text-2xl font-bold text-[#003366]">{analytics.week.avgSessionDuration}</p>
+                    </div>
+                    <div className="w-12 h-12 bg-amber-500 rounded-lg flex items-center justify-center">
+                      <Timer className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Top Pages */}
+            {analytics.topPages.length > 0 && (
+              <Card className="border-0 shadow-sm">
+                <CardContent className="p-4">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Top Pages (Last 7 Days)</h3>
+                  <div className="space-y-2">
+                    {analytics.topPages.map((page, i) => (
+                      <div key={i} className="flex items-center justify-between text-sm">
+                        <span className="text-gray-700 font-mono text-xs truncate max-w-[70%]">{page.path}</span>
+                        <span className="text-gray-500 font-medium">{page.views.toLocaleString()} views</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
 
         {/* Your Work - Pending Jobs */}
         <Card className="border-2 border-[#b29dd9] shadow-md">
