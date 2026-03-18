@@ -124,9 +124,10 @@ export async function GET() {
 
     return NextResponse.json(responseData);
   } catch (error) {
-    console.error('Analytics API error:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('Analytics API error:', errorMessage);
     return NextResponse.json(
-      { error: 'Failed to fetch analytics', configured: true },
+      { error: 'Failed to fetch analytics', configured: true, details: errorMessage },
       { status: 500 }
     );
   }
