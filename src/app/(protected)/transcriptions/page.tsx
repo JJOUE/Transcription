@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { generateTemplateData, exportTranscriptPDF, exportTranscriptDOCX } from '@/lib/utils/transcriptTemplate';
-import { FileText, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { FileText, Search, Filter, ChevronLeft, ChevronRight, Trash2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -30,6 +30,8 @@ export default function TranscriptionsPage() {
   const [modeFilter, setModeFilter] = useState('all');
   const [isPolling, setIsPolling] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [deleteTarget, setDeleteTarget] = useState<TranscriptionJob | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const itemsPerPage = 10;
 
   // Load transcriptions from Firestore
@@ -170,6 +172,33 @@ export default function TranscriptionsPage() {
     } catch (error) {
       console.error('Error retrying transcription:', error);
       toast({ title: 'Retry failed', description: 'Please try again.', variant: 'destructive' });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget?.id || !user) return;
+
+    setIsDeleting(true);
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch(`/api/transcriptions/${deleteTarget.id}/delete`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete transcription');
+      }
+
+      setTranscriptions(prev => prev.filter(t => t.id !== deleteTarget.id));
+      toast({ title: 'Transcription deleted', description: 'The transcription and its files have been permanently deleted.' });
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast({ title: 'Delete failed', description: error instanceof Error ? error.message : 'Please try again.', variant: 'destructive' });
+    } finally {
+      setIsDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -363,7 +392,7 @@ export default function TranscriptionsPage() {
                         </Button>
                       </>
                     )}
-                    
+
                     {transcription.status === 'failed' && (
                       <Button
                         size="sm"
@@ -374,9 +403,9 @@ export default function TranscriptionsPage() {
                         Retry
                       </Button>
                     )}
-                    
-                    {(transcription.status === 'processing' || 
-                      transcription.status === 'under-review' || 
+
+                    {(transcription.status === 'processing' ||
+                      transcription.status === 'under-review' ||
                       transcription.status === 'queued' ||
                       transcription.status === 'pending-review' ||
                       transcription.status === 'pending-transcription') && (
@@ -384,6 +413,16 @@ export default function TranscriptionsPage() {
                         In progress...
                       </div>
                     )}
+
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setDeleteTarget(transcription)}
+                      className="text-gray-400 hover:text-red-600 hover:bg-red-50"
+                      title="Delete transcription"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -480,6 +519,60 @@ export default function TranscriptionsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-red-800">
+                  Delete Transcription
+                </h3>
+              </div>
+
+              <div className="mb-4 space-y-2 p-3 bg-gray-50 rounded">
+                <div className="text-sm text-gray-600">
+                  <strong>File:</strong> {deleteTarget.originalFilename}
+                </div>
+                <div className="text-sm text-gray-600">
+                  <strong>Mode:</strong> {deleteTarget.mode === 'ai' ? 'AI Transcription' :
+                    deleteTarget.mode === 'hybrid' ? 'Hybrid Review' :
+                    deleteTarget.mode === 'human' ? 'Dictation & Human' : deleteTarget.mode}
+                </div>
+                <div className="text-sm text-gray-600">
+                  <strong>Status:</strong> {deleteTarget.status}
+                </div>
+              </div>
+
+              <p className="text-sm text-gray-700 mb-6">
+                This will permanently delete the transcription, its transcript, and all uploaded files. This action cannot be undone.
+              </p>
+
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setDeleteTarget(null)}
+                  disabled={isDeleting}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>
