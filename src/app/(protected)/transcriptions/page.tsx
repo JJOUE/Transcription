@@ -318,12 +318,12 @@ export default function TranscriptionsPage() {
               {!loading && paginatedTranscriptions.map((transcription) => (
                 <div
                   key={transcription.id}
-                  className="w-full flex items-center justify-between p-6 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="w-full flex items-center justify-between p-6 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors overflow-hidden"
                 >
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center space-x-3 mb-3 min-w-0">
                       <FileText className="h-5 w-5 text-[#b29dd9] flex-shrink-0" />
-                      <h3 className="font-semibold text-[#003366] text-lg truncate flex-1" title={transcription.originalFilename}>
+                      <h3 className="font-semibold text-[#003366] text-lg truncate" title={transcription.originalFilename}>
                         {transcription.originalFilename}
                       </h3>
                       <StatusBadge status={transcription.status} className="flex-shrink-0" />
