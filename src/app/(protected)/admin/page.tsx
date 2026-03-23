@@ -79,9 +79,11 @@ export default function AdminPage() {
       const db = getFirestore();
       const transcriptionsRef = collection(db, 'transcriptions');
 
-      // Fetch all jobs to filter for pending ones (Firestore doesn't support OR in where)
+      // Only fetch jobs with statuses that could need admin action
+      const actionableStatuses = ['pending-review', 'under-review', 'pending-transcription', 'processing', 'failed', 'queued'];
       const allJobsQuery = query(
         transcriptionsRef,
+        where('status', 'in', actionableStatuses),
         orderBy('createdAt', 'desc')
       );
 
@@ -159,34 +161,34 @@ export default function AdminPage() {
       try {
         setLoading(true);
 
-        // Fetch all users
-        const users = await getAllUsers();
-
-        // Fetch recent transcription jobs from all users
         const db = getFirestore();
-        const transcriptionsRef = collection(db, 'transcriptions');
-        const recentJobsQuery = query(
-          transcriptionsRef,
-          orderBy('createdAt', 'desc'),
-          limit(3)
-        );
 
-        const snapshot = await getDocs(recentJobsQuery);
+        // Run all 4 queries in parallel
+        const [users, snapshot, allTransactions, packagesSnapshot] = await Promise.all([
+          getAllUsers(),
+          getDocs(query(
+            collection(db, 'transcriptions'),
+            orderBy('createdAt', 'desc'),
+            limit(3)
+          )),
+          getAllTransactions(),
+          getDocs(query(collection(db, 'packages'))),
+        ]);
+
+        // Safe date conversion helper
+        const convertToDate = (timestamp: unknown) => {
+          if (!timestamp) return null;
+          if (typeof (timestamp as { toDate?: () => Date }).toDate === 'function') {
+            return (timestamp as { toDate: () => Date }).toDate();
+          }
+          if (timestamp instanceof Date) {
+            return timestamp;
+          }
+          return new Date(timestamp as string | number);
+        };
+
         const jobs = snapshot.docs.map(docSnap => {
           const data = docSnap.data();
-
-          // Safe date conversion helper
-          const convertToDate = (timestamp: unknown) => {
-            if (!timestamp) return null;
-            if (typeof (timestamp as { toDate?: () => Date }).toDate === 'function') {
-              return (timestamp as { toDate: () => Date }).toDate();
-            }
-            if (timestamp instanceof Date) {
-              return timestamp;
-            }
-            return new Date(timestamp as string | number);
-          };
-
           return {
             id: docSnap.id,
             ...data,
@@ -196,53 +198,40 @@ export default function AdminPage() {
           };
         });
 
-        // Get all transactions for revenue calculations
-        const allTransactions = await getAllTransactions();
-
         // Calculate system statistics
         const activeJobs = jobs.filter(j => j.status === 'processing' || j.status === 'queued').length;
 
-        // Calculate total revenue from transactions
-        // Filter for revenue-generating transactions
         const walletTopups = allTransactions.filter(t =>
-          t.type === 'wallet_topup' || t.type === 'purchase' // 'purchase' for legacy compatibility
+          t.type === 'wallet_topup' || t.type === 'purchase'
         );
         const packagePurchases = allTransactions.filter(t =>
           t.type === 'package_purchase'
         );
 
-        // Calculate totals - wallet topups and package purchases are positive amounts
         const totalWalletTopups = walletTopups.reduce((sum, t) => sum + Math.abs(t.amount), 0);
         const totalPackageRevenue = packagePurchases.reduce((sum, t) => sum + Math.abs(t.amount), 0);
         const totalRevenue = totalWalletTopups + totalPackageRevenue;
 
-        // Calculate total wallet balance across all users
         const totalWalletBalance = users.reduce((sum, user) => {
           const wallet = user.walletBalance || 0;
           return sum + wallet;
         }, 0);
 
-        // Get package statistics from Firestore
-        const packagesQuery = query(collection(db, 'packages'));
-        const packagesSnapshot = await getDocs(packagesQuery);
         const allPackages = packagesSnapshot.docs.map(docSnap => ({
           id: docSnap.id,
           ...docSnap.data()
         }));
-
         const activePackagesCount = allPackages.filter((p: { active?: boolean }) => p.active).length;
         const totalPackagesSold = packagePurchases.length;
 
         // Calculate actual processing times from completed jobs
         const completedJobs = jobs.filter(j => j.status === 'complete' && j.createdAt && j.completedAt);
-        let avgProcessingTime = '2.5hrs'; // Default fallback
+        let avgProcessingTime = '2.5hrs';
 
         if (completedJobs.length > 0) {
           const totalProcessingTime = completedJobs.reduce((sum, job) => {
-            // Dates are already converted to JavaScript Date objects
             const startTime = job.createdAt;
             const endTime = job.completedAt;
-
             if (startTime && endTime) {
               return sum + (endTime - startTime);
             }
@@ -253,7 +242,6 @@ export default function AdminPage() {
           const avgMinutes = avgMilliseconds / (1000 * 60);
           const avgHours = avgMinutes / 60;
 
-          // Format based on duration
           if (avgMinutes < 60) {
             avgProcessingTime = `${Math.round(avgMinutes)}min`;
           } else if (avgHours < 24) {
