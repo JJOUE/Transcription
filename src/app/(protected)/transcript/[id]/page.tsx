@@ -71,7 +71,7 @@ export default function TranscriptViewerPage() {
   const [editedTranscript, setEditedTranscript] = useState('');
   const [editedSegments, setEditedSegments] = useState<{[key: number]: string}>({});
   const [saving, setSaving] = useState(false);
-  const [selectedFormat, setSelectedFormat] = useState<'pdf' | 'docx'>('pdf');
+  const [selectedFormat, setSelectedFormat] = useState<'pdf' | 'docx' | 'srt' | 'vtt'>('pdf');
   const [timestampFrequency, setTimestampFrequency] = useState<30 | 60 | 300>(60); // 30s, 60s, 5min (300s)
   const [speakerNames, setSpeakerNames] = useState<Record<string, string>>({});
   const [editingSpeaker, setEditingSpeaker] = useState<string | null>(null);
@@ -387,8 +387,81 @@ export default function TranscriptViewerPage() {
     });
   };
 
-  const exportTranscript = async (format: 'pdf' | 'docx') => {
+  // Format seconds to SRT timestamp (HH:MM:SS,mmm)
+  const formatSRTTimestamp = (seconds: number): string => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    const ms = Math.round((seconds % 1) * 1000);
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')},${ms.toString().padStart(3, '0')}`;
+  };
+
+  // Format seconds to VTT timestamp (HH:MM:SS.mmm)
+  const formatVTTTimestamp = (seconds: number): string => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    const ms = Math.round((seconds % 1) * 1000);
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
+  };
+
+  const exportSubtitles = (format: 'srt' | 'vtt') => {
+    if (!transcription?.timestampedTranscript || transcription.timestampedTranscript.length === 0) {
+      toast({
+        title: 'No subtitle data',
+        description: 'This transcription does not have timestamped segments needed for subtitles.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const segments = transcription.timestampedTranscript;
+    let content = '';
+
+    if (format === 'vtt') {
+      content = 'WEBVTT\n\n';
+    }
+
+    segments.forEach((segment, index) => {
+      const start = format === 'srt' ? formatSRTTimestamp(segment.start) : formatVTTTimestamp(segment.start);
+      const end = format === 'srt' ? formatSRTTimestamp(segment.end) : formatVTTTimestamp(segment.end);
+      const speakerPrefix = segment.speaker && segment.speaker !== 'UU'
+        ? `${getSpeakerDisplayName(segment.speaker)}: `
+        : '';
+      const text = editedSegments[index] !== undefined ? editedSegments[index] : segment.text;
+
+      if (format === 'srt') {
+        content += `${index + 1}\n${start} --> ${end}\n${speakerPrefix}${text}\n\n`;
+      } else {
+        content += `${index + 1}\n${start} --> ${end}\n${speakerPrefix}${text}\n\n`;
+      }
+    });
+
+    // Download the file
+    const blob = new Blob([content], { type: format === 'vtt' ? 'text/vtt' : 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const baseName = transcription.originalFilename?.replace(/\.[^.]+$/, '') || 'transcript';
+    a.href = url;
+    a.download = `${baseName}.${format}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: 'Download started',
+      description: `Subtitles downloaded as ${format.toUpperCase()}`
+    });
+  };
+
+  const exportTranscript = async (format: 'pdf' | 'docx' | 'srt' | 'vtt') => {
     if (!transcription) return;
+
+    if (format === 'srt' || format === 'vtt') {
+      exportSubtitles(format);
+      return;
+    }
 
     try {
       // Generate template data with current transcript content
@@ -397,11 +470,6 @@ export default function TranscriptViewerPage() {
         transcript: isEditing ? editedTranscript : (transcription.transcript || '')
       }, userData);
 
-      console.log('Export templateData:', templateData);
-      console.log('Transcription data:', transcription);
-      console.log('User data:', userData);
-
-      // Use the new template functions with UI state
       if (format === 'pdf') {
         await exportTranscriptPDF(templateData, {
           timestampFrequency,
@@ -2022,11 +2090,13 @@ export default function TranscriptViewerPage() {
                 </Button>
                 <select
                   value={selectedFormat}
-                  onChange={(e) => setSelectedFormat(e.target.value as 'pdf' | 'docx')}
+                  onChange={(e) => setSelectedFormat(e.target.value as 'pdf' | 'docx' | 'srt' | 'vtt')}
                   className="border border-gray-300 rounded-l-none rounded-r-md px-2 py-1.5 text-sm bg-white hover:bg-gray-50"
                 >
                   <option value="pdf">PDF</option>
                   <option value="docx">DOCX</option>
+                  <option value="srt">SRT</option>
+                  <option value="vtt">VTT</option>
                 </select>
               </div>
             )}
