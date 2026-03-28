@@ -1,6 +1,6 @@
 # Project Tracker
 
-> Last updated: 2026-03-23
+> Last updated: 2026-03-28
 
 ## Project Summary
 Firebase-powered Next.js transcription platform with role-based auth, Stripe payments, Speechmatics AI integration, and admin workflow for human/hybrid transcription processing.
@@ -12,6 +12,7 @@ Firebase-powered Next.js transcription platform with role-based auth, Stripe pay
 - [ ] Production deployment tuning (APP_URL localhost warning in build)
 
 ## Recently Completed
+- [x] Sticky floating toolbar on transcript viewer — Edit/Share/Export buttons stay visible while scrolling long transcripts (2026-03-28)
 - [x] Fix long filename overflow on transcriptions page — added min-w-0 for proper truncation (2026-03-23)
 - [x] Add transcription deletion for users — trash icon per row, confirmation modal, cleans up Firestore + Storage (2026-03-23)
 - [x] Replace Vercel favicon with TTT brand emblem, white background for dark mode (2026-03-23)

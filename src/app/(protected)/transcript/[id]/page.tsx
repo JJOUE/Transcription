@@ -1578,20 +1578,9 @@ export default function TranscriptViewerPage() {
             // Edit mode: Group by speaker like view mode, but make editable
             <div className="space-y-6">
               <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-green-800">
-                    ✏️ <strong>Editing Transcript:</strong> Click on any speaker section to edit it inline. Changes will be saved when you click "Save Changes".
-                  </p>
-                  <Button
-                    onClick={() => setShowSearchPanel(!showSearchPanel)}
-                    size="sm"
-                    variant="outline"
-                    className="border-green-300 text-green-700 hover:bg-green-100"
-                  >
-                    <Search className="h-4 w-4 mr-1" />
-                    Search & Replace
-                  </Button>
-                </div>
+                <p className="text-sm text-green-800">
+                  ✏️ <strong>Editing Transcript:</strong> Click on any speaker section to edit it inline. Changes will be saved when you click "Save Changes".
+                </p>
               </div>
 
               {/* Search and Replace Panel */}
@@ -2081,116 +2070,136 @@ export default function TranscriptViewerPage() {
             Back to Transcriptions
           </Button>
           
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="min-w-0 flex-1">
-              <h1 className="text-2xl font-bold text-[#003366] mb-2 truncate" title={transcription.originalFilename}>
-                {transcription.originalFilename}
-              </h1>
-              <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
-                <StatusBadge status={transcription.status} />
-                <Badge variant="outline">{transcription.mode.charAt(0).toUpperCase() + transcription.mode.slice(1)}</Badge>
-                <div className="flex items-center gap-1">
-                  <Clock className="h-4 w-4" />
-                  {formatTime(transcription.duration)}
-                </div>
-                <div className="flex items-center gap-1">
-                  <FileText className="h-4 w-4" />
-                  {getWordCount(transcription.transcript)} words
-                </div>
-                <CreditDisplay amount={transcription.creditsUsed} size="sm" />
-                <span>Completed: {formatDate(transcription.completedAt || transcription.updatedAt)}</span>
+          <div>
+            <h1 className="text-2xl font-bold text-[#003366] mb-2 truncate" title={transcription.originalFilename}>
+              {transcription.originalFilename}
+            </h1>
+            <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
+              <StatusBadge status={transcription.status} />
+              <Badge variant="outline">{transcription.mode.charAt(0).toUpperCase() + transcription.mode.slice(1)}</Badge>
+              <div className="flex items-center gap-1">
+                <Clock className="h-4 w-4" />
+                {formatTime(transcription.duration)}
               </div>
+              <div className="flex items-center gap-1">
+                <FileText className="h-4 w-4" />
+                {getWordCount(transcription.transcript)} words
+              </div>
+              <CreditDisplay amount={transcription.creditsUsed} size="sm" />
+              <span>Completed: {formatDate(transcription.completedAt || transcription.updatedAt)}</span>
             </div>
-            
-            <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-              {/* Only show edit button for completed transcriptions */}
-              {transcription.status === 'complete' && (
+          </div>
+        </div>
+
+        {/* Sticky Action Toolbar */}
+        <div className="sticky top-0 z-40 -mx-4 px-4 py-3 bg-gray-50/95 backdrop-blur-sm border-b border-gray-200/80 mb-6">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Only show edit button for completed transcriptions */}
+            {transcription.status === 'complete' && (
+              <Button
+                variant="outline"
+                onClick={isEditing ? saveEdits : () => setIsEditing(true)}
+                disabled={saving}
+                className="border-[#003366] text-[#003366] hover:bg-[#003366] hover:text-white"
+                size="sm"
+              >
+                {saving ? (
+                  <>
+                    <LoadingSpinner size="sm" className="mr-2" />
+                    Saving...
+                  </>
+                ) : isEditing ? (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Changes
+                  </>
+                ) : (
+                  <>
+                    <Edit3 className="h-4 w-4 mr-2" />
+                    Edit
+                  </>
+                )}
+              </Button>
+            )}
+
+            {transcription.isShared ? (
+              <>
                 <Button
                   variant="outline"
-                  onClick={isEditing ? saveEdits : () => setIsEditing(true)}
-                  disabled={saving}
-                  className="border-[#003366] text-[#003366] hover:bg-[#003366] hover:text-white w-full sm:w-auto"
+                  onClick={copyShareLink}
+                  className="border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
+                  size="sm"
                 >
-                  {saving ? (
-                    <>
-                      <LoadingSpinner size="sm" className="mr-2" />
-                      Saving...
-                    </>
-                  ) : isEditing ? (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Save Changes
-                    </>
-                  ) : (
-                    <>
-                      <Edit3 className="h-4 w-4 mr-2" />
-                      Edit
-                    </>
-                  )}
+                  <Link2 className="h-4 w-4 mr-2" />
+                  Copy Link
                 </Button>
-              )}
-
-              {transcription.isShared ? (
-                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                  <Button
-                    variant="outline"
-                    onClick={copyShareLink}
-                    className="border-green-300 bg-green-50 text-green-700 hover:bg-green-100 w-full sm:w-auto"
-                  >
-                    <Link2 className="h-4 w-4 mr-2" />
-                    Copy Link
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={shareTranscript}
-                    className="border-gray-300 w-full sm:w-auto"
-                  >
-                    <Globe className="h-4 w-4 mr-2" />
-                    Disable Sharing
-                  </Button>
-                </div>
-              ) : (
                 <Button
                   variant="outline"
                   onClick={shareTranscript}
-                  className="border-gray-300 w-full sm:w-auto"
+                  className="border-gray-300"
+                  size="sm"
                 >
-                  <Share2 className="h-4 w-4 mr-2" />
-                  Share
+                  <Globe className="h-4 w-4 mr-2" />
+                  Disable Sharing
                 </Button>
-              )}
+              </>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={shareTranscript}
+                className="border-gray-300"
+                size="sm"
+              >
+                <Share2 className="h-4 w-4 mr-2" />
+                Share
+              </Button>
+            )}
 
-              {/* Download options - show admin transcript if available */}
-              {transcription.adminTranscriptURL ? (
+            {/* Download options - show admin transcript if available */}
+            {transcription.adminTranscriptURL ? (
+              <Button
+                variant="default"
+                onClick={downloadAdminTranscript}
+                className="bg-[#003366] hover:bg-[#004080]"
+                size="sm"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download Transcript
+              </Button>
+            ) : (
+              <div className="flex">
                 <Button
-                  variant="default"
-                  onClick={downloadAdminTranscript}
-                  className="bg-[#003366] hover:bg-[#004080] w-full sm:w-auto"
+                  variant="outline"
+                  onClick={() => exportTranscript(selectedFormat)}
+                  className="border-gray-300 rounded-r-none border-r-0"
+                  size="sm"
                 >
                   <Download className="h-4 w-4 mr-2" />
-                  Download Transcript
+                  Export {selectedFormat.toUpperCase()}
                 </Button>
-              ) : (
-                <div className="flex w-full sm:w-auto">
-                  <Button
-                    variant="outline"
-                    onClick={() => exportTranscript(selectedFormat)}
-                    className="border-gray-300 rounded-r-none border-r-0 flex-1 sm:flex-initial"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    <span className="hidden sm:inline">Export </span>{selectedFormat.toUpperCase()}
-                  </Button>
-                  <select
-                    value={selectedFormat}
-                    onChange={(e) => setSelectedFormat(e.target.value as 'pdf' | 'docx')}
-                    className="border border-gray-300 rounded-l-none rounded-r-md px-2 py-2 text-sm bg-white hover:bg-gray-50"
-                  >
-                    <option value="pdf">PDF</option>
-                    <option value="docx">DOCX</option>
-                  </select>
-                </div>
-              )}
-            </div>
+                <select
+                  value={selectedFormat}
+                  onChange={(e) => setSelectedFormat(e.target.value as 'pdf' | 'docx')}
+                  className="border border-gray-300 rounded-l-none rounded-r-md px-2 py-1.5 text-sm bg-white hover:bg-gray-50"
+                >
+                  <option value="pdf">PDF</option>
+                  <option value="docx">DOCX</option>
+                </select>
+              </div>
+            )}
+
+            {/* Search button - always visible in edit mode */}
+            {isEditing && (
+              <Button
+                onClick={() => setShowSearchPanel(!showSearchPanel)}
+                size="sm"
+                variant="outline"
+                className="border-blue-300 text-blue-700 hover:bg-blue-50 ml-auto"
+              >
+                <Search className="h-4 w-4 mr-1" />
+                Search & Replace
+              </Button>
+            )}
           </div>
         </div>
 
