@@ -33,11 +33,11 @@ function LandingPage() {
             <div className="text-center lg:text-left">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
                 Professional Transcription
-                <span className="block text-[#b29dd9]">Made Simple</span>
+                <span className="block text-[#b29dd9]">& Dictation Services</span>
               </h1>
               <p className="text-lg md:text-xl text-gray-300 mb-8 max-w-xl mx-auto lg:mx-0">
-                Accurate, secure, and reliable transcription services for legal professionals,
-                businesses, and individuals across Canada.
+                Built by a transcriptionist — designed for real-world workflows. 
+                Get accurate, professionally formatted transcripts and finished documents without the back-and-forth.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <Button
@@ -45,8 +45,8 @@ function LandingPage() {
                   size="lg"
                   className="bg-[#b29dd9] hover:bg-[#9d87c7] text-white text-lg px-15 py-4"
                 >
-                  <Link href="/signup">
-                    Get Started Free
+                  <Link href="/signin">
+                    Start Transcription
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
@@ -56,7 +56,7 @@ function LandingPage() {
                   size="lg"
                   className="border-2 border-white !bg-white !text-[#003366] hover:!bg-gray-50 hover:!text-[#003366] text-lg px-8 py-4 font-medium opacity-100"
                 >
-                  <Link href="/pricing">View Pricing</Link>
+                  <Link href="/signin">Submit Dictation</Link>
                 </Button>
               </div>
             </div>
@@ -289,18 +289,18 @@ function LandingPage() {
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">
-            Ready to Get Started?
+            Get Accurate Transcripts or Fully Prepared Documents — Without the Back-and-Forth
           </h2>
           <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-            Join thousands of professionals who trust Talk To Text Canada 
-            for their transcription needs.
+            <span className="block mb-4"><strong>Transcription:</strong> Convert audio into structured transcripts.</span>
+            <span className="block"><strong>Dictation:</strong> Upload instructions/templates and receive finished documents.</span>
           </p>
           <Button
             asChild
             size="lg"
             className="bg-[#b29dd9] hover:bg-[#9d87c7] text-white text-lg px-8 py-3"
           >
-            <Link href="/signup">
+            <Link href="/signin">
               Start Your Free Account
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
