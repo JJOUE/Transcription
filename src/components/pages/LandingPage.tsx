@@ -32,21 +32,36 @@ function LandingPage() {
             {/* Text Content */}
             <div className="text-center lg:text-left">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-                Professional Transcription
-                <span className="block text-[#b29dd9]">Made Simple</span>
+                Transcription & Dictation Built for Accuracy, Speed, and Real Workflows
               </h1>
-              <p className="text-lg md:text-xl text-gray-300 mb-8 max-w-xl mx-auto lg:mx-0">
-                Accurate, secure, and reliable transcription services for legal professionals,
-                businesses, and individuals across Canada.
+              <p className="text-lg md:text-xl text-gray-300 mb-4 max-w-xl mx-auto lg:mx-0">
+                A transcription platform built by a transcriptionist for transcriptionists, and for business professionals who need more accurate transcripts.
               </p>
+              <p className="text-base text-gray-200 mb-8 max-w-xl mx-auto lg:mx-0">
+                Designed to ease workflow, reduce back-and-forth, and deliver cleaner, ready-to-use transcripts every time.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto lg:mx-0 mb-10 text-left">
+                <div className="rounded-3xl bg-white/10 p-4">
+                  <p className="text-sm uppercase tracking-[0.2em] text-[#b29dd9] mb-2">Step 1</p>
+                  <p className="font-semibold text-white">Upload your audio or dictation file</p>
+                </div>
+                <div className="rounded-3xl bg-white/10 p-4">
+                  <p className="text-sm uppercase tracking-[0.2em] text-[#b29dd9] mb-2">Step 2</p>
+                  <p className="font-semibold text-white">Choose AI, human, or hybrid transcription</p>
+                </div>
+                <div className="rounded-3xl bg-white/10 p-4">
+                  <p className="text-sm uppercase tracking-[0.2em] text-[#b29dd9] mb-2">Step 3</p>
+                  <p className="font-semibold text-white">Download accurate, ready-to-use transcripts</p>
+                </div>
+              </div>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <Button
                   asChild
                   size="lg"
                   className="bg-[#b29dd9] hover:bg-[#9d87c7] text-white text-lg px-15 py-4"
                 >
-                  <Link href="/signup">
-                    Get Started Free
+                  <Link href="/signin">
+                    Start Transcription
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
@@ -56,7 +71,7 @@ function LandingPage() {
                   size="lg"
                   className="border-2 border-white !bg-white !text-[#003366] hover:!bg-gray-50 hover:!text-[#003366] text-lg px-8 py-4 font-medium opacity-100"
                 >
-                  <Link href="/pricing">View Pricing</Link>
+                  <Link href="/signup">Create Account</Link>
                 </Button>
               </div>
             </div>
@@ -104,8 +119,7 @@ function LandingPage() {
                   AI Transcription
                 </h3>
                 <p className="text-gray-600 mb-6">
-                  Fast, automated transcription with high accuracy. Perfect for quick turnarounds 
-                  and cost-effective solutions.
+                  Fast AI transcription in Canada with high accuracy. Perfect for quick turnarounds and cost-effective results.
                 </p>
                 <ul className="text-sm text-gray-600 space-y-2">
                   <li className="flex items-center">
@@ -139,8 +153,7 @@ function LandingPage() {
                   Human Transcription
                 </h3>
                 <p className="text-gray-600 mb-6">
-                  Professional human transcribers ensure the highest accuracy for legal 
-                  and business-critical documents.
+                  Professional human transcription for legal and business-critical documents in Canada, with accuracy you can trust.
                 </p>
                 <ul className="text-sm text-gray-600 space-y-2">
                   <li className="flex items-center">
@@ -174,8 +187,7 @@ function LandingPage() {
                   Hybrid Review
                 </h3>
                 <p className="text-gray-600 mb-6">
-                  AI speed with human precision. Get the best of both worlds with 
-                  AI transcription reviewed by professionals.
+                  Hybrid transcription review combining AI speed with human editing for more accurate Canadian transcripts.
                 </p>
                 <ul className="text-sm text-gray-600 space-y-2">
                   <li className="flex items-center">
@@ -289,18 +301,18 @@ function LandingPage() {
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">
-            Ready to Get Started?
+            Get Accurate Transcripts or Fully Prepared Documents — Without the Back-and-Forth
           </h2>
           <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-            Join thousands of professionals who trust Talk To Text Canada 
-            for their transcription needs.
+            <span className="block mb-4"><strong>Transcription:</strong> Convert audio into structured transcripts.</span>
+            <span className="block"><strong>Dictation:</strong> Upload instructions/templates and receive finished documents.</span>
           </p>
           <Button
             asChild
             size="lg"
             className="bg-[#b29dd9] hover:bg-[#9d87c7] text-white text-lg px-8 py-3"
           >
-            <Link href="/signup">
+            <Link href="/signin">
               Start Your Free Account
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
