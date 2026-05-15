@@ -122,9 +122,15 @@ function LandingPage() {
                   <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Editable transcripts</li>
                   <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />PDF, DOCX, TXT, SRT, VTT</li>
                 </ul>
+
+                <Button asChild className="mt-6 w-full bg-[#003366] hover:bg-[#002244] text-white">
+                  <Link href="/pricing?service=ai">
+                    View AI Pricing
+                  </Link>
+                </Button>
               </CardContent>
             </Card>
-
+            
             <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
               <CardContent className="p-8 text-center">
                 <div className="w-16 h-16 bg-[#b29dd9] rounded-full flex items-center justify-center mx-auto mb-6">
@@ -139,6 +145,12 @@ function LandingPage() {
                   <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Professional formatting</li>
                   <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Locked PDF or DOCX options</li>
                 </ul>
+
+                  <Button asChild className="mt-6 w-full bg-[#003366] hover:bg-[#002244] text-white">
+                    <Link href="/pricing?service=human">
+                      View Human Pricing
+                    </Link>
+                  </Button>
               </CardContent>
             </Card>
 
@@ -156,6 +168,12 @@ function LandingPage() {
                   <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Human reviewed</li>
                   <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />PDF, DOCX, TXT, SRT, VTT</li>
                 </ul>
+
+                <Button asChild className="mt-6 w-full bg-[#003366] hover:bg-[#002244] text-white">
+                  <Link href="/pricing?service=hybrid">
+                    View Hybrid Pricing
+                  </Link>
+                </Button>
               </CardContent>
             </Card>
 
@@ -173,6 +191,12 @@ function LandingPage() {
                   <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Court and office documents</li>
                   <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Editable DOCX and PDF options</li>
                 </ul>
+
+                <Button asChild className="mt-6 w-full bg-[#72629E] hover:bg-[#5D5186] text-white">
+                  <Link href="/pricing?service=dictation">
+                    View Dictation Pricing
+                  </Link>
+                </Button>
               </CardContent>
             </Card>
           </div>
