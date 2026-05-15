@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Check, Star, Clock, Users, Zap, CreditCard } from 'lucide-react';
+import { Check, Star, Clock, Users, Zap, CreditCard, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -50,7 +50,8 @@ export function PricingPage() {
   const packagesByType = {
     ai: activePackages.filter(pkg => pkg.type === 'ai').sort((a, b) => a.minutes - b.minutes),
     hybrid: activePackages.filter(pkg => pkg.type === 'hybrid').sort((a, b) => a.minutes - b.minutes),
-    human: activePackages.filter(pkg => pkg.type === 'human').sort((a, b) => a.minutes - b.minutes)
+    human: activePackages.filter(pkg => pkg.type === 'human').sort((a, b) => a.minutes - b.minutes),
+    dictation: []
   };
 
   // Add-ons data
@@ -69,34 +70,44 @@ export function PricingPage() {
     }
   ];
 
-  const getTypeInfo = (type: string) => {
-    switch (type) {
-      case 'ai':
-        return {
-          title: 'AI Transcription Packages',
-          subtitle: 'Fast, automated transcription delivered within 60 minutes',
-          icon: Zap,
-          label: 'AI Transcription'
-        };
-      case 'hybrid':
-        return {
-          title: 'Hybrid Transcription Packages',
-          subtitle: 'AI transcription with human review - delivered in 3-5 business days',
-          icon: Users,
-          label: 'Hybrid (AI + Human)'
-        };
-      case 'human':
-        return {
-          title: '100% Human Transcription Packages',
-          subtitle: 'Professional human transcription - delivered in 3-5 business days',
-          icon: Check,
-          label: '100% Human'
-        };
-      default:
-        return null;
-    }
-  };
+const getTypeInfo = (type: string) => {
+  switch (type) {
+    case 'ai':
+      return {
+        title: 'AI Transcription Packages',
+        subtitle: 'Fast, automated transcription delivered within 60 minutes',
+        icon: Zap,
+        label: 'AI Transcription'
+      };
 
+    case 'hybrid':
+      return {
+        title: 'Hybrid Transcription Packages',
+        subtitle: 'AI transcription with human review - delivered in 3-5 business days',
+        icon: Users,
+        label: 'Hybrid (AI + Human)'
+      };
+
+    case 'human':
+      return {
+        title: '100% Human Transcription Packages',
+        subtitle: 'Professional human transcription - delivered in 3-5 business days',
+        icon: Check,
+        label: '100% Human'
+      };
+
+    case 'dictation':
+      return {
+        title: 'Dictation to Documents',
+        subtitle: 'Upload dictated instructions and receive polished finished documents',
+        icon: FileText,
+        label: 'Dictation'
+      };
+
+    default:
+      return null;
+  }
+};
   return (
     <div className="min-h-screen bg-white">
       <Header />
@@ -133,7 +144,7 @@ export function PricingPage() {
             </div>
           ) : (
             <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
-              <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-3 mb-12">
+              <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-4 mb-12">
                 <TabsTrigger value="ai" className="flex items-center justify-center">
                   <Zap className="h-4 w-4 mr-2" />
                   AI Transcription
@@ -146,15 +157,103 @@ export function PricingPage() {
                   <Check className="h-4 w-4 mr-2" />
                   100% Human
                 </TabsTrigger>
+                <TabsTrigger value="dictation" className="flex items-center justify-center">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Dictation
+                </TabsTrigger>
               </TabsList>
 
               {Object.entries(packagesByType).map(([type, packages]) => (
                 <TabsContent key={type} value={type}>
-                  {packages.length === 0 ? (
-                    <div className="text-center py-12">
-                      <p className="text-gray-500">No packages available at the moment.</p>
-                    </div>
-                  ) : (
+                  {type === 'dictation' ? (
+                  <div className="max-w-5xl mx-auto">
+                    <Card className="border-0 shadow-lg">
+                      <CardContent className="p-10">
+                        <div className="text-center mb-10">
+                          <h3 className="text-3xl font-bold text-[#003366] mb-4">
+                            Dictation to Documents
+                          </h3>
+                          
+                          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                            Have you ever needed documents typed up but didn’t have an assistant or the time to do it yourself?
+                          </p>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
+                          <div>
+                            <h4 className="text-xl font-semibold text-[#003366] mb-4">
+                              How It Works
+                            </h4>
+                            
+            <p className="text-gray-600 mb-6">
+              Talk to Text Canada can act as your transcription and dictation assistant.
+            </p>
+
+            <p className="text-gray-600 mb-6">
+              Simply upload your dictated instructions and, if desired, upload your own template or explain how you would like the document formatted.
+            </p>
+
+            <p className="text-gray-600">
+              We will prepare your document according to your instructions and return it as a polished, ready-to-use file.
+            </p>
+          </div>
+
+          <div>
+            <h4 className="text-xl font-semibold text-[#003366] mb-4">
+              Ideal For
+            </h4>
+
+            <ul className="space-y-3">
+              {[
+                'Letters',
+                'Case notes',
+                'Reports',
+                'Summaries',
+                'Court documents',
+                'Office correspondence'
+              ].map((item) => (
+                <li key={item} className="flex items-center text-gray-600">
+                  <Check className="h-5 w-5 text-green-500 mr-3" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-8 p-6 bg-gray-50 rounded-2xl">
+              <p className="text-sm uppercase tracking-[0.2em] text-[#72629E] mb-2">
+                Starting At
+              </p>
+
+              <div className="text-4xl font-bold text-[#003366] mb-2">
+                CA$1.75/min
+              </div>
+
+              <p className="text-sm text-gray-500">
+                Minimum charge applies. Complex formatting or large projects may require custom pricing.
+              </p>
+            </div>
+          </div>
+
+        </div>
+
+        <div className="text-center mt-10">
+          <Button
+            asChild
+            className="bg-[#72629E] hover:bg-[#5D5186] text-white px-8 py-3"
+          >
+            <Link href="/signup">
+              Start a Dictation Job
+            </Link>
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+) : packages.length === 0 ? (
+  <div className="text-center py-12">
+    <p className="text-gray-500">No packages available at the moment.</p>
+  </div>
+) : (
                     <>
                       <div className="text-center mb-8">
                         <h3 className="text-2xl font-bold text-[#003366] mb-2">
