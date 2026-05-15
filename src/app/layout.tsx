@@ -15,14 +15,14 @@ if (typeof window === 'undefined') {
 }
 
 export const metadata: Metadata = {
-  title: "Talk to Text Canada",
-  description: "Professional transcription services for legal professionals, businesses, and individuals across Canada",
+  title: "Talk to Text Canada | Canadian Transcription & Dictation Services",
+  description: "Professional transcription services for transcriptionists, legal professionals, businesses, and individuals across Canada",
   metadataBase: new URL('https://www.talktotext.ca'),
   alternates: {
     canonical: '/',
   },
   openGraph: {
-    title: "Talk to Text Canada",
+    title: "Talk to Text Canada | Canadian Transcription & Dictation Services",
     description: "Professional transcription services for legal professionals, businesses, and individuals across Canada",
     url: 'https://www.talktotext.ca',
     siteName: 'Talk to Text Canada',
