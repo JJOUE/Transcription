@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, CheckCircle } from 'lucide-react';
+import { ArrowRight, CheckCircle, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Header } from '@/components/layout/Header';
@@ -24,29 +24,44 @@ function LandingPage() {
           backgroundRepeat: 'no-repeat'
         }}
       >
-        {/* Overlay for better text readability */}
         <div className="absolute inset-0 bg-gradient-to-br from-[#003366]/80 to-[#2c3e50]/80"></div>
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-            {/* Text Content */}
             <div className="text-center lg:text-left">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-                Professional Transcription
-                <span className="block text-[#b29dd9]">Made Simple</span>
+                Canadian Transcription & Dictation Services Built by a Professional Transcriptionist
               </h1>
-              <p className="text-lg md:text-xl text-gray-300 mb-8 max-w-xl mx-auto lg:mx-0">
-                Accurate, secure, and reliable transcription services for legal professionals,
-                businesses, and individuals across Canada.
+              <p className="text-lg md:text-xl text-gray-300 mb-4 max-w-xl mx-auto lg:mx-0">
+                Talk to Text Canada is built by a transcriptionist for transcriptionists, legal professionals, businesses, and anyone who needs cleaner, more accurate transcripts and finished documents.
               </p>
+              <p className="text-base text-gray-200 mb-8 max-w-xl mx-auto lg:mx-0">
+                Designed to lighten workflow, reduce editing time, and deliver ready-to-use files at a fraction of traditional transcription costs.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto lg:mx-0 mb-10 text-left">
+                <div className="rounded-3xl bg-white/10 p-4">
+                  <p className="text-sm uppercase tracking-[0.2em] text-[#b29dd9] mb-2">Step 1</p>
+                  <p className="font-semibold text-white">Upload your audio or dictation file</p>
+                </div>
+                <div className="rounded-3xl bg-white/10 p-4">
+                  <p className="text-sm uppercase tracking-[0.2em] text-[#b29dd9] mb-2">Step 2</p>
+                  <p className="font-semibold text-white">Choose transcription or dictation-to-document service</p>
+                </div>
+                <div className="rounded-3xl bg-white/10 p-4">
+                  <p className="text-sm uppercase tracking-[0.2em] text-[#b29dd9] mb-2">Step 3</p>
+                  <p className="font-semibold text-white">Download transcripts or finished documents</p>
+                </div>
+              </div>
+
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <Button
                   asChild
                   size="lg"
                   className="bg-[#b29dd9] hover:bg-[#9d87c7] text-white text-lg px-15 py-4"
                 >
-                  <Link href="/signup">
-                    Get Started Free
+                  <Link href="/signin">
+                    Start Transcription
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
@@ -56,9 +71,13 @@ function LandingPage() {
                   size="lg"
                   className="border-2 border-white !bg-white !text-[#003366] hover:!bg-gray-50 hover:!text-[#003366] text-lg px-8 py-4 font-medium opacity-100"
                 >
-                  <Link href="/pricing">View Pricing</Link>
+                  <Link href="/signup">Create Account</Link>
                 </Button>
               </div>
+
+              <p className="text-sm text-gray-200 mt-6 max-w-xl mx-auto lg:mx-0">
+                Download options may include PDF, locked PDF, DOCX, TXT, SRT, and VTT depending on the service selected.
+              </p>
             </div>
 
             {/* Mascot Image */}
@@ -81,116 +100,103 @@ function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-[#003366] mb-4">
-              Why Choose Talk To Text Canada?
+              Choose the Service That Fits Your Workflow
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              We offer three transcription modes to meet your specific needs and budget.
+              We offer AI, human, hybrid, and dictation-to-document services to meet different accuracy, budget, and workflow needs.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
               <CardContent className="p-8 text-center">
                 <div className="w-16 h-16 bg-[#b29dd9] rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Image
-                    src="/images/AI.svg"
-                    alt="AI Transcription"
-                    width={48}
-                    height={48}
-                    className="w-12 h-12"
-                  />
+                  <Image src="/images/AI.svg" alt="AI Transcription" width={48} height={48} className="w-12 h-12" />
                 </div>
-                <h3 className="text-xl font-semibold text-[#003366] mb-4">
-                  AI Transcription
-                </h3>
+                <h3 className="text-xl font-semibold text-[#003366] mb-4">AI Transcription</h3>
                 <p className="text-gray-600 mb-6">
-                  Fast, automated transcription with high accuracy. Perfect for quick turnarounds 
-                  and cost-effective solutions.
+                  Fast AI transcription for clear audio, meetings, interviews, notes, and general recordings.
                 </p>
                 <ul className="text-sm text-gray-600 space-y-2">
-                  <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    Instant processing
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    Editable transcripts
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    Most affordable
-                  </li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Instant processing</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Editable transcripts</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />PDF, DOCX, TXT, SRT, VTT</li>
                 </ul>
+
+                <Button asChild className="mt-6 w-full bg-[#003366] hover:bg-[#002244] text-white">
+                  <Link href="/pricing?service=ai">
+                    View AI Pricing
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+            
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardContent className="p-8 text-center">
+                <div className="w-16 h-16 bg-[#b29dd9] rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Image src="/images/Human.svg" alt="Human Transcription" width={48} height={48} className="w-12 h-12" />
+                </div>
+                <h3 className="text-xl font-semibold text-[#003366] mb-4">Human Transcription</h3>
+                <p className="text-gray-600 mb-6">
+                  Professional human transcription for legal, business, academic, and complex audio.
+                </p>
+                <ul className="text-sm text-gray-600 space-y-2">
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Human-prepared accuracy</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Professional formatting</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Locked PDF or DOCX options</li>
+                </ul>
+
+                  <Button asChild className="mt-6 w-full bg-[#003366] hover:bg-[#002244] text-white">
+                    <Link href="/pricing?service=human">
+                      View Human Pricing
+                    </Link>
+                  </Button>
               </CardContent>
             </Card>
 
             <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
               <CardContent className="p-8 text-center">
                 <div className="w-16 h-16 bg-[#b29dd9] rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Image
-                    src="/images/Human.svg"
-                    alt="Human Transcription"
-                    width={48}
-                    height={48}
-                    className="w-12 h-12"
-                  />
+                  <Image src="/images/Hybrid.svg" alt="Hybrid Review" width={56} height={56} className="w-14 h-14" />
                 </div>
-                <h3 className="text-xl font-semibold text-[#003366] mb-4">
-                  Human Transcription
-                </h3>
+                <h3 className="text-xl font-semibold text-[#003366] mb-4">Hybrid Review</h3>
                 <p className="text-gray-600 mb-6">
-                  Professional human transcribers ensure the highest accuracy for legal 
-                  and business-critical documents.
+                  AI speed combined with human review for cleaner, more reliable Canadian transcripts.
                 </p>
                 <ul className="text-sm text-gray-600 space-y-2">
-                  <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    99%+ accuracy
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    Legal expertise
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    Quality guaranteed
-                  </li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Fast + accurate</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Human reviewed</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />PDF, DOCX, TXT, SRT, VTT</li>
                 </ul>
+
+                <Button asChild className="mt-6 w-full bg-[#003366] hover:bg-[#002244] text-white">
+                  <Link href="/pricing?service=hybrid">
+                    View Hybrid Pricing
+                  </Link>
+                </Button>
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow ring-2 ring-[#b29dd9]">
               <CardContent className="p-8 text-center">
                 <div className="w-16 h-16 bg-[#b29dd9] rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Image
-                    src="/images/Hybrid.svg"
-                    alt="Hybrid Review"
-                    width={56}
-                    height={56}
-                    className="w-14 h-14"
-                  />
+                  <FileText className="h-9 w-9 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold text-[#003366] mb-4">
-                  Hybrid Review
-                </h3>
+                <h3 className="text-xl font-semibold text-[#003366] mb-4">Dictation to Documents</h3>
                 <p className="text-gray-600 mb-6">
-                  AI speed with human precision. Get the best of both worlds with 
-                  AI transcription reviewed by professionals.
+                  Upload dictated audio and receive a finished document — not just a transcript.
                 </p>
                 <ul className="text-sm text-gray-600 space-y-2">
-                  <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    Fast + accurate
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    Human verified
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    Best value
-                  </li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Letters, case notes, reports</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Court and office documents</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Editable DOCX and PDF options</li>
                 </ul>
+
+                <Button asChild className="mt-6 w-full bg-[#72629E] hover:bg-[#5D5186] text-white">
+                  <Link href="/pricing?service=dictation">
+                    View Dictation Pricing
+                  </Link>
+                </Button>
               </CardContent>
             </Card>
           </div>
@@ -202,72 +208,51 @@ function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-[#003366] mb-4">
-              Trusted by Legal Professionals
+              Built for Legal, Business, and Professional Workflows
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Secure, confidential, and compliant with Canadian privacy regulations.
+              Secure, confidential, and designed to support practical transcript and document preparation.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="flex items-center space-x-4">
               <div className="w-16 h-16 rounded-full overflow-hidden border border-gray-200 flex-shrink-0">
-                <Image
-                  src="/TBLP/Accuracy rate.svg"
-                  alt="Accuracy"
-                  width={64}
-                  height={64}
-                  className="w-full h-full object-cover"
-                />
+                <Image src="/TBLP/Accuracy rate.svg" alt="Accuracy" width={64} height={64} className="w-full h-full object-cover" />
               </div>
               <div className="text-left">
                 <div className="text-3xl font-bold text-[#003366] mb-2">99.5%</div>
-                <div className="text-gray-600">Accuracy Rate</div>
+                <div className="text-gray-600">Accuracy Goal</div>
               </div>
             </div>
+
             <div className="flex items-center space-x-4">
               <div className="w-16 h-16 rounded-full overflow-hidden border border-gray-200 flex-shrink-0">
-                <Image
-                  src="/TBLP/24-7.svg"
-                  alt="Processing"
-                  width={64}
-                  height={64}
-                  className="w-full h-full object-cover"
-                />
+                <Image src="/TBLP/24-7.svg" alt="Processing" width={64} height={64} className="w-full h-full object-cover" />
               </div>
               <div className="text-left">
                 <div className="text-3xl font-bold text-[#003366] mb-2">24/7</div>
-                <div className="text-gray-600">Processing</div>
+                <div className="text-gray-600">AI Processing</div>
               </div>
             </div>
+
             <div className="flex items-center space-x-4">
               <div className="w-16 h-16 rounded-full overflow-hidden border border-gray-200 flex-shrink-0">
-                <Image
-                  src="/TBLP/SOC 2.svg"
-                  alt="Compliance"
-                  width={64}
-                  height={64}
-                  className="w-full h-full object-cover"
-                />
+                <Image src="/TBLP/SOC 2.svg" alt="Compliance" width={64} height={64} className="w-full h-full object-cover" />
               </div>
               <div className="text-left">
-                <div className="text-3xl font-bold text-[#003366] mb-2">SOC 2</div>
-                <div className="text-gray-600">Compliant</div>
+                <div className="text-3xl font-bold text-[#003366] mb-2">Secure</div>
+                <div className="text-gray-600">Client Workflow</div>
               </div>
             </div>
+
             <div className="flex items-center space-x-4">
               <div className="w-16 h-16 rounded-full overflow-hidden border border-gray-200 flex-shrink-0">
-                <Image
-                  src="/TBLP/10K+.svg"
-                  alt="Files Processed"
-                  width={64}
-                  height={64}
-                  className="w-full h-full object-cover"
-                />
+                <Image src="/TBLP/10K+.svg" alt="Files Processed" width={64} height={64} className="w-full h-full object-cover" />
               </div>
               <div className="text-left">
-                <div className="text-3xl font-bold text-[#003366] mb-2">10k+</div>
-                <div className="text-gray-600">Files Processed</div>
+                <div className="text-3xl font-bold text-[#003366] mb-2">Files</div>
+                <div className="text-gray-600">Direct Downloads</div>
               </div>
             </div>
           </div>
@@ -284,23 +269,22 @@ function LandingPage() {
           backgroundRepeat: 'no-repeat'
         }}
       >
-        {/* Overlay for better text readability */}
         <div className="absolute inset-0 bg-[#003366]/80"></div>
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">
-            Ready to Get Started?
+            From Audio to Finished Work — Faster
           </h2>
           <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-            Join thousands of professionals who trust Talk To Text Canada 
-            for their transcription needs.
+            <span className="block mb-4"><strong>Transcription:</strong> Convert audio into structured transcripts with AI, human, or hybrid options.</span>
+            <span className="block"><strong>Dictation:</strong> Upload spoken instructions and receive polished letters, case notes, reports, court documents, or other finished documents.</span>
           </p>
           <Button
             asChild
             size="lg"
             className="bg-[#b29dd9] hover:bg-[#9d87c7] text-white text-lg px-8 py-3"
           >
-            <Link href="/signup">
+            <Link href="/signin">
               Start Your Free Account
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
