@@ -105,8 +105,12 @@
       <div class="muted" id="saveStatus">Unsaved</div>
       <div style="width:1px;height:20px;background:#ffffff4d;margin:0 6px;"></div>
       <div class="toolbar">
-        <button class="btn small" id="exportHtml">Export HTML</button>
-        <button class="btn small" id="exportTxt">Export TXT</button>
+        <button class="btn small" data-cmd="bold"><b>B</b></button>
+        <button class="btn small" data-cmd="italic"><i>I</i></button>
+        <button class="btn small" data-cmd="underline"><u>U</u></button>
+        <button class="btn small" id="addParagraph">¶</button>
+        <button class="btn small" id="openSearchReplace">Search & Replace</button>
+        <span class="muted">Canadian spellcheck active</span>
       </div>
     </div>
   </header>
@@ -245,7 +249,26 @@
 
     </aside>
   </main>
-
+  <!-- Search Replace Modal -->
+  <div class="modal-backdrop" id="searchReplaceModal">
+    <div class="modal">
+      <header>
+        <h3>Search & Replace</h3>
+      </header>
+      
+      <label>Find</label>
+      <input type="text" id="searchText" placeholder="Search text">
+      
+      <label style="margin-top:10px;">Replace With</label>
+      <input type="text" id="replaceText" placeholder="Replacement text">
+      
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+        <button class="btn" id="closeSearchReplace">Cancel</button>
+        <button class="btn small" id="findNextBtn">Find Next</button>
+        <button class="btn navy" id="replaceAllBtn">Replace All</button>
+      </div>
+    </div>
+</div>
   <!-- Speaker Map Modal -->
   <div class="modal-backdrop" id="mapModal">
     <div class="modal">
