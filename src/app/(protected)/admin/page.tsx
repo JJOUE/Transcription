@@ -168,8 +168,7 @@ export default function AdminPage() {
           getAllUsers(),
           getDocs(query(
             collection(db, 'transcriptions'),
-            orderBy('createdAt', 'desc'),
-            limit(3)
+            orderBy('createdAt', 'desc')
           )),
           getAllTransactions(),
           getDocs(query(collection(db, 'packages'))),
