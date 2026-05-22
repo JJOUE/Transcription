@@ -368,7 +368,7 @@ export function CreditProvider({ children }: CreditProviderProps) {
     try {
       const db = getFirestore();
       const usersRef = collection(db, 'users');
-      const q = query(usersRef, orderBy('createdAt', 'desc'), limit(100));
+      const q = query(usersRef, orderBy('createdAt', 'desc'));
       
       const snapshot = await getDocs(q);
       const allUsers = snapshot.docs.map(doc => ({

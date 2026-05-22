@@ -17,6 +17,7 @@ import {
   TranscriptionJob
 } from '@/lib/firebase/transcriptions';
 import { formatDuration } from '@/lib/utils';
+import { formatDistanceToNow } from 'date-fns';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, updateDoc, getFirestore, Timestamp } from 'firebase/firestore';
 
@@ -313,39 +314,101 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
 
   // Check if this is a stuck processing job
   const isStuckProcessing = job.status === 'processing' && !job.speechmaticsJobId;
+  const createdDate =
+    job.createdAt instanceof Date
+      ? job.createdAt
+      : job.createdAt?.toDate?.();
+            
+  const waitingTime = createdDate
+    ? formatDistanceToNow(createdDate, { addSuffix: true })
+    : 'Unknown';
+    
+  const waitingClass =
+    createdDate
+      ? Date.now() - createdDate.getTime() > 86400000
+        ? 'text-red-600 font-semibold'
+        : Date.now() - createdDate.getTime() > 7200000
+        ? 'text-amber-600 font-medium'
+        : 'text-gray-500'
+      : 'text-gray-500';
 
   return (
     <>
       <div
         className={`p-4 rounded-lg border transition-colors ${
           job.rushDelivery
-            ? 'bg-orange-50 border-orange-300'
-            : 'bg-gray-50 border-gray-200'
-        }`}
+            ? 'bg-orange-50 border-orange-400 border-l-4 border-l-red-500 shadow-sm'
+              : 'bg-gray-50 border-gray-200'
+      }`}
       >
         {/* Job Info Row */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center flex-wrap gap-2 mb-1">
               {job.rushDelivery && (
-                <span className="text-amber-500 text-lg" title="Rush Delivery">⚡</span>
+                <span
+                  className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-300"
+                  title="Rush Delivery"
+                >
+                  ⚡ RUSH
+                </span>
               )}
+                
               <span className="font-medium text-[#003366] truncate">
                 {job.originalFilename || job.filename || 'Unknown file'}
               </span>
               <StatusBadge status={job.status} />
-              {job.multipleSpeakers && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                  👥 {job.speakerCount || 3}+ Speakers
-                </span>
-              )}
             </div>
-            <div className="flex items-center flex-wrap gap-3 text-sm text-gray-600">
-              <span>{userEmail || 'Unknown user'}</span>
-              <span className="capitalize">{job.mode}</span>
-              <span>{formatDuration(job.duration || 0)}</span>
+
+      <div className="space-y-2"> 
+
+        {/* Client Info */}
+        <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-sm text-gray-700">
+            <span className="font-medium text-gray-900">
+              {userEmail || 'Unknown user'}
+            </span>
+
+            <span
+              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                job.mode === 'ai'
+                  ? 'bg-indigo-100 text-indigo-800'
+                  : job.mode === 'human'
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : job.mode === 'hybrid'
+                  ? 'bg-purple-100 text-purple-800'
+                  : 'bg-amber-100 text-amber-800'
+              }`}
+
+            >
+              {job.mode === 'ai'
+                ? 'AI'
+                : job.mode === 'human'
+                ? 'Human'
+                : job.mode === 'hybrid'
+                ? 'Hybrid'
+                : 'Office'}
+            </span> 
+
+            <span>
+              {formatDuration(job.duration || 0)}
+            </span>
+        </div>
+
+        {/* Queue Metadata */}
+        <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+           {job.multipleSpeakers && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
+              👥 {job.speakerCount || 3}+ Speakers
+            </span>
+          )}
+
+              <span className={`${waitingClass} whitespace-nowrap`}>
+                Submitted {waitingTime}
+              </span>
+
               <CreditDisplay amount={job.creditsUsed || 0} size="sm" />
             </div>
+
           </div>
         </div>
 

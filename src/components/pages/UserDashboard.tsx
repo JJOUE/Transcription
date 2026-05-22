@@ -430,9 +430,12 @@ export function UserDashboard() {
           {/* Recent Jobs */}
           <div className="lg:col-span-2">
             <Card className="border-0 shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-row items-start justify-between">
                 <CardTitle className="text-lg font-semibold text-[#003366]">
-                  Recent Jobs
+                  My Projects
+                  <p className="text-sm font-normal text-gray-500 mt-1">
+                    Access your active and completed transcription projects
+                  </p>
                 </CardTitle>
                 <Button 
                   size="sm" 
@@ -453,25 +456,40 @@ export function UserDashboard() {
                     </div>
                   )}
                   
-                  {!jobsLoading && recentJobs.map((job) => (
+                    <div className="mb-4">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                        Active Projects
+                        </h3>
+                    </div>
+
+                  {!jobsLoading &&
+                    recentJobs
+                    .filter((job) => job.status !== 'complete')
+                    .map((job) => (
+                      
                     <div
                       key={job.id}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                      className="flex items-center justify-between p-5 bg-white border border-gray-200 rounded-xl hover:border-[#003366] hover:shadow-sm transition-all"
                     >
                       <div className="flex-1">
-                        <div className="flex items-center space-x-3 mb-2">
-                          <h3 className="font-medium text-[#003366] truncate">
+                        <div className="flex items-center flex-wrap gap-2 mb-2">
+                          <h3 className="text-base font-semibold text-[#003366] truncate">
                             {job.originalFilename}
                           </h3>
                           <StatusBadge status={job.status} />
                         </div>
-                        <div className="flex items-center space-x-4 text-sm text-gray-600">
+                        <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
                           <span>
                             {job.mode === 'ai' ? 'AI Transcription' :
                              job.mode === 'hybrid' ? 'Hybrid Review' :
                              job.mode === 'human' ? 'Dictation & Human' : job.mode}
                           </span>
                           <span>{Math.ceil(job.duration / 60)} min</span>
+
+                          <span>
+                            {new Date(job.createdAt).toLocaleDateString()}
+                          </span>
+                          
                           <span className="text-[#003366] font-medium">CA${((job.creditsUsed || 0) / 100).toFixed(2)}</span>
                         </div>
                       </div>
@@ -484,7 +502,7 @@ export function UserDashboard() {
                             className="bg-white border border-[#003366] text-[#003366] hover:bg-[#003366] hover:text-white shadow-sm"
                           >
                             <Link href={`/transcript/${job.id}`}>
-                              View
+                              Open Workspace
                             </Link>
                           </Button>
                         )}
@@ -492,6 +510,63 @@ export function UserDashboard() {
                     </div>
                   ))}
                   
+                      <div className="pt-2 border-t border-gray-100">
+                        <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                          Completed Projects
+                        </h3>
+                      </div>
+
+                      {!jobsLoading &&
+                        recentJobs
+                          .filter((job) => job.status === 'complete')
+                          .map((job) => (
+                            
+                          <div
+                            key={job.id}
+                            className="flex items-center justify-between p-5 bg-white border border-gray-200 rounded-xl hover:border-[#003366] hover:shadow-sm transition-all"
+                          >
+                            <div className="flex-1">
+                              <div className="flex items-center flex-wrap gap-2 mb-2">
+                                <h3 className="text-base font-semibold text-[#003366] truncate">
+                                 {job.originalFilename}
+                                </h3>
+                                
+                                <StatusBadge status={job.status} />
+                              </div>
+                                 
+                              <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
+                                <span>
+                                  {job.mode === 'ai'
+                                    ? 'AI Transcription'
+                                    : job.mode === 'hybrid'
+                                    ? 'Hybrid Review'
+                                    : job.mode === 'human'
+                                    ? 'Dictation & Human'
+                                    : job.mode}
+                                </span>
+                                    
+                                <span>{Math.ceil(job.duration / 60)} min</span>
+                                    
+                                <span className="text-[#003366] font-medium">
+                                  CA${((job.creditsUsed || 0) / 100).toFixed(2)}
+                                </span>
+                              </div>
+                            </div>
+                                
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                 size="sm"
+                                 asChild
+                                 className="bg-white border border-[#003366] text-[#003366] hover:bg-[#003366] hover:text-white shadow-sm"
+                              >
+                                <Link href={`/transcript/${job.id}`}>
+                                  Open Workspace
+                                </Link>
+                              </Button>
+                            </div>
+                          </div>
+                  ))}
+                        
                   {!jobsLoading && recentJobs.length === 0 && (
                     <div className="text-center py-8 text-gray-500">
                       <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
@@ -508,7 +583,7 @@ export function UserDashboard() {
         {/* Recent Transactions */}
         <div className="mt-8">
           <Card className="border-0 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-row items-start justify-between">
               <CardTitle className="text-lg font-semibold text-[#003366]">
                 Recent Credit Activity
               </CardTitle>
