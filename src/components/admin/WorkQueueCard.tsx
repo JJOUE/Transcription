@@ -17,7 +17,6 @@ import {
   TranscriptionJob
 } from '@/lib/firebase/transcriptions';
 import { formatDuration } from '@/lib/utils';
-import { formatDistanceToNow } from 'date-fns';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, updateDoc, getFirestore, Timestamp } from 'firebase/firestore';
 
@@ -320,7 +319,7 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
       : job.createdAt?.toDate?.();
             
   const waitingTime = createdDate
-    ? formatDistanceToNow(createdDate, { addSuffix: true })
+    ? createdDate.toLocaleDateString()
     : 'Unknown';
     
   const waitingClass =
