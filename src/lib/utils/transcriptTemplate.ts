@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import { Document, Packer, Paragraph, TextRun, AlignmentType, Header, Footer, Table, TableRow, TableCell, WidthType, TextDirection, PageBreak } from 'docx';
+import { Document, Packer, Paragraph, TextRun, AlignmentType, Header, Footer, Table, TableRow, TableCell, WidthType, TextDirection, PageBreak, ImageRun } from 'docx';
 import { TranscriptionJob, TranscriptSegment } from '@/lib/firebase/transcriptions';
 import { Timestamp } from 'firebase/firestore';
 
@@ -14,6 +14,30 @@ export interface TranscriptTemplateData {
   date: string;
   transcriptContent: string;
   timestampedTranscript?: TranscriptSegment[]; // New field for timestamped data
+}
+
+// Helper function to fetch and convert image to base64 for embedding in DOCX
+async function fetchImageAsBase64(imagePath: string): Promise<string> {
+  try {
+    const response = await fetch(imagePath);
+    if (!response.ok) {
+      console.warn(`Failed to fetch image from ${imagePath}`);
+      return '';
+    }
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.warn(`Error loading image ${imagePath}:`, error);
+    return '';
+  }
 }
 
 // Utility function to format seconds into MM:SS or HH:MM:SS format
@@ -555,35 +579,45 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
 }
 
 export async function exportTranscriptDOCX(templateData: TranscriptTemplateData, options?: ExportOptions): Promise<void> {
+  // Fetch logo for header
+  let logoBase64 = '';
+  try {
+    logoBase64 = await fetchImageAsBase64('/images/logo.png');
+  } catch (error) {
+    console.warn('Failed to load logo:', error);
+  }
+
   const doc = new Document({
     sections: [
       {
         headers: {
           default: new Header({
             children: [
-              // Professional header matching PDF with proper spacing
+              // Logo-only professional header
               new Paragraph({
-                children: [
-                  new TextRun({
-                    text: "TALK TO TEXT CANADA",
-                    bold: true,
-                    size: 36, // Match PDF header size
-                    color: "003366", // Match the brand color
+                children: logoBase64 ? [
+                  new ImageRun({
+                    data: logoBase64,
+                    transformation: {
+                      width: 110, // ~1.15 inches at 96 DPI
+                      height: 35,
+                    },
+                    type: 'base64',
                   }),
-                ],
+                ] : [new TextRun('')],
                 alignment: AlignmentType.LEFT,
-                spacing: { before: 200, after: 200 },
+                spacing: { before: 100, after: 200 },
               }),
-              // Header underline matching PDF
+              // Subtle separator line
               new Paragraph({
-                children: [new TextRun("")],
-                spacing: { after: 300 },
+                children: [new TextRun('')],
+                spacing: { after: 200 },
                 border: {
                   bottom: {
-                    color: "000000",
+                    color: "B29DD9",
                     space: 1,
                     style: "single",
-                    size: 8, // Slightly thicker to match PDF
+                    size: 4, // Subtle line
                   },
                 },
               }),
@@ -620,10 +654,10 @@ export async function exportTranscriptDOCX(templateData: TranscriptTemplateData,
           }),
         },
         children: [
-          // Spacing after header
+          // Minimal spacing after logo header
           new Paragraph({
             children: [new TextRun("")],
-            spacing: { after: 400 },
+            spacing: { after: 200 },
           }),
 
           // Metadata table - dynamically build rows for existing data only
