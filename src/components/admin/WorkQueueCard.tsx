@@ -360,55 +360,55 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
               <StatusBadge status={job.status} />
             </div>
 
-      <div className="space-y-2"> 
+            <div className="space-y-2"> 
 
-        {/* Client Info */}
-        <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-sm text-gray-700">
-            <span className="font-medium text-gray-900">
-              {userEmail || 'Unknown user'}
-            </span>
-
-            <span
-              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                job.mode === 'ai'
-                  ? 'bg-indigo-100 text-indigo-800'
-                  : job.mode === 'human'
-                  ? 'bg-emerald-100 text-emerald-800'
-                  : job.mode === 'hybrid'
-                  ? 'bg-purple-100 text-purple-800'
-                  : 'bg-amber-100 text-amber-800'
-              }`}
-
-            >
-              {job.mode === 'ai'
-                ? 'AI'
-                : job.mode === 'human'
-                ? 'Human'
-                : job.mode === 'hybrid'
-                ? 'Hybrid'
-                : 'Office'}
-            </span> 
-
-            <span>
-              {formatDuration(job.duration || 0)}
-            </span>
-        </div>
-
-        {/* Queue Metadata */}
-        <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
-           {job.multipleSpeakers && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
-              👥 {job.speakerCount || 3}+ Speakers
-            </span>
-          )}
-
-              <span className={`${waitingClass} whitespace-nowrap`}>
-                Submitted {waitingTime}
+              {/* Client Info */}
+              <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-sm text-gray-700">
+              <span className="font-medium text-gray-900">
+                {userEmail || 'Unknown user'}
               </span>
 
-              <CreditDisplay amount={job.creditsUsed || 0} size="sm" />
-            </div>
+              <span
+                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                  job.mode === 'ai'
+                    ? 'bg-indigo-100 text-indigo-800'
+                    : job.mode === 'human'
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : job.mode === 'hybrid'
+                    ? 'bg-purple-100 text-purple-800'
+                    : 'bg-amber-100 text-amber-800'
+                }`}
 
+              >
+                {job.mode === 'ai'
+                  ? 'AI'
+                  : job.mode === 'human'
+                  ? 'Human'
+                  : job.mode === 'hybrid'
+                  ? 'Hybrid'
+                  : 'Office'}
+              </span> 
+
+              <span>
+                {formatDuration(job.duration || 0)}
+              </span>
+              </div>
+
+              {/* Queue Metadata */}
+              <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+                 {job.multipleSpeakers && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
+                    👥 {job.speakerCount || 3}+ Speakers
+                  </span>
+                )}
+
+                <span className={`${waitingClass} whitespace-nowrap`}>
+                  Submitted {waitingTime}
+                </span>
+
+                <CreditDisplay amount={job.creditsUsed || 0} size="sm" />
+              </div>
+            </div>
           </div>
         </div>
 
