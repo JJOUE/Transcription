@@ -65,7 +65,11 @@ export function AdminLedger() {
           type: transaction.type,
           amount: transaction.amount,
           description: transaction.description,
-          date: transaction.createdAt instanceof Date ? transaction.createdAt : new Date(transaction.createdAt),
+          date: transaction.createdAt instanceof Date 
+            ? transaction.createdAt 
+            : transaction.createdAt?.toDate?.()
+            ? transaction.createdAt.toDate()
+            : new Date(transaction.createdAt),
           jobId: transaction.jobId || null,
           revenue: transaction.revenue || 0
         }));

@@ -84,7 +84,7 @@ export function UserDashboard() {
       } else if (job.createdAt instanceof Date) {
         startTime = job.createdAt;
       } else {
-        startTime = new Date(job.createdAt);
+        startTime = new Date(job.createdAt as unknown as number);
       }
       
       if (job.completedAt instanceof Timestamp) {
@@ -92,16 +92,7 @@ export function UserDashboard() {
       } else if (job.completedAt instanceof Date) {
         endTime = job.completedAt;
       } else {
-        endTime = new Date(job.completedAt);
-      }
-      
-      return sum + (endTime.getTime() - startTime.getTime());
-    }, 0);
-    
-    const avgMilliseconds = totalProcessingTime / completedJobs.length;
-    const avgMinutes = avgMilliseconds / (1000 * 60);
-    const avgHours = avgMinutes / 60;
-    
+        endTime = new Date(job.completedAt as unknown as number);
     // Format based on duration
     if (avgMinutes < 60) {
       return `${Math.round(avgMinutes)}min`;

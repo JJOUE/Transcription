@@ -122,7 +122,7 @@ export default function UserActivityPage() {
 
     const headers = ['Date', 'Type', 'Description', 'Amount'];
     const rows = transactions.map(tx => {
-      const date = tx.createdAt?.toDate ? tx.createdAt.toDate().toISOString() : new Date(tx.createdAt).toISOString();
+      const date = tx.createdAt?.toDate ? tx.createdAt.toDate().toISOString() : (tx.createdAt instanceof Date ? tx.createdAt.toISOString() : new Date(tx.createdAt).toISOString());
       return [
         date,
         tx.type,
@@ -426,6 +426,8 @@ export default function UserActivityPage() {
                   const isCredit = transaction.type === 'wallet_topup' || transaction.type === 'package_purchase';
                   const date = transaction.createdAt?.toDate
                     ? transaction.createdAt.toDate().toLocaleDateString()
+                    : transaction.createdAt instanceof Date
+                    ? transaction.createdAt.toLocaleDateString()
                     : new Date(transaction.createdAt).toLocaleDateString();
 
                   return (

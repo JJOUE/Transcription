@@ -670,6 +670,8 @@ export default function BillingPage() {
                           <p className="text-xs text-gray-500">
                             {transaction.createdAt instanceof Date
                               ? transaction.createdAt.toLocaleDateString()
+                              : transaction.createdAt?.toDate?.()
+                              ? transaction.createdAt.toDate().toLocaleDateString()
                               : new Date(transaction.createdAt).toLocaleDateString()}
                           </p>
                         </div>
