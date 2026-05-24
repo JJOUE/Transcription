@@ -14,7 +14,7 @@ import { usePackages } from '@/contexts/PackageContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { TranscriptionJob } from '@/lib/firebase/transcriptions';
-import { collection, getDocs, query, orderBy, limit, getFirestore, where, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, getFirestore, where, doc, getDoc } from 'firebase/firestore';
 
 export default function AdminPage() {
   const { userData, loading: authLoading } = useAuth();
@@ -25,6 +25,11 @@ export default function AdminPage() {
   const [systemStats, setSystemStats] = useState({
     totalUsers: 0,
     activeJobs: 0,
+    queuedJobs: 0,
+    processingJobs: 0,
+    pendingReviewJobs: 0,
+    failedJobs: 0,
+    rushJobs: 0,
     totalRevenue: 0,
     avgProcessingTime: '2.5hrs',
     totalWalletBalance: 0,
@@ -32,7 +37,7 @@ export default function AdminPage() {
     activePackages: 0,
     totalWalletTopups: 0
   });
-
+  
   // Analytics state
   const [analytics, setAnalytics] = useState<{
     configured: boolean;
@@ -168,8 +173,7 @@ export default function AdminPage() {
           getAllUsers(),
           getDocs(query(
             collection(db, 'transcriptions'),
-            orderBy('createdAt', 'desc'),
-            limit(3)
+            orderBy('createdAt', 'desc')
           )),
           getAllTransactions(),
           getDocs(query(collection(db, 'packages'))),
@@ -199,8 +203,16 @@ export default function AdminPage() {
         });
 
         // Calculate system statistics
-        const activeJobs = jobs.filter(j => j.status === 'processing' || j.status === 'queued').length;
-
+        const queuedJobs = jobs.filter(j => j.status === 'queued').length;
+        const processingJobs = jobs.filter(j => j.status === 'processing').length;
+        const pendingReviewJobs = jobs.filter(j =>
+          j.status === 'pending-review' || j.status === 'under-review'
+                                             ).length;
+        const failedJobs = jobs.filter(j => j.status === 'failed').length;
+        const rushJobs = jobs.filter(j => j.rushDelivery === true).length;
+        
+        const activeJobs = queuedJobs + processingJobs;
+        
         const walletTopups = allTransactions.filter(t =>
           t.type === 'wallet_topup' || t.type === 'purchase'
         );
@@ -255,17 +267,22 @@ export default function AdminPage() {
           }
         }
 
-        setSystemStats({
-          totalUsers: users.length,
-          activeJobs,
-          totalRevenue,
-          avgProcessingTime,
-          totalWalletBalance,
-          totalPackagesSold,
-          activePackages: activePackagesCount,
-          totalWalletTopups
-        });
-
+       setSystemStats({
+         totalUsers: users.length,
+         activeJobs,
+         queuedJobs,
+         processingJobs,
+         pendingReviewJobs,
+         failedJobs,
+         rushJobs,
+         totalRevenue,
+         avgProcessingTime,
+         totalWalletBalance,
+         totalPackagesSold,
+         activePackages: activePackagesCount,
+         totalWalletTopups
+       });
+        
       } catch (error) {
         console.error('Error loading admin data:', error);
       } finally {
@@ -326,8 +343,8 @@ export default function AdminPage() {
                 </div>
               </div>
             </CardContent>
-          </Card>
-
+          </Card>                
+    
           <Card className="border-0 shadow-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -375,13 +392,16 @@ export default function AdminPage() {
         </div>
 
         {/* Key Metrics - Row 2 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          
           <Card className="border-0 shadow-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Active Jobs</p>
-                  <p className="text-2xl font-bold text-[#003366]">{systemStats.activeJobs}</p>
+                  <p className="text-2xl font-bold text-[#003366]">
+                    {systemStats.activeJobs}
+                  </p>
                 </div>
                 <div className="w-12 h-12 bg-[#003366] rounded-lg flex items-center justify-center">
                   <FileText className="h-6 w-6 text-white" />
@@ -389,40 +409,128 @@ export default function AdminPage() {
               </div>
             </CardContent>
           </Card>
-
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Avg. Processing</p>
-                  <p className="text-2xl font-bold text-[#003366]">{systemStats.avgProcessingTime}</p>
-                </div>
-                <div className="w-12 h-12 bg-[#2c3e50] rounded-lg flex items-center justify-center">
-                  <Clock className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Package Management Link */}
-          <Link href="/admin/packages">
-            <Card className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer bg-gradient-to-br from-[#b29dd9] to-[#9d87c7]">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-white/90">Manage Packages</p>
-                    <p className="text-lg font-bold text-white">Package Settings</p>
-                    <p className="text-xs text-white/80 mt-1">Configure pricing & minutes</p>
-                  </div>
-                  <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                    <ArrowRight className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+          
+      <Card className="border-0 shadow-sm">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Queued Jobs</p>
+              <p className="text-2xl font-bold text-[#003366]">
+                {systemStats.queuedJobs}
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center">
+              <Clock className="h-6 w-6 text-white" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+          
+      <Card className="border-0 shadow-sm">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Pending Review</p>
+              <p className="text-2xl font-bold text-[#003366]">
+                {systemStats.pendingReviewJobs}
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
+              <Eye className="h-6 w-6 text-white" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+          
+      <Card className="border-0 shadow-sm">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Failed Jobs</p>
+              <p className="text-2xl font-bold text-red-600">
+                {systemStats.failedJobs}
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center">
+              <RefreshCw className="h-6 w-6 text-white" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card className="border-0 shadow-sm">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Rush Jobs</p>
+              <p className="text-2xl font-bold text-[#003366]">
+                {systemStats.rushJobs}
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center">
+              <Timer className="h-6 w-6 text-white" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+          
+      <Card className="border-0 shadow-sm">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Avg. Processing</p>
+              <p className="text-2xl font-bold text-[#003366]">
+                {systemStats.avgProcessingTime}
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-[#2c3e50] rounded-lg flex items-center justify-center">
+              <Clock className="h-6 w-6 text-white" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+          
+  <Link href="/admin/packages">
+    <Card className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer bg-gradient-to-br from-[#b29dd9] to-[#9d87c7]">
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-white/90">Manage Packages</p>
+            <p className="text-lg font-bold text-white">Package Settings</p>
+            <p className="text-xs text-white/80 mt-1">
+              Configure pricing & minutes
+            </p>
+          </div>
+          <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+            <ArrowRight className="h-6 w-6 text-white" />
+          </div>
         </div>
+      </CardContent>
+    </Card>
+  </Link>
 
+</div>
+              
+      {systemStats.failedJobs > 0 && (
+      <Card className="border-2 border-red-300 bg-red-50 mb-6">
+        <CardContent className="p-4 flex items-center justify-between">
+          <div>
+            <p className="font-semibold text-red-700">
+              ⚠ Failed Jobs Require Attention
+            </p>
+            <p className="text-sm text-red-600">
+              {systemStats.failedJobs} transcription job(s) failed and may need retry or review.
+            </p>
+          </div>
+          
+          <Link href="/admin/queue">
+            <Button className="bg-red-600 hover:bg-red-700 text-white">
+              View Failed Jobs
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
+    )}
         {/* Site Analytics */}
         {!analyticsLoading && analytics && (
           <div className="mb-8">
@@ -517,10 +625,10 @@ export default function AdminPage() {
               <div>
                 <CardTitle className="text-xl font-semibold text-[#003366] flex items-center gap-2">
                   <FileText className="h-5 w-5" />
-                  Your Work
+                  Jobs Needing Admin Action
                 </CardTitle>
                 <p className="text-sm text-gray-600 mt-1">
-                  Jobs waiting for transcription or review
+                  Human review, failed jobs, rush jobs, and items requiring admin attention
                 </p>
               </div>
               <div className="flex items-center gap-2">

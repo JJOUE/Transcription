@@ -13,16 +13,16 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
       className: 'bg-gray-100 text-gray-800 border-gray-200'
     },
     processing: {
-      label: 'Processing',
-      className: 'bg-blue-100 text-blue-800 border-blue-200'
+        label: 'Processing',
+          className: 'bg-blue-100 text-blue-800 border-blue-300 animate-pulse'
     },
     'under-review': {
-      label: 'Under Review',
-      className: 'bg-yellow-100 text-yellow-800 border-yellow-200'
+        label: 'Under Review',
+          className: 'bg-indigo-100 text-indigo-800 border-indigo-300'
     },
     'pending-review': {
       label: 'Pending Review',
-      className: 'bg-orange-100 text-orange-800 border-orange-200'
+      className: 'bg-amber-200 text-amber-900 border-amber-400'
     },
     'pending-transcription': {
       label: 'Pending Transcription',
@@ -34,7 +34,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
     },
     failed: {
       label: 'Failed',
-      className: 'bg-red-100 text-red-800 border-red-200'
+      className: 'bg-red-200 text-red-900 border-red-400'
     },
     cancelled: {
       label: 'Cancelled',
@@ -50,7 +50,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border',
+        'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border shadow-sm',
         config.className,
         className
       )}

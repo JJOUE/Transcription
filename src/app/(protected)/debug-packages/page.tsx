@@ -251,7 +251,7 @@ export default function DebugPackagesPage() {
                           <div key={tx.id} className="flex items-center justify-between bg-gray-50 p-3 rounded">
                             <div>
                               <p className="text-sm font-medium">{tx.description}</p>
-                              <p className="text-xs text-gray-500">{new Date(tx.createdAt).toLocaleString()}</p>
+                              <p className="text-xs text-gray-500">{tx.createdAt?.toDate?.()?.toLocaleString() || new Date(tx.createdAt).toLocaleString()}</p>
                             </div>
                             <div className={`font-semibold ${
                               tx.type === 'package_purchase' || tx.type === 'wallet_topup'
