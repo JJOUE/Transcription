@@ -31,6 +31,7 @@ export function TranscriptionQueue() {
   const { refundCredits } = useCredits();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [filterJobType, setFilterJobType] = useState('all');
   const [selectedJob, setSelectedJob] = useState<TranscriptionJob | null>(null);
   const [transcript, setTranscript] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -279,6 +280,9 @@ export function TranscriptionQueue() {
     const matchesSearch = filename.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          userEmail.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || item.status === filterStatus;
+    const matchesJobType = filterJobType === 'all' || 
+                          (filterJobType === 'transcription' && item.type !== 'office') ||
+                          (filterJobType === 'office' && item.type === 'office');
 
     // Filter out completed jobs and AI-only jobs that don't need admin intervention
     // Only show jobs that need admin action:
@@ -286,14 +290,16 @@ export function TranscriptionQueue() {
     // - Hybrid mode jobs that need review (pending-review, under-review)
     // - Failed AI/Hybrid jobs that might need retry
     // - Stuck processing jobs (processing status but no speechmaticsJobId)
+    // - Office Studio jobs (all non-completed statuses)
     const isStuckProcessing = item.status === 'processing' && !item.speechmaticsJobId;
-    const needsAdminAction = (item.mode === 'human' && !['complete', 'cancelled'].includes(item.status)) ||
+    const needsAdminAction = (item.type === 'office' && !['complete', 'cancelled'].includes(item.status)) ||
+                            (item.mode === 'human' && !['complete', 'cancelled'].includes(item.status)) ||
                             (item.mode === 'hybrid' && ['pending-review', 'under-review'].includes(item.status)) ||
                             (item.mode === 'ai' && item.status === 'failed') ||
                             (item.mode === 'hybrid' && item.status === 'failed') ||
                             isStuckProcessing;
 
-    return matchesSearch && matchesStatus && needsAdminAction;
+    return matchesSearch && matchesStatus && matchesJobType && needsAdminAction;
   }).sort((a, b) => {
     // Sort by priority: Rush delivery jobs first
     if (a.rushDelivery && !b.rushDelivery) return -1;
@@ -303,9 +309,14 @@ export function TranscriptionQueue() {
     return (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0);
   });
 
+  // Separate transcription and office jobs
+  const transcriptionItems = filteredItems.filter(item => item.type !== 'office');
+  const officeItems = filteredItems.filter(item => item.type === 'office');
+
   // Calculate stats only for jobs that need admin action
   const adminActionItems = queueItems.filter(item => {
-    return (item.mode === 'human' && !['complete', 'cancelled'].includes(item.status)) || 
+    return (item.type === 'office' && !['complete', 'cancelled'].includes(item.status)) ||
+           (item.mode === 'human' && !['complete', 'cancelled'].includes(item.status)) || 
            (item.mode === 'hybrid' && ['pending-review', 'under-review'].includes(item.status)) ||
            (item.mode === 'ai' && item.status === 'failed') ||
            (item.mode === 'hybrid' && item.status === 'failed');
@@ -381,6 +392,17 @@ export function TranscriptionQueue() {
                   />
                 </div>
               </div>
+              <Select value={filterJobType} onValueChange={setFilterJobType}>
+                <SelectTrigger className="w-48">
+                  <Filter className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="Filter by type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="transcription">Transcription</SelectItem>
+                  <SelectItem value="office">Office Studio</SelectItem>
+                </SelectContent>
+              </Select>
               <Select value={filterStatus} onValueChange={setFilterStatus}>
                 <SelectTrigger className="w-48">
                   <Filter className="mr-2 h-4 w-4" />
@@ -402,11 +424,11 @@ export function TranscriptionQueue() {
           </CardContent>
         </Card>
 
-        {/* Queue Items */}
-        <Card className="border-0 shadow-sm">
+        {/* Transcription Queue Items */}
+        <Card className="border-0 shadow-sm mb-8">
           <CardHeader>
             <CardTitle className="text-lg font-semibold text-[#003366]">
-              Queue Items ({filteredItems.length})
+              Transcription Queue ({transcriptionItems.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -417,7 +439,7 @@ export function TranscriptionQueue() {
               </div>
             ) : (
             <div className="space-y-4">
-              {filteredItems.map((item) => (
+              {transcriptionItems.map((item) => (
                 <div
                   key={item.id}
                   className={`p-4 rounded-lg border transition-colors ${
@@ -445,7 +467,7 @@ export function TranscriptionQueue() {
                       </div>
                       <div className="flex items-center space-x-4 text-sm text-gray-600">
                         <span>{userEmails[item.userId] || 'Loading...'}</span>
-                        <span>{item.mode}</span>
+                        <span>{item.mode === 'ai' ? 'AI' : item.mode === 'human' ? 'Human' : item.mode === 'hybrid' ? 'Hybrid' : item.mode}</span>
                         <span>{formatDuration(item.duration || 0)}</span>
                         <CreditDisplay amount={item.creditsUsed || 0} size="sm" />
                       </div>
@@ -573,9 +595,152 @@ export function TranscriptionQueue() {
                 </div>
               ))}
 
-              {filteredItems.length === 0 && !queueLoading && (
+              {transcriptionItems.length === 0 && !queueLoading && (
                 <div className="text-center py-12">
-                  <p className="text-gray-500">No items found matching your criteria.</p>
+                  <p className="text-gray-500">No transcription items found matching your criteria.</p>
+                </div>
+              )}
+            </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Office Studio Queue Items */}
+        <Card className="border-0 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-[#003366]">
+              Office Studio Queue ({officeItems.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {queueLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <LoadingSpinner size="lg" />
+                <span className="ml-2 text-gray-600">Loading queue items...</span>
+              </div>
+            ) : (
+            <div className="space-y-4">
+              {officeItems.map((item) => (
+                <div
+                  key={item.id}
+                  className={`p-4 rounded-lg border transition-colors ${
+                    item.rushDelivery
+                      ? 'bg-orange-50 border-orange-300 hover:bg-orange-100'
+                      : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <h3 className="font-medium text-[#003366]">{item.originalFilename || item.filename || 'Unknown file'}</h3>
+                        <StatusBadge status={item.status} />
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-[#b29dd9] text-white border border-[#9d87c7]">
+                          🏢 Office
+                        </span>
+                        {/* Add-on indicators */}
+                        {item.rushDelivery && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                            🚀 Rush
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-4 text-sm text-gray-600">
+                        <span>{userEmails[item.userId] || 'Loading...'}</span>
+                        <span>Office Studio</span>
+                        {item.domain && <span>📄 {item.domain.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>}
+                        <span>{formatDuration(item.duration || 0)}</span>
+                        <CreditDisplay amount={item.creditsUsed || 0} size="sm" />
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      {item.status === 'pending-review' && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-blue-600"
+                            onClick={() => {
+                              setSelectedJob(item);
+                            }}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            Review
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-green-600"
+                            onClick={() => item.id && handleAction(item.id, 'approve-review')}
+                            disabled={isLoading}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Approve
+                          </Button>
+                        </>
+                      )}
+                      {item.status === 'pending-transcription' && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-blue-600"
+                          onClick={() => {
+                            setSelectedJob(item);
+                            setTranscript('');
+                          }}
+                        >
+                          <Upload className="h-4 w-4 mr-1" />
+                          Upload Document
+                        </Button>
+                      )}
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-red-600"
+                        onClick={() => item.id && handleAction(item.id, 'reject')}
+                        disabled={isLoading}
+                      >
+                        <XCircle className="h-4 w-4 mr-1" />
+                        Reject
+                      </Button>
+                      {item.downloadURL && (
+                        <Button variant="ghost" size="sm" className="text-gray-600">
+                          <a href={item.downloadURL} target="_blank" rel="noopener noreferrer" className="flex items-center">
+                            <Download className="h-4 w-4 mr-1" />
+                            Audio
+                          </a>
+                        </Button>
+                      )}
+                      {item.templateURL && (
+                        <Button variant="ghost" size="sm" className="text-purple-600">
+                          <a href={item.templateURL} target="_blank" rel="noopener noreferrer" className="flex items-center">
+                            <Download className="h-4 w-4 mr-1" />
+                            Template
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Office-specific metadata display */}
+                  {item.specialInstructions && (
+                    <div className="mt-3 p-3 bg-cyan-50 border border-cyan-200 rounded">
+                      <h4 className="font-medium text-cyan-900 mb-1 text-sm">Formatting Instructions:</h4>
+                      <p className="text-sm text-cyan-800 line-clamp-2">{item.specialInstructions}</p>
+                    </div>
+                  )}
+
+                  {/* Timestamps */}
+                  <div className="flex justify-between text-xs text-gray-500 mt-2">
+                    <span>Submitted: {item.createdAt ? item.createdAt.toDate().toISOString().slice(0, 19).replace('T', ' ') : 'Unknown'}</span>
+                    <span>Status: {item.status || 'Unknown'}</span>
+                  </div>
+                </div>
+              ))}
+
+              {officeItems.length === 0 && !queueLoading && (
+                <div className="text-center py-12">
+                  <p className="text-gray-500">No Office Studio projects found matching your criteria.</p>
                 </div>
               )}
             </div>

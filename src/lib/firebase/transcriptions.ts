@@ -73,6 +73,7 @@ const TRANSCRIPTIONS_COLLECTION = 'transcriptions';
 export const createTranscriptionJob = async (job: Omit<TranscriptionJob, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
   const now = Timestamp.now();
   const jobWithTimestamps = {
+     type: 'transcription',
     ...job,
     createdAt: now,
     updatedAt: now

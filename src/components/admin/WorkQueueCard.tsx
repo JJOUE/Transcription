@@ -352,6 +352,15 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                   ⚡ RUSH
                 </span>
               )}
+              
+              {job.type === 'office' && (
+                <span
+                  className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-[#b29dd9] text-white border border-[#9d87c7]"
+                  title="Office Studio Project"
+                >
+                  🏢 OFFICE STUDIO
+                </span>
+              )}
                 
               <span className="font-medium text-[#003366] truncate">
                 {job.originalFilename || job.filename || 'Unknown file'}
@@ -369,7 +378,9 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
 
               <span
                 className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                  job.mode === 'ai'
+                  job.type === 'office'
+                    ? 'bg-[#b29dd9] text-white'
+                    : job.mode === 'ai'
                     ? 'bg-indigo-100 text-indigo-800'
                     : job.mode === 'human'
                     ? 'bg-emerald-100 text-emerald-800'
@@ -379,7 +390,9 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                 }`}
 
               >
-                {job.mode === 'ai'
+                {job.type === 'office'
+                  ? 'Office Studio'
+                  : job.mode === 'ai'
                   ? 'AI'
                   : job.mode === 'human'
                   ? 'Human'
@@ -395,7 +408,19 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
 
               {/* Queue Metadata */}
               <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
-                 {job.multipleSpeakers && (
+                {job.type === 'office' && job.domain && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#f0ebf8] text-[#003366]">
+                    📄 {job.domain.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                  </span>
+                )}
+                
+                {job.templateFilename && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-800">
+                    📋 Template
+                  </span>
+                )}
+                
+                {job.multipleSpeakers && (
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
                     👥 {job.speakerCount || 3}+ Speakers
                   </span>

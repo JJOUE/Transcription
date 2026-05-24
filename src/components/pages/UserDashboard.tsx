@@ -117,6 +117,15 @@ export function UserDashboard() {
     }
   };
 
+  // Separate transcription and office studio jobs
+  const transcriptionJobs = recentJobs.filter(
+    job => job.type !== 'office'
+  );
+
+  const officeJobs = recentJobs.filter(
+    job => job.type === 'office'
+  );
+
   const stats = {
     totalJobs: allJobs.length,
     completedJobs: allJobs.filter(j => j.status === 'complete').length,
@@ -397,6 +406,16 @@ export function UserDashboard() {
                     Upload New File
                   </Link>
                 </Button>
+
+                <Button
+                  asChild
+                  className="w-full bg-white border border-[#003366] text-[#003366] hover:bg-[#003366] hover:text-white shadow-sm"
+                >
+                  <Link href="/office/upload">
+                    <FileText className="mr-2 h-4 w-4" />
+                    Office Studio
+                  </Link>
+                </Button>
                 
                 <Button
                   asChild
@@ -464,7 +483,7 @@ export function UserDashboard() {
                     </div>
 
                   {!jobsLoading &&
-                    recentJobs
+                    transcriptionJobs
                     .filter((job) => job.status !== 'complete')
                     .map((job) => (
                       
@@ -518,7 +537,7 @@ export function UserDashboard() {
                       </div>
 
                       {!jobsLoading &&
-                        recentJobs
+                        transcriptionJobs
                           .filter((job) => job.status === 'complete')
                           .map((job) => (
                             
@@ -568,11 +587,64 @@ export function UserDashboard() {
                           </div>
                   ))}
                         
-                  {!jobsLoading && recentJobs.length === 0 && (
+                  {!jobsLoading && transcriptionJobs.length === 0 && (
                     <div className="text-center py-8 text-gray-500">
                       <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                       <p className="text-lg font-medium mb-2">No transcriptions yet</p>
                       <p className="text-sm">Upload your first audio or video file to get started!</p>
+                    </div>
+                  )}
+
+                  {/* Office Studio Projects Section */}
+                  <div className="pt-2 border-t border-gray-100 mt-6">
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                      Office Studio Projects
+                    </h3>
+                  </div>
+
+                  {!jobsLoading &&
+                    officeJobs.map((job) => (
+                      <div
+                        key={job.id}
+                        className="flex items-center justify-between p-5 bg-white border border-gray-200 rounded-xl hover:border-[#003366] hover:shadow-sm transition-all"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center flex-wrap gap-2 mb-2">
+                            <h3 className="text-base font-semibold text-[#003366] truncate">
+                              {job.originalFilename}
+                            </h3>
+                            <StatusBadge status={job.status} />
+                          </div>
+                          <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
+                            <span>Office Studio</span>
+                            <span>{Math.ceil(job.duration / 60)} min</span>
+                            <span>
+                              {new Date(job.createdAt).toLocaleDateString()}
+                            </span>
+                            <span className="text-[#003366] font-medium">CA${((job.creditsUsed || 0) / 100).toFixed(2)}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {job.status === 'complete' && (
+                            <Button
+                              size="sm"
+                              asChild
+                              className="bg-white border border-[#003366] text-[#003366] hover:bg-[#003366] hover:text-white shadow-sm"
+                            >
+                              <Link href={`/transcript/${job.id}`}>
+                                Open Workspace
+                              </Link>
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+
+                  {!jobsLoading && officeJobs.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                      <p className="text-lg font-medium mb-2">No Office Studio projects yet</p>
+                      <p className="text-sm">Start a new Office Studio project to get started!</p>
                     </div>
                   )}
                 </div>

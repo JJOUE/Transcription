@@ -259,6 +259,33 @@ function LandingPage() {
         </div>
       </section>
 
+      {/* Office Studio CTA Section */}
+      <section className="py-24 bg-gradient-to-br from-[#f0ebf8] to-[#e8e0f2]">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-[#003366] rounded-full mb-6">
+              <FileText className="h-8 w-8 text-[#b29dd9]" />
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-[#003366] mb-4">
+              Office Studio — Dictation to Document
+            </h2>
+            <p className="text-lg text-gray-700 mb-8 max-w-2xl mx-auto">
+              Turn voice dictation into professionally prepared documents. Upload your audio with templates, instructions, and formatting guidelines — we'll handle the rest.
+            </p>
+            <Button
+              asChild
+              size="lg"
+              className="bg-[#003366] hover:bg-[#002244] text-white text-lg px-12 py-4"
+            >
+              <Link href="/office/upload">
+                Start Office Project
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section 
         className="relative text-white py-24"

@@ -517,6 +517,10 @@ export default function UploadPage() {
           filePath: result.fullPath,
           downloadURL: result.downloadURL,
           status: initialStatus,
+          type:
+            transcriptionMode === 'human'
+              ? 'office'
+              : 'transcription',
           mode: transcriptionMode as TranscriptionMode,
           domain: transcriptionDomain, // Include domain for specialized vocabulary
           language: transcriptionLanguage, // Store language selection

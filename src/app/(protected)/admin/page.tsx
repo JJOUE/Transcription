@@ -102,6 +102,8 @@ export default function AdminPage() {
       const actionableJobs = allJobs.filter(job => {
         const isStuckProcessing = job.status === 'processing' && !job.speechmaticsJobId;
         return (
+          // Office Studio jobs (except completed/cancelled)
+          (job.type === 'office' && !['complete', 'cancelled'].includes(job.status)) ||
           // Human mode jobs (except completed/cancelled)
           (job.mode === 'human' && !['complete', 'cancelled'].includes(job.status)) ||
           // Hybrid mode jobs needing review
