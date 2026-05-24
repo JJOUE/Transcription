@@ -93,6 +93,16 @@ export function UserDashboard() {
         endTime = job.completedAt;
       } else {
         endTime = new Date(job.completedAt as unknown as number);
+      }
+      
+      const processingTimeMs = endTime.getTime() - startTime.getTime();
+      return sum + processingTimeMs;
+    }, 0);
+
+    const avgMs = totalProcessingTime / completedJobs.length;
+    const avgMinutes = avgMs / (1000 * 60);
+    const avgHours = avgMinutes / 60;
+
     // Format based on duration
     if (avgMinutes < 60) {
       return `${Math.round(avgMinutes)}min`;
@@ -626,5 +636,3 @@ export function UserDashboard() {
     </div>
   );
 }
-// Default export for Next.js pages compatibility
-export default UserDashboard;
