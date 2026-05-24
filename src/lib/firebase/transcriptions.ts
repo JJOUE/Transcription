@@ -1,4 +1,4 @@
-import { collection, doc, addDoc, getDocs, getDoc, updateDoc, query, where, orderBy, Timestamp, deleteDoc } from 'firebase/firestore';
+secondsimport { collection, doc, addDoc, getDocs, getDoc, updateDoc, query, where, orderBy, Timestamp, deleteDoc } from 'firebase/firestore';
 import { db } from './config';
 
 export type TranscriptionStatus = 'processing' | 'pending-review' | 'pending-transcription' | 'complete' | 'failed';
@@ -20,6 +20,7 @@ export interface TranscriptionJob {
   filePath: string;
   downloadURL: string;
   status: TranscriptionStatus;
+  type?: 'transcription' | 'office';
   mode: TranscriptionMode;
   domain?: string; // Transcription domain (general, medical, legal, technical)
   language?: string; // Transcription language (e.g., 'en', 'fr')
