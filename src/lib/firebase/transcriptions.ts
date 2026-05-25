@@ -1,4 +1,4 @@
-secondsimport { collection, doc, addDoc, getDocs, getDoc, updateDoc, query, where, orderBy, Timestamp, deleteDoc } from 'firebase/firestore';
+import { collection, doc, addDoc, getDocs, getDoc, updateDoc, query, where, orderBy, Timestamp, deleteDoc } from 'firebase/firestore';
 import { db } from './config';
 
 export type TranscriptionStatus = 'processing' | 'pending-review' | 'pending-transcription' | 'complete' | 'failed';

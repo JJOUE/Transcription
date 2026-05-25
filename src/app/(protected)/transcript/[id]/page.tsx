@@ -1726,7 +1726,7 @@ export default function TranscriptViewerPage() {
                   ).join(' ');
 
                   // Use a ref to track the contentEditable element for this group
-                  const contentEditableRef = React.useRef<HTMLDivElement>(null);
+                  const contentEditableRef = useRef<HTMLDivElement>(null);
 
                   return (
                     <div
