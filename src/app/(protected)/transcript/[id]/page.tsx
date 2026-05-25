@@ -1725,6 +1725,9 @@ export default function TranscriptViewerPage() {
                     editedSegments[seg.index] !== undefined ? editedSegments[seg.index] : seg.text
                   ).join(' ');
 
+                  // Use a ref to track the contentEditable element for this group
+                  const contentEditableRef = React.useRef<HTMLDivElement>(null);
+
                   return (
                     <div
                       key={groupIndex}
@@ -1763,32 +1766,37 @@ export default function TranscriptViewerPage() {
                             // Editable view when no search is active
                             <div
                               ref={(el) => {
-                                if (el && !el.dataset.initialized) {
-                                  el.textContent = groupText;
-                                  el.dataset.initialized = 'true';
+                                if (el && contentEditableRef.current !== el) {
+                                  contentEditableRef.current = el;
+                                  // Only initialize once on first mount or when groupIndex changes
+                                  if (!el.dataset.groupIndex) {
+                                    el.textContent = groupText;
+                                    el.dataset.groupIndex = String(groupIndex);
+                                  }
                                 }
                               }}
                               contentEditable
                               suppressContentEditableWarning
                               onInput={(e) => {
                                 const newText = e.currentTarget.textContent || '';
-                                console.log(`[Edit] Group ${groupIndex} changed`);
+                                console.log(`[Edit] Group ${groupIndex} changed, computing edits...`);
 
-                                // Split the edited text back into segments based on word count
+                                // BATCHED STATE UPDATE: Collect all edits first, then update state once
+                                const newEditedSegments: Record<number, string> = {};
                                 const words = newText.trim().split(/\s+/);
                                 let wordIndex = 0;
+                                let hasChanges = false;
 
                                 group.segments.forEach((segment) => {
                                   const originalWords = segment.text.trim().split(/\s+/);
                                   const segmentWordCount = originalWords.length;
                                   const segmentWords = words.slice(wordIndex, wordIndex + segmentWordCount);
-                                  const segmentText = segmentWords.join(' ');
+                                  const segmentText = segmentWords.join(' ') || '';
 
+                                  // Track if this segment changed
                                   if (segmentText !== segment.text) {
-                                    setEditedSegments(prev => ({
-                                      ...prev,
-                                      [segment.index]: segmentText
-                                    }));
+                                    newEditedSegments[segment.index] = segmentText;
+                                    hasChanges = true;
                                   }
 
                                   wordIndex += segmentWordCount;
@@ -1799,48 +1807,20 @@ export default function TranscriptViewerPage() {
                                   const remainingText = words.slice(wordIndex).join(' ');
                                   const lastSegment = group.segments[group.segments.length - 1];
                                   const existingEdit = editedSegments[lastSegment.index] || lastSegment.text;
-                                  setEditedSegments(prev => ({
-                                    ...prev,
-                                    [lastSegment.index]: existingEdit + ' ' + remainingText
-                                  }));
+                                  newEditedSegments[lastSegment.index] = existingEdit + ' ' + remainingText;
+                                  hasChanges = true;
                                 }
-                              }}
-                              onBlur={(e) => {
-                                const newText = e.currentTarget.textContent || '';
-                                console.log(`[Edit] Group ${groupIndex} blur - saving all segments`);
 
-                                // On blur, just save the entire block to all segments proportionally
-                                const words = newText.trim().split(/\s+/);
-                                let wordIndex = 0;
-
-                                group.segments.forEach((segment, segIndex) => {
-                                  const originalWords = segment.text.trim().split(/\s+/);
-                                  const segmentWordCount = originalWords.length;
-                                  const segmentWords = words.slice(wordIndex, wordIndex + segmentWordCount);
-                                  const segmentText = segmentWords.join(' ');
-
+                                // Only update state if there are actual changes
+                                if (hasChanges) {
                                   setEditedSegments(prev => ({
                                     ...prev,
-                                    [segment.index]: segmentText
-                                  }));
-
-                                  wordIndex += segmentWordCount;
-                                });
-
-                                // Handle any remaining words
-                                if (wordIndex < words.length) {
-                                  const remainingText = words.slice(wordIndex).join(' ');
-                                  const lastSegment = group.segments[group.segments.length - 1];
-                                  const existingEdit = editedSegments[lastSegment.index] || lastSegment.text;
-                                  setEditedSegments(prev => ({
-                                    ...prev,
-                                    [lastSegment.index]: existingEdit + ' ' + remainingText
+                                    ...newEditedSegments
                                   }));
                                 }
                               }}
                               className="text-gray-800 leading-relaxed outline-none focus:bg-yellow-50 rounded p-2 cursor-text min-h-[3rem]"
                             >
-                              {groupText}
                             </div>
                           )}
                         </div>

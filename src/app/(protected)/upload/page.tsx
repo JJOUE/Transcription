@@ -539,7 +539,12 @@ export default function UploadPage() {
           addOnCost: fileAddOnCost,
           hasPackage: hasPackage,
           // Template for human transcription
-          ...templateData
+          ...templateData,
+          // Office Studio fields
+          ...(transcriptionMode === 'human' && {
+            officeStatus: 'submitted' as const,
+            officePriority: rushDelivery ? 'rush' : 'standard'
+          })
         };
 
         // Only add specialInstructions if it has content

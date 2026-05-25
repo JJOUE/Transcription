@@ -3,6 +3,8 @@ import { db } from './config';
 
 export type TranscriptionStatus = 'processing' | 'pending-review' | 'pending-transcription' | 'complete' | 'failed';
 export type TranscriptionMode = 'ai' | 'hybrid' | 'human';
+export type OfficeStatus = 'submitted' | 'assigned' | 'in_progress' | 'waiting_review' | 'completed' | 'delivered';
+export type OfficePriority = 'standard' | 'rush' | 'same_day';
 
 export interface TranscriptSegment {
   start: number; // Start time in seconds
@@ -66,6 +68,18 @@ export interface TranscriptionJob {
   adminTranscriptPath?: string; // Storage path for admin-uploaded transcript
   adminTranscriptURL?: string; // Download URL for admin-uploaded transcript
   adminTranscriptFilename?: string; // Original filename of admin-uploaded transcript
+  // Office Studio specific fields
+  assignedTypist?: string; // UID of assigned typist
+  assignedTypistName?: string; // Name of assigned typist
+  officeDueDate?: Timestamp; // Due date for Office Studio project
+  officePriority?: OfficePriority; // Priority level (standard, rush, same_day)
+  officeStatus?: OfficeStatus; // Office-specific workflow status
+  officeCompletedDocumentURL?: string; // Download URL for completed document
+  officeCompletedDocumentPath?: string; // Storage path for completed document
+  officeCompletedFilename?: string; // Filename of completed document
+  officeReviewed?: boolean; // Whether Office project has been reviewed
+  officeTemplateCategory?: string; // Category of template used (for template library)
+  officeTemplateName?: string; // Name of template used (for template library)
 }
 
 const TRANSCRIPTIONS_COLLECTION = 'transcriptions';
@@ -260,4 +274,101 @@ export const getTranscriptionByShareId = async (shareId: string): Promise<Transc
     id: doc.id,
     ...doc.data()
   } as TranscriptionJob;
+};
+
+// Office Studio specific functions
+export const updateOfficeStatus = async (
+  id: string,
+  officeStatus: OfficeStatus,
+  additionalData?: Partial<TranscriptionJob>
+): Promise<void> => {
+  const docRef = doc(db, TRANSCRIPTIONS_COLLECTION, id);
+  const updateData: Partial<TranscriptionJob> = {
+    officeStatus,
+    updatedAt: Timestamp.now(),
+    ...additionalData
+  };
+
+  // Mark as completed when delivered
+  if (officeStatus === 'delivered') {
+    updateData.completedAt = Timestamp.now();
+  }
+
+  await updateDoc(docRef, updateData);
+};
+
+export const assignOfficeTypist = async (
+  id: string,
+  typistId: string,
+  typistName: string
+): Promise<void> => {
+  const docRef = doc(db, TRANSCRIPTIONS_COLLECTION, id);
+  await updateDoc(docRef, {
+    assignedTypist: typistId,
+    assignedTypistName: typistName,
+    officeStatus: 'assigned' as OfficeStatus,
+    updatedAt: Timestamp.now()
+  });
+};
+
+export const uploadOfficeCompletedDocument = async (
+  id: string,
+  documentPath: string,
+  documentURL: string,
+  filename: string
+): Promise<void> => {
+  const docRef = doc(db, TRANSCRIPTIONS_COLLECTION, id);
+  await updateDoc(docRef, {
+    officeCompletedDocumentPath: documentPath,
+    officeCompletedDocumentURL: documentURL,
+    officeCompletedFilename: filename,
+    officeStatus: 'completed' as OfficeStatus,
+    updatedAt: Timestamp.now()
+  });
+};
+
+export const setOfficeProjectDueDate = async (
+  id: string,
+  dueDate: Timestamp,
+  priority: OfficePriority = 'standard'
+): Promise<void> => {
+  const docRef = doc(db, TRANSCRIPTIONS_COLLECTION, id);
+  await updateDoc(docRef, {
+    officeDueDate: dueDate,
+    officePriority: priority,
+    updatedAt: Timestamp.now()
+  });
+};
+
+export const getOfficeProjectsByStatus = async (
+  status: OfficeStatus
+): Promise<TranscriptionJob[]> => {
+  const q = query(
+    collection(db, TRANSCRIPTIONS_COLLECTION),
+    where('type', '==', 'office'),
+    where('officeStatus', '==', status),
+    orderBy('officeDueDate', 'asc')
+  );
+
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  } as TranscriptionJob));
+};
+
+export const getOverdueOfficeProjects = async (): Promise<TranscriptionJob[]> => {
+  const now = Timestamp.now();
+  const q = query(
+    collection(db, TRANSCRIPTIONS_COLLECTION),
+    where('type', '==', 'office'),
+    where('officeDueDate', '<', now),
+    orderBy('officeDueDate', 'asc')
+  );
+
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  } as TranscriptionJob));
 };

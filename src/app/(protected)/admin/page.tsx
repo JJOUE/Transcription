@@ -52,6 +52,10 @@ export default function AdminPage() {
   const [pendingJobsLoading, setPendingJobsLoading] = useState(true);
   const [userEmails, setUserEmails] = useState<{[key: string]: string}>({});
 
+  // Filter state for admin queue
+  const [queueFilter, setQueueFilter] = useState<'all' | 'transcription' | 'office'>('all');
+  const [officeStatusFilter, setOfficeStatusFilter] = useState<'all' | 'submitted' | 'assigned' | 'in_progress' | 'waiting_review' | 'completed' | 'delivered'>('all');
+
   // Load GA4 analytics
   const loadAnalytics = useCallback(async () => {
     if (userData?.role !== 'admin') return;
@@ -316,6 +320,25 @@ export default function AdminPage() {
   if (userData?.role !== 'admin') {
     return null;
   }
+
+  // Filter pending jobs by type
+  const transcriptionJobs = pendingJobs.filter(
+    job => job.type !== 'office'
+  );
+
+  const officeJobs = pendingJobs.filter(
+    job => job.type === 'office'
+  );
+
+  // Get displayed jobs based on filter
+  const displayedJobs = 
+    queueFilter === 'transcription' 
+      ? transcriptionJobs 
+      : queueFilter === 'office' 
+      ? officeStatusFilter === 'all'
+        ? officeJobs
+        : officeJobs.filter(job => job.officeStatus === officeStatusFilter)
+      : pendingJobs;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -620,6 +643,105 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* Queue Filter Buttons */}
+        <div className="mb-6 flex flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-600">Filter:</span>
+          </div>
+          <Button
+            onClick={() => setQueueFilter('all')}
+            variant={queueFilter === 'all' ? 'default' : 'outline'}
+            size="sm"
+            className={queueFilter === 'all' ? 'bg-[#003366] hover:bg-[#004080]' : ''}
+          >
+            All Jobs {pendingJobs.length > 0 && `(${pendingJobs.length})`}
+          </Button>
+          <Button
+            onClick={() => setQueueFilter('transcription')}
+            variant={queueFilter === 'transcription' ? 'default' : 'outline'}
+            size="sm"
+            className={queueFilter === 'transcription' ? 'bg-indigo-600 hover:bg-indigo-700' : ''}
+          >
+            Transcription {transcriptionJobs.length > 0 && `(${transcriptionJobs.length})`}
+          </Button>
+          <Button
+            onClick={() => {
+              setQueueFilter('office');
+              setOfficeStatusFilter('all');
+            }}
+            variant={queueFilter === 'office' ? 'default' : 'outline'}
+            size="sm"
+            className={queueFilter === 'office' ? 'bg-[#b29dd9] hover:bg-[#9d87c7]' : ''}
+          >
+            Office Studio {officeJobs.length > 0 && `(${officeJobs.length})`}
+          </Button>
+        </div>
+
+        {/* Office Status Filters - Only show when Office filter is selected */}
+        {queueFilter === 'office' && (
+          <div className="mb-6 flex flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-600">Office Status:</span>
+            </div>
+            <Button
+              onClick={() => setOfficeStatusFilter('all')}
+              variant={officeStatusFilter === 'all' ? 'default' : 'outline'}
+              size="sm"
+              className={officeStatusFilter === 'all' ? 'bg-[#b29dd9] text-white hover:bg-[#9d87c7]' : ''}
+            >
+              All
+            </Button>
+            <Button
+              onClick={() => setOfficeStatusFilter('submitted')}
+              variant={officeStatusFilter === 'submitted' ? 'default' : 'outline'}
+              size="sm"
+              className={officeStatusFilter === 'submitted' ? 'bg-blue-600 text-white hover:bg-blue-700' : ''}
+            >
+              📨 Submitted {officeJobs.filter(j => j.officeStatus === 'submitted').length > 0 && `(${officeJobs.filter(j => j.officeStatus === 'submitted').length})`}
+            </Button>
+            <Button
+              onClick={() => setOfficeStatusFilter('assigned')}
+              variant={officeStatusFilter === 'assigned' ? 'default' : 'outline'}
+              size="sm"
+              className={officeStatusFilter === 'assigned' ? 'bg-cyan-600 text-white hover:bg-cyan-700' : ''}
+            >
+              👤 Assigned {officeJobs.filter(j => j.officeStatus === 'assigned').length > 0 && `(${officeJobs.filter(j => j.officeStatus === 'assigned').length})`}
+            </Button>
+            <Button
+              onClick={() => setOfficeStatusFilter('in_progress')}
+              variant={officeStatusFilter === 'in_progress' ? 'default' : 'outline'}
+              size="sm"
+              className={officeStatusFilter === 'in_progress' ? 'bg-yellow-600 text-white hover:bg-yellow-700' : ''}
+            >
+              ⚙️ In Progress {officeJobs.filter(j => j.officeStatus === 'in_progress').length > 0 && `(${officeJobs.filter(j => j.officeStatus === 'in_progress').length})`}
+            </Button>
+            <Button
+              onClick={() => setOfficeStatusFilter('waiting_review')}
+              variant={officeStatusFilter === 'waiting_review' ? 'default' : 'outline'}
+              size="sm"
+              className={officeStatusFilter === 'waiting_review' ? 'bg-orange-600 text-white hover:bg-orange-700' : ''}
+            >
+              👀 Waiting Review {officeJobs.filter(j => j.officeStatus === 'waiting_review').length > 0 && `(${officeJobs.filter(j => j.officeStatus === 'waiting_review').length})`}
+            </Button>
+            <Button
+              onClick={() => setOfficeStatusFilter('completed')}
+              variant={officeStatusFilter === 'completed' ? 'default' : 'outline'}
+              size="sm"
+              className={officeStatusFilter === 'completed' ? 'bg-green-600 text-white hover:bg-green-700' : ''}
+            >
+              ✅ Completed {officeJobs.filter(j => j.officeStatus === 'completed').length > 0 && `(${officeJobs.filter(j => j.officeStatus === 'completed').length})`}
+            </Button>
+            <Button
+              onClick={() => setOfficeStatusFilter('delivered')}
+              variant={officeStatusFilter === 'delivered' ? 'default' : 'outline'}
+              size="sm"
+              className={officeStatusFilter === 'delivered' ? 'bg-purple-600 text-white hover:bg-purple-700' : ''}
+            >
+              📦 Delivered {officeJobs.filter(j => j.officeStatus === 'delivered').length > 0 && `(${officeJobs.filter(j => j.officeStatus === 'delivered').length})`}
+            </Button>
+          </div>
+        )}
+
         {/* Your Work - Pending Jobs */}
         <Card className="border-2 border-[#b29dd9] shadow-md">
           <CardHeader className="pb-3">
@@ -627,10 +749,18 @@ export default function AdminPage() {
               <div>
                 <CardTitle className="text-xl font-semibold text-[#003366] flex items-center gap-2">
                   <FileText className="h-5 w-5" />
-                  Jobs Needing Admin Action
+                  {queueFilter === 'transcription' 
+                    ? 'Transcription Jobs Needing Admin Action' 
+                    : queueFilter === 'office' 
+                    ? 'Office Studio Projects Needing Admin Action' 
+                    : 'Jobs Needing Admin Action'}
                 </CardTitle>
                 <p className="text-sm text-gray-600 mt-1">
-                  Human review, failed jobs, rush jobs, and items requiring admin attention
+                  {queueFilter === 'transcription'
+                    ? 'AI, hybrid, and human transcription jobs requiring review, processing, or retry'
+                    : queueFilter === 'office'
+                    ? 'Office Studio dictation and document projects needing admin attention'
+                    : 'Human review, failed jobs, rush jobs, and items requiring admin attention'}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -659,15 +789,27 @@ export default function AdminPage() {
                 <LoadingSpinner size="md" />
                 <span className="ml-2 text-gray-600">Loading pending jobs...</span>
               </div>
-            ) : pendingJobs.length === 0 ? (
+            ) : displayedJobs.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p className="text-lg font-medium">No pending jobs</p>
-                <p className="text-sm">You're all caught up! Check back later for new work.</p>
+                <p className="text-lg font-medium">
+                  {queueFilter === 'transcription'
+                    ? 'No transcription jobs pending'
+                    : queueFilter === 'office'
+                    ? 'No Office Studio projects in queue'
+                    : 'No pending jobs'}
+                </p>
+                <p className="text-sm">
+                  {queueFilter === 'transcription'
+                    ? 'All transcription jobs are caught up!'
+                    : queueFilter === 'office'
+                    ? 'All Office Studio projects are caught up!'
+                    : "You're all caught up! Check back later for new work."}
+                </p>
               </div>
             ) : (
               <div className="space-y-3">
-                {pendingJobs.map(job => (
+                {displayedJobs.map(job => (
                   <WorkQueueCard
                     key={job.id}
                     job={job}
@@ -675,7 +817,7 @@ export default function AdminPage() {
                     onComplete={loadPendingJobs}
                   />
                 ))}
-                {pendingJobs.length >= 10 && (
+                {displayedJobs.length >= 10 && (
                   <div className="text-center pt-2">
                     <Link href="/admin/queue" className="text-sm text-[#003366] hover:underline">
                       View all jobs in queue →

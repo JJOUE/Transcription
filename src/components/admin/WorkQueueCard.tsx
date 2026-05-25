@@ -14,7 +14,12 @@ import {
   approveTranscriptionReview,
   rejectTranscriptionJob,
   submitHumanTranscription,
-  TranscriptionJob
+  TranscriptionJob,
+  updateOfficeStatus,
+  uploadOfficeCompletedDocument,
+  assignOfficeTypist,
+  setOfficeProjectDueDate,
+  OfficeStatus
 } from '@/lib/firebase/transcriptions';
 import { formatDuration } from '@/lib/utils';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -36,6 +41,12 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { refundCredits } = useCredits();
+  
+  // Office Studio management state
+  const [assignedTypistInput, setAssignedTypistInput] = useState(job.assignedTypistName || '');
+  const [dueDateInput, setDueDateInput] = useState('');
+  const [uploadingCompletedDoc, setUploadingCompletedDoc] = useState(false);
+  const completedDocInputRef = useRef<HTMLInputElement>(null);
 
   // Handle file upload - uploads directly to Storage (no parsing)
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -311,6 +322,143 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
     }
   };
 
+  // Office Studio handlers
+  const handleAssignTypist = async () => {
+    if (!job.id || !assignedTypistInput.trim()) {
+      toast({
+        title: "Missing information",
+        description: "Please enter a typist name.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Use the input as both ID and name for now (simplified)
+      await assignOfficeTypist(job.id, assignedTypistInput.trim(), assignedTypistInput.trim());
+      toast({
+        title: "Typist Assigned",
+        description: `Project assigned to ${assignedTypistInput.trim()}.`,
+      });
+      onComplete();
+    } catch (error) {
+      console.error('Assignment error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to assign typist. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSetDueDate = async () => {
+    if (!job.id || !dueDateInput) {
+      toast({
+        title: "Missing date",
+        description: "Please select a due date.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const dueDate = new Timestamp(Math.floor(new Date(dueDateInput).getTime() / 1000), 0);
+      const priority = job.rushDelivery ? 'rush' : 'standard';
+      await setOfficeProjectDueDate(job.id, dueDate, priority);
+      toast({
+        title: "Due Date Set",
+        description: `Due date set to ${new Date(dueDateInput).toLocaleDateString()}.`,
+      });
+      setDueDateInput('');
+      onComplete();
+    } catch (error) {
+      console.error('Due date error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to set due date. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUploadCompletedDocument = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !job.id) return;
+
+    const fileName = file.name.toLowerCase();
+    const validExtensions = ['.docx', '.doc', '.pdf', '.txt'];
+    const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
+
+    if (!hasValidExtension) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload a document file (.docx, .doc, .pdf, .txt)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploadingCompletedDoc(true);
+    try {
+      const storage = getStorage();
+      const storagePath = `transcriptions/${job.userId}/${job.id}/completed-document/${file.name}`;
+      const storageRef = ref(storage, storagePath);
+
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
+
+      // Update Office document in Firestore
+      await uploadOfficeCompletedDocument(job.id, storagePath, downloadURL, file.name);
+
+      toast({
+        title: "Document Uploaded",
+        description: `${file.name} uploaded successfully.`,
+      });
+
+      onComplete();
+    } catch (error) {
+      console.error('Document upload error:', error);
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload document. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingCompletedDoc(false);
+      if (completedDocInputRef.current) {
+        completedDocInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleUpdateOfficeStatus = async (newStatus: OfficeStatus) => {
+    if (!job.id) return;
+    setIsLoading(true);
+    try {
+      await updateOfficeStatus(job.id, newStatus);
+      toast({
+        title: "Status Updated",
+        description: `Project status changed to ${newStatus.replace(/_/g, ' ')}.`,
+      });
+      onComplete();
+    } catch (error) {
+      console.error('Status update error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update status. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Check if this is a stuck processing job
   const isStuckProcessing = job.status === 'processing' && !job.speechmaticsJobId;
   const createdDate =
@@ -391,15 +539,29 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
 
               >
                 {job.type === 'office'
-                  ? 'Office Studio'
+                  ? '🏢 Office Studio'
                   : job.mode === 'ai'
-                  ? 'AI'
+                  ? '⚡ AI'
                   : job.mode === 'human'
-                  ? 'Human'
+                  ? '👤 Human'
                   : job.mode === 'hybrid'
-                  ? 'Hybrid'
-                  : 'Office'}
-              </span> 
+                  ? '🔄 Hybrid'
+                  : 'Unknown'}
+              </span>
+
+              {/* Office Status Badge */}
+              {job.type === 'office' && job.officeStatus && (
+                <span
+                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#f0ebf8] text-[#003366]"
+                >
+                  {job.officeStatus === 'submitted' && '📨 Submitted'}
+                  {job.officeStatus === 'assigned' && '👤 Assigned'}
+                  {job.officeStatus === 'in_progress' && '⚙️ In Progress'}
+                  {job.officeStatus === 'waiting_review' && '👀 Waiting Review'}
+                  {job.officeStatus === 'completed' && '✅ Completed'}
+                  {job.officeStatus === 'delivered' && '📦 Delivered'}
+                </span>
+              )} 
 
               <span>
                 {formatDuration(job.duration || 0)}
@@ -409,8 +571,30 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
               {/* Queue Metadata */}
               <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
                 {job.type === 'office' && job.domain && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#f0ebf8] text-[#003366]">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#f0ebf8] text-[#003366] font-medium">
                     📄 {job.domain.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                  </span>
+                )}
+                
+                {job.type === 'office' && job.rushDelivery && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-red-100 text-red-800 font-medium">
+                    ⚡ Rush
+                  </span>
+                )}
+
+                {job.type === 'office' && job.assignedTypistName && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
+                    👤 Assigned to: {job.assignedTypistName}
+                  </span>
+                )}
+
+                {job.type === 'office' && job.officeDueDate && (
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full ${
+                    job.officeDueDate.toDate() < new Date() 
+                      ? 'bg-red-100 text-red-800 font-medium' 
+                      : 'bg-amber-100 text-amber-800'
+                  }`}>
+                    📅 Due: {job.officeDueDate.toDate().toLocaleDateString()}
                   </span>
                 )}
                 
@@ -466,8 +650,40 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
 
           {/* Actions based on status */}
 
+          {/* Office Studio jobs: management controls */}
+          {job.type === 'office' && !['complete', 'cancelled'].includes(job.status) && (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-[#003366] border-[#b29dd9] hover:bg-[#f0ebf8]"
+                onClick={openReviewModal}
+              >
+                <Eye className="h-4 w-4 mr-1" />
+                View Details
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-purple-600 border-purple-300 hover:bg-purple-50"
+                onClick={() => completedDocInputRef.current?.click()}
+                disabled={uploadingCompletedDoc}
+              >
+                <Upload className="h-4 w-4 mr-1" />
+                {uploadingCompletedDoc ? 'Uploading...' : 'Upload Doc'}
+              </Button>
+              <input
+                ref={completedDocInputRef}
+                type="file"
+                accept=".docx,.doc,.pdf,.txt"
+                onChange={handleUploadCompletedDocument}
+                className="hidden"
+              />
+            </>
+          )}
+
           {/* Hybrid jobs: pending-review or under-review */}
-          {(job.status === 'pending-review' || job.status === 'under-review') && (
+          {job.type !== 'office' && (job.status === 'pending-review' || job.status === 'under-review') && (
             <>
               <Button
                 size="sm"
@@ -492,7 +708,7 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
           )}
 
           {/* Human jobs: pending-transcription or queued */}
-          {(job.status === 'pending-transcription' || (job.mode === 'human' && job.status === 'queued')) && (
+          {job.type !== 'office' && (job.status === 'pending-transcription' || (job.mode === 'human' && job.status === 'queued')) && (
             <>
               <Button
                 size="sm"
@@ -522,8 +738,8 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
             </>
           )}
 
-          {/* Failed jobs: retry with AI */}
-          {job.status === 'failed' && (job.mode === 'ai' || job.mode === 'hybrid') && (
+          {/* Failed jobs: retry with AI (non-office only) */}
+          {job.type !== 'office' && job.status === 'failed' && (job.mode === 'ai' || job.mode === 'hybrid') && (
             <Button
               size="sm"
               variant="outline"
@@ -536,8 +752,8 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
             </Button>
           )}
 
-          {/* Stuck processing jobs: resubmit */}
-          {isStuckProcessing && (job.mode === 'ai' || job.mode === 'hybrid') && (
+          {/* Stuck processing jobs: resubmit (non-office only) */}
+          {job.type !== 'office' && isStuckProcessing && (job.mode === 'ai' || job.mode === 'hybrid') && (
             <Button
               size="sm"
               variant="outline"
@@ -552,7 +768,8 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
 
           {/* Reject button for actionable statuses */}
           {(job.status === 'pending-review' || job.status === 'under-review' ||
-            job.status === 'pending-transcription' || (job.mode === 'human' && job.status === 'queued')) && (
+            job.status === 'pending-transcription' || (job.mode === 'human' && job.status === 'queued') ||
+            (job.type === 'office' && !['complete', 'cancelled'].includes(job.status))) && (
             <Button
               size="sm"
               variant="outline"
@@ -565,6 +782,106 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
             </Button>
           )}
         </div>
+        
+        {/* Office Studio Management Panel */}
+        {job.type === 'office' && !['complete', 'cancelled'].includes(job.status) && (
+          <div className="mt-4 p-4 bg-[#f0ebf8] border border-[#b29dd9] rounded-lg space-y-3">
+            <h4 className="font-medium text-[#003366] text-sm">📋 Office Studio Management</h4>
+            
+            <div className="space-y-2">
+              {/* Typist Assignment */}
+              <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                  <label className="text-xs font-medium text-gray-700 block mb-1">Assign Typist</label>
+                  <input
+                    type="text"
+                    value={assignedTypistInput}
+                    onChange={(e) => setAssignedTypistInput(e.target.value)}
+                    placeholder="Typist name"
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  className="bg-[#003366] hover:bg-[#004080] text-white whitespace-nowrap"
+                  onClick={handleAssignTypist}
+                  disabled={isLoading}
+                >
+                  Assign
+                </Button>
+              </div>
+
+              {/* Due Date Setting */}
+              <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                  <label className="text-xs font-medium text-gray-700 block mb-1">Due Date</label>
+                  <input
+                    type="date"
+                    value={dueDateInput}
+                    onChange={(e) => setDueDateInput(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  className="bg-[#003366] hover:bg-[#004080] text-white whitespace-nowrap"
+                  onClick={handleSetDueDate}
+                  disabled={isLoading}
+                >
+                  Set
+                </Button>
+              </div>
+
+              {/* Status Update Buttons */}
+              <div className="flex gap-2 flex-wrap">
+                {job.officeStatus !== 'in_progress' && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs"
+                    onClick={() => handleUpdateOfficeStatus('in_progress')}
+                    disabled={isLoading}
+                  >
+                    Start Work
+                  </Button>
+                )}
+                {job.officeStatus !== 'waiting_review' && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs"
+                    onClick={() => handleUpdateOfficeStatus('waiting_review')}
+                    disabled={isLoading}
+                  >
+                    Mark for Review
+                  </Button>
+                )}
+                {job.officeStatus !== 'completed' && job.officeCompletedDocumentURL && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs"
+                    onClick={() => handleUpdateOfficeStatus('completed')}
+                    disabled={isLoading}
+                  >
+                    Mark Complete
+                  </Button>
+                )}
+                {job.officeStatus !== 'delivered' && job.officeCompletedDocumentURL && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs bg-green-50 border-green-300 text-green-700 hover:bg-green-100"
+                    onClick={() => handleUpdateOfficeStatus('delivered')}
+                    disabled={isLoading}
+                  >
+                    Deliver to Client
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Transcription/Review Modal */}
@@ -574,7 +891,9 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
             <div className="p-4 sm:p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-base sm:text-lg font-semibold text-[#003366]">
-                  {(job.status === 'pending-review' || job.status === 'under-review') ? 'Review AI Transcript' : 'Create Transcript'}
+                  {job.type === 'office'
+                    ? 'Office Studio Project Details'
+                    : (job.status === 'pending-review' || job.status === 'under-review') ? 'Review AI Transcript' : 'Create Transcript'}
                 </h3>
                 <Button
                   variant="ghost"
@@ -600,9 +919,16 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                 <p className="text-sm text-gray-600">
                   <strong>Duration:</strong> {formatDuration(job.duration || 0)}
                 </p>
-                <p className="text-sm text-gray-600">
-                  <strong>Mode:</strong> {job.mode || 'Unknown'}
-                </p>
+                {job.type !== 'office' && (
+                  <p className="text-sm text-gray-600">
+                    <strong>Mode:</strong> {job.mode || 'Unknown'}
+                  </p>
+                )}
+                {job.type === 'office' && job.domain && (
+                  <p className="text-sm text-gray-600">
+                    <strong>Project Type:</strong> {job.domain.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                  </p>
+                )}
 
                 {/* Audio Player */}
                 {job.downloadURL && (
@@ -652,8 +978,8 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                 </div>
               )}
 
-              {/* Transcript input for human transcription */}
-              {(job.status === 'pending-transcription' || (job.mode === 'human' && job.status === 'queued')) && (
+              {/* Transcript input for human transcription (non-office jobs only) */}
+              {job.type !== 'office' && (job.status === 'pending-transcription' || (job.mode === 'human' && job.status === 'queued')) && (
                 <div className="mb-4">
                   <p className="text-sm text-gray-600 mb-3">
                     Type or paste the transcript below. Or use the <strong>Upload</strong> button to upload a document file directly.
@@ -668,6 +994,23 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                 </div>
               )}
 
+              {/* Office Studio message */}
+              {job.type === 'office' && (
+                <div className="mb-4 p-4 bg-[#f0ebf8] border border-[#b29dd9] rounded-lg">
+                  <p className="text-sm text-[#003366] font-medium">
+                    🏢 Office Studio Project
+                  </p>
+                  <p className="text-xs text-[#003366]/80 mt-1">
+                    This is an Office Studio project. Review the document and template details above. Use appropriate action buttons to process or reject this project.
+                  </p>
+                  {job.domain && (
+                    <p className="text-xs text-[#003366]/80 mt-2">
+                      <strong>Project Type:</strong> {job.domain.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Action buttons */}
               <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
                 <Button
@@ -678,9 +1021,9 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                   }}
                   className="w-full sm:w-auto"
                 >
-                  Cancel
+                  Close
                 </Button>
-                {(job.status === 'pending-review' || job.status === 'under-review') && (
+                {job.type !== 'office' && (job.status === 'pending-review' || job.status === 'under-review') && (
                   <Button
                     onClick={handleApprove}
                     disabled={isLoading}
@@ -689,7 +1032,7 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                     {isLoading ? <LoadingSpinner size="sm" /> : 'Approve Transcript'}
                   </Button>
                 )}
-                {(job.status === 'pending-transcription' || (job.mode === 'human' && job.status === 'queued')) && (
+                {job.type !== 'office' && (job.status === 'pending-transcription' || (job.mode === 'human' && job.status === 'queued')) && (
                   <Button
                     onClick={handleSubmitTranscription}
                     disabled={isLoading || !transcript.trim()}

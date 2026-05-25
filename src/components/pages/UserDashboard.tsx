@@ -636,6 +636,22 @@ export function UserDashboard() {
                               </Link>
                             </Button>
                           )}
+                          {job.officeCompletedDocumentURL && (
+                            <Button
+                              size="sm"
+                              asChild
+                              className="bg-green-50 border border-green-300 text-green-700 hover:bg-green-100 shadow-sm"
+                            >
+                              <a 
+                                href={job.officeCompletedDocumentURL}
+                                download={job.officeCompletedFilename || 'completed-document'}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                📥 Download
+                              </a>
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}
