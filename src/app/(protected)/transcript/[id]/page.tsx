@@ -98,6 +98,7 @@ export default function TranscriptViewerPage() {
   const [caseSensitive, setCaseSensitive] = useState(false);
 
   const audioPlayerRef = useRef<AudioPlayerRef>(null);
+  const contentEditableRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
   useEffect(() => {
     if (id && user) {
@@ -1725,9 +1726,6 @@ export default function TranscriptViewerPage() {
                     editedSegments[seg.index] !== undefined ? editedSegments[seg.index] : seg.text
                   ).join(' ');
 
-                  // Use a ref to track the contentEditable element for this group
-                  const contentEditableRef = useRef<HTMLDivElement>(null);
-
                   return (
                     <div
                       key={groupIndex}
@@ -1766,8 +1764,8 @@ export default function TranscriptViewerPage() {
                             // Editable view when no search is active
                             <div
                               ref={(el) => {
-                                if (el && contentEditableRef.current !== el) {
-                                  contentEditableRef.current = el;
+                                if (el) {
+                                  contentEditableRefs.current[groupIndex] = el;
                                   // Only initialize once on first mount or when groupIndex changes
                                   if (!el.dataset.groupIndex) {
                                     el.textContent = groupText;
