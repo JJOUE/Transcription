@@ -99,8 +99,6 @@ export default function TranscriptViewerPage() {
 
   const audioPlayerRef = useRef<AudioPlayerRef>(null);
   const contentEditableRefs = useRef<Record<number, HTMLDivElement | null>>({});
-  const [speakerOrder, setSpeakerOrder] = useState<string[]>([]);
-  const [draggedSpeaker, setDraggedSpeaker] = useState<string | null>(null);
 
   useEffect(() => {
     if (id && user) {
