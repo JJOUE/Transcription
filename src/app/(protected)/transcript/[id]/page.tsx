@@ -99,6 +99,8 @@ export default function TranscriptViewerPage() {
 
   const audioPlayerRef = useRef<AudioPlayerRef>(null);
   const contentEditableRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const [speakerOrder, setSpeakerOrder] = useState<string[]>([]);
+  const [draggedSpeaker, setDraggedSpeaker] = useState<string | null>(null);
 
   useEffect(() => {
     if (id && user) {
@@ -1695,7 +1697,7 @@ export default function TranscriptViewerPage() {
                 </div>
               )}
 
-              {/* Group segments by speaker for editing */}
+              {/* Group segments by speaker for editing - Word-like interface */}
               {(() => {
                 const speakerGroups: Array<{speaker: string, segments: Array<{text: string, index: number, start: number}>}> = [];
                 let currentGroup: {speaker: string, segments: Array<{text: string, index: number, start: number}>} | null = null;
@@ -1719,9 +1721,9 @@ export default function TranscriptViewerPage() {
                 return speakerGroups.map((group, groupIndex) => {
                   const firstSegmentIndex = group.segments[0].index;
                   const segmentIndices = group.segments.map(seg => seg.index);
+                  const editorKey = `editor-${groupIndex}`;
 
                   // Combine all segments in this group into one continuous text
-                  // Use edited text if available, otherwise use original
                   const groupText = group.segments.map(seg =>
                     editedSegments[seg.index] !== undefined ? editedSegments[seg.index] : seg.text
                   ).join(' ');
@@ -1730,98 +1732,101 @@ export default function TranscriptViewerPage() {
                     <div
                       key={groupIndex}
                       id={`segment-${firstSegmentIndex}`}
-                      className={`group rounded-lg border-2 transition-all duration-200 ${shouldDim(group.speaker) ? 'opacity-30 hover:opacity-50 border-gray-200' : isSpeakerHighlighted(group.speaker) ? 'border-blue-400 bg-blue-50/30 hover:border-blue-500' : 'border-gray-200 hover:border-blue-300'}`}
+                      className="my-6 rounded-lg border-2 border-gray-300 bg-white shadow-sm hover:shadow-md transition-shadow"
                     >
-                      <div className="p-4">
-                        {/* Speaker Label */}
-{showSpeakerLabels && (
-                            <div className="flex items-center gap-2 mb-3">
-                              <div className={`px-3 py-1 rounded-full text-xs font-semibold ${getSpeakerColor(group.speaker)}`}>
-                                {getSpeakerDisplayName(group.speaker)}
-                              </div>
-                              <span className="text-xs text-gray-500 font-mono">
-                                {formatTimestamp(group.segments[0].start)}
-                              </span>
-                            </div>
-                          )}
+                      {/* Word-like header with draggable speaker tag */}
+                      <div className="flex items-center gap-3 bg-gray-50 px-4 py-3 border-b border-gray-200 rounded-t-md">
+                        {/* Draggable Speaker Tag */}
+                        <div
+                          draggable
+                          onDragStart={(e) => {
+                            setDraggedSpeaker(group.speaker);
+                            e.dataTransfer.effectAllowed = 'move';
+                          }}
+                          onDragEnd={() => setDraggedSpeaker(null)}
+                          className={`px-3 py-1 rounded-full text-xs font-semibold cursor-move transition-all ${
+                            draggedSpeaker === group.speaker ? 'opacity-50 scale-95' : 'hover:shadow-md'
+                          } ${getSpeakerColor(group.speaker)}`}
+                          title="Drag to reorder speakers or click to edit"
+                        >
+                          {getSpeakerDisplayName(group.speaker)}
+                        </div>
 
-                        {/* Editable grouped content with inline word highlighting */}
-                        <div className="pl-4 border-l-2 border-gray-200">
-                          {searchMatches.length > 0 && searchMatches.some(m => segmentIndices.includes(m.segmentIndex)) ? (
-                            // Read-only view with highlights when search is active
-                            <div
-                              className="text-gray-800 leading-relaxed p-2 cursor-text min-h-[3rem]"
-                              onClick={(e) => {
-                                // Make editable when clicked
-                                const target = e.currentTarget;
-                                target.contentEditable = 'true';
-                                target.focus();
-                              }}
-                            >
-                              {renderTextWithHighlights(groupText, segmentIndices, group.segments)}
-                            </div>
-                          ) : (
-                            // Editable view when no search is active
-                            <div
-                              ref={(el) => {
-                                if (el) {
-                                  contentEditableRefs.current[groupIndex] = el;
-                                  // Only initialize once on first mount or when groupIndex changes
-                                  if (!el.dataset.groupIndex) {
-                                    el.textContent = groupText;
-                                    el.dataset.groupIndex = String(groupIndex);
-                                  }
+                        {/* Timestamp */}
+                        <span className="text-xs text-gray-500 font-mono ml-auto">
+                          {formatTimestamp(group.segments[0].start)}
+                        </span>
+                      </div>
+
+                      {/* Word-like editable paragraph area */}
+                      <div className="p-4 min-h-[120px]">
+                        {searchMatches.length > 0 && searchMatches.some(m => segmentIndices.includes(m.segmentIndex)) ? (
+                          // Read-only with highlights
+                          <div className="text-gray-800 leading-relaxed text-base">
+                            {renderTextWithHighlights(groupText, segmentIndices, group.segments)}
+                          </div>
+                        ) : (
+                          // Editable area - properly initialized
+                          <div
+                            key={editorKey}
+                            ref={(el) => {
+                              if (el && !contentEditableRefs.current[groupIndex]) {
+                                contentEditableRefs.current[groupIndex] = el;
+                                // Initialize ONLY if empty
+                                if (!el.textContent || el.textContent.trim() === '') {
+                                  el.textContent = groupText;
                                 }
-                              }}
-                              contentEditable
-                              suppressContentEditableWarning
-                              onInput={(e) => {
-                                const newText = e.currentTarget.textContent || '';
-                                console.log(`[Edit] Group ${groupIndex} changed, computing edits...`);
+                              }
+                            }}
+                            contentEditable
+                            suppressContentEditableWarning
+                            onInput={(e) => {
+                              const newText = e.currentTarget.textContent || '';
 
-                                // BATCHED STATE UPDATE: Collect all edits first, then update state once
-                                const newEditedSegments: Record<number, string> = {};
-                                const words = newText.trim().split(/\s+/);
-                                let wordIndex = 0;
-                                let hasChanges = false;
+                              // Batch updates: collect all segment edits
+                              const newEditedSegments: Record<number, string> = {};
+                              const words = newText.trim().split(/\s+/);
+                              let wordIndex = 0;
+                              let hasChanges = false;
 
-                                group.segments.forEach((segment) => {
-                                  const originalWords = segment.text.trim().split(/\s+/);
-                                  const segmentWordCount = originalWords.length;
-                                  const segmentWords = words.slice(wordIndex, wordIndex + segmentWordCount);
-                                  const segmentText = segmentWords.join(' ') || '';
+                              group.segments.forEach((segment) => {
+                                const originalWords = segment.text.trim().split(/\s+/);
+                                const segmentWordCount = originalWords.length;
+                                const segmentWords = words.slice(wordIndex, wordIndex + segmentWordCount);
+                                const segmentText = segmentWords.join(' ') || '';
 
-                                  // Track if this segment changed
-                                  if (segmentText !== segment.text) {
-                                    newEditedSegments[segment.index] = segmentText;
-                                    hasChanges = true;
-                                  }
-
-                                  wordIndex += segmentWordCount;
-                                });
-
-                                // Handle any remaining words (in case text was added)
-                                if (wordIndex < words.length) {
-                                  const remainingText = words.slice(wordIndex).join(' ');
-                                  const lastSegment = group.segments[group.segments.length - 1];
-                                  const existingEdit = editedSegments[lastSegment.index] || lastSegment.text;
-                                  newEditedSegments[lastSegment.index] = existingEdit + ' ' + remainingText;
+                                if (segmentText !== segment.text) {
+                                  newEditedSegments[segment.index] = segmentText;
                                   hasChanges = true;
                                 }
 
-                                // Only update state if there are actual changes
-                                if (hasChanges) {
-                                  setEditedSegments(prev => ({
-                                    ...prev,
-                                    ...newEditedSegments
-                                  }));
-                                }
-                              }}
-                              className="text-gray-800 leading-relaxed outline-none focus:bg-yellow-50 rounded p-2 cursor-text min-h-[3rem]"
-                            >
-                            </div>
-                          )}
-                        </div>
+                                wordIndex += segmentWordCount;
+                              });
+
+                              // Handle remaining words
+                              if (wordIndex < words.length) {
+                                const remainingText = words.slice(wordIndex).join(' ');
+                                const lastSegment = group.segments[group.segments.length - 1];
+                                newEditedSegments[lastSegment.index] = (editedSegments[lastSegment.index] || lastSegment.text) + ' ' + remainingText;
+                                hasChanges = true;
+                              }
+
+                              if (hasChanges) {
+                                setEditedSegments(prev => ({
+                                  ...prev,
+                                  ...newEditedSegments
+                                }));
+                              }
+                            }}
+                            onBlur={(e) => {
+                              // Preserve content on blur
+                              e.currentTarget.textContent = e.currentTarget.textContent;
+                            }}
+                            className="text-gray-800 leading-relaxed text-base outline-none focus:ring-2 focus:ring-blue-400 rounded px-2 py-2 whitespace-pre-wrap break-words"
+                            style={{ minHeight: '120px' }}
+                          >
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
