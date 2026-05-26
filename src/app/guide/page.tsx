@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PricingSettings, getPricingSettings } from '@/lib/firebase/settings';
 import {
-  PlayCircle,
   Upload,
   CreditCard,
   FileAudio,
@@ -74,7 +73,6 @@ const getFaqItems = (pricingSettings: PricingSettings | null): FAQItem[] => [
 
 export default function GuidePage() {
   const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
-  const [videoError, setVideoError] = useState(false);
   const [pricingSettings, setPricingSettings] = useState<PricingSettings | null>(null);
 
   // Load pricing settings from database
@@ -111,39 +109,28 @@ export default function GuidePage() {
           </p>
         </div>
 
-        {/* Video Tutorial */}
+        {/* Workspace Tutorial Placeholder */}
         <Card className="mb-12 overflow-hidden shadow-lg">
           <CardHeader className="bg-gradient-to-r from-[#003366] to-[#b29dd9] text-white">
-            <div className="flex items-center gap-3">
-              <PlayCircle className="h-8 w-8" />
-              <div>
-                <CardTitle className="text-2xl">Watch the Tutorial</CardTitle>
-                <CardDescription className="text-gray-100">
-                  Learn how to use all features in just 5 minutes
-                </CardDescription>
-              </div>
+            <div>
+              <CardTitle className="text-2xl">Updated Workspace Tutorial Coming Soon</CardTitle>
+              <CardDescription className="text-gray-100">
+                We are updating this guide to reflect the new Talk to Text Canada workspace
+              </CardDescription>
             </div>
           </CardHeader>
-          <CardContent className="p-0 bg-black">
-            {!videoError ? (
-              <video
-                controls
-                className="w-full"
-                preload="metadata"
-                onError={() => setVideoError(true)}
-              >
-                <source src="/tutorial-video.mp4" type="video/mp4" />
-                Your browser does not support the video tag.
-              </video>
-            ) : (
-              <div className="flex items-center justify-center h-96 bg-gray-900 text-white">
-                <div className="text-center">
-                  <AlertCircle className="h-12 w-12 mx-auto mb-4 text-yellow-500" />
-                  <p className="text-lg mb-2">Video tutorial is temporarily unavailable</p>
-                  <p className="text-gray-400">Please follow the written guide below or try refreshing the page</p>
-                </div>
+          <CardContent className="p-8 bg-gray-50">
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-[#b29dd9] bg-opacity-20 rounded-lg mb-4">
+                <FileText className="h-8 w-8 text-[#003366]" />
               </div>
-            )}
+              <p className="text-gray-700 mb-4">
+                We are updating this guide to reflect the new Talk to Text Canada workspace, including AI transcription, transcript styles, Document Workspace, AI Assist tools, and professional document workflows.
+              </p>
+              <p className="text-gray-600 text-sm">
+                In the meantime, use the written guide below to learn how to upload files, choose options, edit transcripts, and download completed work.
+              </p>
+            </div>
           </CardContent>
         </Card>
 
