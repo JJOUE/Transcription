@@ -30,13 +30,13 @@ function LandingPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
             <div className="text-center lg:text-left">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-                Canadian Transcription & Dictation Services Built by a Professional Transcriptionist
+                Canadian transcription, dictation, and document workspace for busy professionals
               </h1>
               <p className="text-lg md:text-xl text-gray-300 mb-4 max-w-xl mx-auto lg:mx-0">
-                Talk to Text Canada is built by a transcriptionist for transcriptionists, legal professionals, businesses, and anyone who needs cleaner, more accurate transcripts and finished documents.
+                Talk to Text Canada helps Canadian professionals turn audio, dictation, and document instructions into accurate transcripts, polished letters, reports, and office-ready documents.
               </p>
               <p className="text-base text-gray-200 mb-8 max-w-xl mx-auto lg:mx-0">
-                Designed to lighten workflow, reduce editing time, and deliver ready-to-use files at a fraction of traditional transcription costs.
+                Designed to simplify your workflow, reduce editing time, and deliver finished files that are ready for review and download.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto lg:mx-0 mb-10 text-left">
@@ -267,10 +267,10 @@ function LandingPage() {
               <FileText className="h-8 w-8 text-[#b29dd9]" />
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-[#003366] mb-4">
-              Office Studio — Dictation to Document
+              Document Workspace — Dictation to Documents
             </h2>
             <p className="text-lg text-gray-700 mb-8 max-w-2xl mx-auto">
-              Turn voice dictation into professionally prepared documents. Upload your audio with templates, instructions, and formatting guidelines — we'll handle the rest.
+              Turn voice dictation, instructions, and templates into polished office documents. Upload your audio and document details — we support the finished document workflow.
             </p>
             <Button
               asChild
@@ -278,7 +278,7 @@ function LandingPage() {
               className="bg-[#003366] hover:bg-[#002244] text-white text-lg px-12 py-4"
             >
               <Link href="/office/upload">
-                Start Office Project
+                Start a Document Request
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
