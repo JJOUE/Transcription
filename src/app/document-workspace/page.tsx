@@ -84,7 +84,7 @@ export default function DocumentWorkspacePage() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/upload"
+                href="/legal-intake"
                 className="inline-flex items-center justify-center rounded-md bg-[#003366] px-6 py-3 text-white font-semibold hover:bg-[#00264d]"
               >
                 Start a Document Request
@@ -259,7 +259,7 @@ export default function DocumentWorkspacePage() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/upload"
+                href="/legal-intake"
                 className="inline-flex items-center justify-center rounded-md bg-white px-6 py-3 text-[#003366] font-semibold hover:bg-gray-100"
               >
                 Start a Document Request
