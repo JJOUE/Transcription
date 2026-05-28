@@ -1768,16 +1768,22 @@ export default function TranscriptViewerPage() {
                           <div
                             key={editorKey}
                             ref={(el) => {
-                              if (el && !contentEditableRefs.current[groupIndex]) {
+                              if (el) {
                                 contentEditableRefs.current[groupIndex] = el;
-                                // Initialize ONLY if empty
-                                if (!el.textContent || el.textContent.trim() === '') {
+                                if (el.textContent !== groupText) {
                                   el.textContent = groupText;
                                 }
+                              } else {
+                                delete contentEditableRefs.current[groupIndex];
                               }
                             }}
                             contentEditable
                             suppressContentEditableWarning
+                            onPaste={(e) => {
+                              e.preventDefault();
+                              const pasteText = e.clipboardData.getData('text/plain');
+                              document.execCommand('insertText', false, pasteText);
+                            }}
                             onInput={(e) => {
                               const newText = e.currentTarget.textContent || '';
 
