@@ -277,8 +277,8 @@ function LandingPage() {
               size="lg"
               className="bg-[#003366] hover:bg-[#002244] text-white text-lg px-12 py-4"
             >
-              <Link href="/office/upload">
-                Start a Document Request
+              <Link href="/document-workspace">
+                Explore Document Workspace
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
