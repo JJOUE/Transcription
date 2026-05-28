@@ -10,10 +10,10 @@ export default function LegalIntakePage() {
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex-1">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
           <h1 className="text-3xl font-bold text-[#003366] mb-4">
-            LegalScript Studio — Intake
+            Document Workspace — Intake
           </h1>
           <p className="text-gray-600 mb-8">
-            Tell us what to produce. We&apos;ll use our template (or yours if you upload one). You&apos;ll upload audio after this step.
+            Tell us what you need prepared. You can provide instructions, templates, reference files, and document details. You&apos;ll upload audio or supporting files after this step.
           </p>
 
           <form>
@@ -260,7 +260,7 @@ export default function LegalIntakePage() {
                 </div>
               </div>
               <p className="text-sm text-gray-600 mt-4">
-                AI‑only transcripts don&apos;t need this intake. If you choose &quot;AI‑only,&quot; we&apos;ll auto‑transcribe right after you upload audio, then continue with your legal document.
+                AI‑only transcripts don&apos;t need this intake. If you choose &quot;AI‑only,&quot; we&apos;ll auto‑transcribe right after you upload audio, then continue with your document request.
               </p>
             </fieldset>
 
