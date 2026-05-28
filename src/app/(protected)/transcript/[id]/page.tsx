@@ -1770,7 +1770,9 @@ export default function TranscriptViewerPage() {
                             ref={(el) => {
                               if (el) {
                                 contentEditableRefs.current[groupIndex] = el;
-                                if (el.textContent !== groupText) {
+                                const isFocused = document.activeElement === el;
+                                // Only sync DOM -> React when the element is not focused
+                                if (!isFocused && el.textContent !== groupText) {
                                   el.textContent = groupText;
                                 }
                               } else {
