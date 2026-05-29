@@ -33,11 +33,24 @@ const TranscriptionModeSchema = z.enum(['ai', 'hybrid', 'human'], {
 });
 
 /**
+ * Internal job type validation
+ */
+const TranscriptionTypeSchema = z.enum(['transcription', 'office']);
+
+/**
  * Transcription domain validation
  */
-const TranscriptionDomainSchema = z.enum(['general', 'medical', 'legal', 'technical'], {
-  errorMap: () => ({ message: 'Domain must be general, medical, legal, or technical' }),
-});
+const TranscriptionDomainSchema = z.enum([
+  'general',
+  'medical',
+  'legal',
+  'technical',
+  'letter',
+  'case-notes',
+  'court-document',
+  'general-dictation',
+  'other',
+]);
 
 /**
  * Transcription status validation
@@ -66,6 +79,7 @@ export const CreateTranscriptionJobSchema = z.object({
   filePath: RequiredString.max(500, 'File path too long'),
   downloadURL: UrlSchema.max(1000, 'Download URL too long'),
   status: TranscriptionStatusSchema,
+  type: TranscriptionTypeSchema.optional(),
   mode: TranscriptionModeSchema,
   domain: TranscriptionDomainSchema.optional(),
   language: z.string().max(10).optional(), // Language code (e.g., 'en', 'fr')
@@ -78,6 +92,9 @@ export const CreateTranscriptionJobSchema = z.object({
     .max(100000, 'Credits too high'), // Increased to 100,000 to support longer files
   specialInstructions: z.string()
     .max(1000, 'Special instructions too long')
+    .optional(),
+  officeNotes: z.string()
+    .max(1000, 'Office notes too long')
     .optional(),
   // Template metadata fields
   clientName: z.string()

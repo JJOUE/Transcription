@@ -317,22 +317,18 @@ export default function OfficeUploadPage() {
 
         const jobId = await createTranscriptionJobAPI(jobData);
 
-        // Deduct from wallet
-        if (minutesFromWallet > 0) {
-          const cost = Math.min(
-            ((uploadFile.duration / 60) * costPerMinute),
-            minutesFromWallet * costPerMinute
+        // Deduct using the existing human-mode wallet flow used for Document Workspace pricing.
+        const fileBillingMinutes = getBillingMinutes(uploadFile.duration);
+        if (fileBillingMinutes > 0) {
+          const deductionResult = await deductForTranscription(
+            'human',
+            fileBillingMinutes,
+            jobId
           );
-          
-          try {
-            await deductForTranscription(
-              jobId,
-              uploadFile.duration,
-              cost,
-              'office-studio'
-            );
-          } catch (error) {
-            console.error('Error deducting credits:', error);
+
+          if (!deductionResult.success) {
+            console.error('Failed to deduct payment:', deductionResult.error);
+            throw new Error(deductionResult.error || 'Payment failed');
           }
         }
       }

@@ -74,6 +74,7 @@ export interface TranscriptionJob {
   officeDueDate?: Timestamp; // Due date for Office Studio project
   officePriority?: OfficePriority; // Priority level (standard, rush, same_day)
   officeStatus?: OfficeStatus; // Office-specific workflow status
+  officeNotes?: string; // Additional notes for office projects
   officeCompletedDocumentURL?: string; // Download URL for completed document
   officeCompletedDocumentPath?: string; // Storage path for completed document
   officeCompletedFilename?: string; // Filename of completed document
