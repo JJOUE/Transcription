@@ -673,7 +673,7 @@ export default function AdminPage() {
             size="sm"
             className={queueFilter === 'office' ? 'bg-[#b29dd9] hover:bg-[#9d87c7]' : ''}
           >
-            Office Studio {officeJobs.length > 0 && `(${officeJobs.length})`}
+            Document Workspace {officeJobs.length > 0 && `(${officeJobs.length})`}
           </Button>
         </div>
 
@@ -752,14 +752,14 @@ export default function AdminPage() {
                   {queueFilter === 'transcription' 
                     ? 'Transcription Jobs Needing Admin Action' 
                     : queueFilter === 'office' 
-                    ? 'Office Studio Projects Needing Admin Action' 
+                    ? 'Document Workspace Projects Needing Admin Action' 
                     : 'Jobs Needing Admin Action'}
                 </CardTitle>
                 <p className="text-sm text-gray-600 mt-1">
                   {queueFilter === 'transcription'
                     ? 'AI, hybrid, and human transcription jobs requiring review, processing, or retry'
                     : queueFilter === 'office'
-                    ? 'Office Studio dictation and document projects needing admin attention'
+                    ? 'Document Workspace dictation and document projects needing admin attention'
                     : 'Human review, failed jobs, rush jobs, and items requiring admin attention'}
                 </p>
               </div>
@@ -796,14 +796,14 @@ export default function AdminPage() {
                   {queueFilter === 'transcription'
                     ? 'No transcription jobs pending'
                     : queueFilter === 'office'
-                    ? 'No Office Studio projects in queue'
+                    ? 'No Document Workspace projects in queue'
                     : 'No pending jobs'}
                 </p>
                 <p className="text-sm">
                   {queueFilter === 'transcription'
                     ? 'All transcription jobs are caught up!'
                     : queueFilter === 'office'
-                    ? 'All Office Studio projects are caught up!'
+                    ? 'All Document Workspace projects are caught up!'
                     : "You're all caught up! Check back later for new work."}
                 </p>
               </div>

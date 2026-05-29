@@ -504,12 +504,11 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
               {job.type === 'office' && (
                 <span
                   className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-[#b29dd9] text-white border border-[#9d87c7]"
-                  title="Office Studio Project"
+                  title="Document Workspace Project"
                 >
-                  🏢 OFFICE STUDIO
+                  🏢 DOCUMENT WORKSPACE
                 </span>
               )}
-                
               <span className="font-medium text-[#003366] truncate">
                 {job.originalFilename || job.filename || 'Unknown file'}
               </span>
@@ -539,7 +538,7 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
 
               >
                 {job.type === 'office'
-                  ? '🏢 Office Studio'
+                  ? '🏢 Document Workspace'
                   : job.mode === 'ai'
                   ? '⚡ AI'
                   : job.mode === 'human'
@@ -786,7 +785,7 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
         {/* Office Studio Management Panel */}
         {job.type === 'office' && !['complete', 'cancelled'].includes(job.status) && (
           <div className="mt-4 p-4 bg-[#f0ebf8] border border-[#b29dd9] rounded-lg space-y-3">
-            <h4 className="font-medium text-[#003366] text-sm">📋 Office Studio Management</h4>
+            <h4 className="font-medium text-[#003366] text-sm">📋 Document Workspace Management</h4>
             
             <div className="space-y-2">
               {/* Typist Assignment */}
@@ -892,7 +891,7 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-base sm:text-lg font-semibold text-[#003366]">
                   {job.type === 'office'
-                    ? 'Office Studio Project Details'
+                    ? 'Document Workspace Project Details'
                     : (job.status === 'pending-review' || job.status === 'under-review') ? 'Review AI Transcript' : 'Create Transcript'}
                 </h3>
                 <Button
@@ -998,10 +997,10 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
               {job.type === 'office' && (
                 <div className="mb-4 p-4 bg-[#f0ebf8] border border-[#b29dd9] rounded-lg">
                   <p className="text-sm text-[#003366] font-medium">
-                    🏢 Office Studio Project
+                    🏢 Document Workspace Project
                   </p>
                   <p className="text-xs text-[#003366]/80 mt-1">
-                    This is an Office Studio project. Review the document and template details above. Use appropriate action buttons to process or reject this project.
+                    This is a Document Workspace project. Review the document and template details above. Use appropriate action buttons to process or reject this project.
                   </p>
                   {job.domain && (
                     <p className="text-xs text-[#003366]/80 mt-2">

@@ -400,7 +400,7 @@ export function TranscriptionQueue() {
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="transcription">Transcription</SelectItem>
-                  <SelectItem value="office">Office Studio</SelectItem>
+                  <SelectItem value="office">Document Workspace</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -609,7 +609,7 @@ export function TranscriptionQueue() {
         <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg font-semibold text-[#003366]">
-              Office Studio Queue ({officeItems.length})
+              Document Workspace Queue ({officeItems.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -635,7 +635,7 @@ export function TranscriptionQueue() {
                         <h3 className="font-medium text-[#003366]">{item.originalFilename || item.filename || 'Unknown file'}</h3>
                         <StatusBadge status={item.status} />
                         <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-[#b29dd9] text-white border border-[#9d87c7]">
-                          🏢 Office
+                          🏢 Document Workspace
                         </span>
                         {/* Add-on indicators */}
                         {item.rushDelivery && (
@@ -646,7 +646,7 @@ export function TranscriptionQueue() {
                       </div>
                       <div className="flex items-center space-x-4 text-sm text-gray-600">
                         <span>{userEmails[item.userId] || 'Loading...'}</span>
-                        <span>Office Studio</span>
+                        <span>Document Workspace</span>
                         {item.domain && <span>📄 {item.domain.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>}
                         <span>{formatDuration(item.duration || 0)}</span>
                         <CreditDisplay amount={item.creditsUsed || 0} size="sm" />
@@ -740,7 +740,7 @@ export function TranscriptionQueue() {
 
               {officeItems.length === 0 && !queueLoading && (
                 <div className="text-center py-12">
-                  <p className="text-gray-500">No Office Studio projects found matching your criteria.</p>
+                  <p className="text-gray-500">No Document Workspace projects found matching your criteria.</p>
                 </div>
               )}
             </div>
