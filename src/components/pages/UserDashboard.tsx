@@ -413,7 +413,7 @@ export function UserDashboard() {
                 >
                   <Link href="/office/upload">
                     <FileText className="mr-2 h-4 w-4" />
-                    Office Studio
+                    Document Workspace
                   </Link>
                 </Button>
                 
@@ -598,7 +598,7 @@ export function UserDashboard() {
                   {/* Office Studio Projects Section */}
                   <div className="pt-2 border-t border-gray-100 mt-6">
                     <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-                      Office Studio Projects
+                      Document Workspace Projects
                     </h3>
                   </div>
 
@@ -616,7 +616,7 @@ export function UserDashboard() {
                             <StatusBadge status={job.status} />
                           </div>
                           <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
-                            <span>Office Studio</span>
+                            <span>Document Workspace</span>
                             <span>{Math.ceil(job.duration / 60)} min</span>
                             <span>
                               {new Date(job.createdAt).toLocaleDateString()}
@@ -659,8 +659,8 @@ export function UserDashboard() {
                   {!jobsLoading && officeJobs.length === 0 && (
                     <div className="text-center py-8 text-gray-500">
                       <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                      <p className="text-lg font-medium mb-2">No Office Studio projects yet</p>
-                      <p className="text-sm">Start a new Office Studio project to get started!</p>
+                      <p className="text-lg font-medium mb-2">No Document Workspace projects yet</p>
+                      <p className="text-sm">Start a new Document Workspace project to get started!</p>
                     </div>
                   )}
                 </div>

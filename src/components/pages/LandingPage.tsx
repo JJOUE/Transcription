@@ -30,10 +30,13 @@ function LandingPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
             <div className="text-center lg:text-left">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-                Canadian transcription, dictation, and document workspace for busy professionals
+                Your Canadian Workspace for Transcription, Dictation and Documents
               </h1>
               <p className="text-lg md:text-xl text-gray-300 mb-4 max-w-xl mx-auto lg:mx-0">
-                Talk to Text Canada helps Canadian professionals turn audio, dictation, and document instructions into accurate transcripts, polished letters, reports, and office-ready documents.
+                Upload audio, edit transcripts, request human review, and turn dictation into polished professional documents with Canadian English, legal and medical terminology support, and secure project delivery.
+              </p>
+              <p className="text-base text-gray-200 mb-4 max-w-xl mx-auto lg:mx-0">
+                Built on 27 years of legal documentation and transcription experience.
               </p>
               <p className="text-base text-gray-200 mb-8 max-w-xl mx-auto lg:mx-0">
                 Designed to simplify your workflow, reduce editing time, and deliver finished files that are ready for review and download.
@@ -61,7 +64,7 @@ function LandingPage() {
                   className="bg-[#b29dd9] hover:bg-[#9d87c7] text-white text-lg px-15 py-4"
                 >
                   <Link href="/signin">
-                    Start Transcription
+                    Start Your Workspace
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
@@ -182,7 +185,7 @@ function LandingPage() {
                 <div className="w-16 h-16 bg-[#b29dd9] rounded-full flex items-center justify-center mx-auto mb-6">
                   <FileText className="h-9 w-9 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold text-[#003366] mb-4">Dictation to Documents</h3>
+                <h3 className="text-xl font-semibold text-[#003366] mb-4">Document Workspace</h3>
                 <p className="text-gray-600 mb-6">
                   Upload dictated audio and receive a finished document — not just a transcript.
                 </p>
@@ -267,10 +270,10 @@ function LandingPage() {
               <FileText className="h-8 w-8 text-[#b29dd9]" />
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-[#003366] mb-4">
-              Document Workspace — Dictation to Documents
+              Document Workspace — Transcription, Dictation and Documents
             </h2>
             <p className="text-lg text-gray-700 mb-8 max-w-2xl mx-auto">
-              Turn voice dictation, instructions, and templates into polished office documents. Upload your audio and document details — we support the finished document workflow.
+              Upload audio, edit transcripts, request human review, and turn dictation into polished professional documents with Canadian English, legal and medical terminology support, and secure project delivery.
             </p>
             <Button
               asChild

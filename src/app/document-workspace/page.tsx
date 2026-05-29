@@ -4,14 +4,14 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 
 export const metadata: Metadata = {
-  title: 'Document Workspace for Legal Dictation & Office Services | Talk to Text Canada',
+  title: 'Document Workspace for Transcription, Dictation and Documents | Talk to Text Canada',
   description:
-    'Document Workspace by Talk to Text Canada helps professionals turn dictation, instructions, audio notes, templates, and document requests into polished letters, case notes, reports, correspondence, and professional documents.',
+    'Upload audio, edit transcripts, request human review, and turn dictation into polished professional documents with Canadian English, legal and medical terminology support, and secure project delivery.',
   metadataBase: new URL('https://www.talktotext.ca'),
   openGraph: {
-    title: 'Document Workspace for Legal Dictation & Office Services | Talk to Text Canada',
+    title: 'Document Workspace for Transcription, Dictation and Documents | Talk to Text Canada',
     description:
-      'Turn dictation, instructions, audio notes, templates, and document requests into polished letters, case notes, reports, correspondence, and professional documents.',
+      'Upload audio, edit transcripts, request human review, and turn dictation into polished professional documents with Canadian English, legal and medical terminology support, and secure project delivery.',
     url: 'https://www.talktotext.ca/document-workspace',
     type: 'website',
   },
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 
 const services = [
   {
-    title: 'Dictation to Documents',
+    title: 'Document Workspace',
     text: 'Upload dictation or voice notes and receive polished documents prepared for professional office use.',
   },
   {
@@ -74,12 +74,14 @@ export default function DocumentWorkspacePage() {
             </p>
 
             <h1 className="text-4xl md:text-5xl font-bold text-[#003366] mb-6">
-              Document Workspace for Legal Dictation & Office Services
+              Document Workspace for Transcription, Dictation and Documents
             </h1>
 
-            <p className="text-lg md:text-xl text-gray-700 max-w-3xl mx-auto mb-8">
-              Turn dictation, instructions, audio notes, templates, and document requests into
-              polished letters, case notes, reports, correspondence, and professional documents.
+            <p className="text-lg md:text-xl text-gray-700 max-w-3xl mx-auto mb-6">
+              Upload audio, edit transcripts, request human review, and turn dictation into polished professional documents with Canadian English, legal and medical terminology support, and secure project delivery.
+            </p>
+            <p className="text-sm text-gray-500 max-w-3xl mx-auto mb-8">
+              Built on 27 years of legal documentation and transcription experience.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">

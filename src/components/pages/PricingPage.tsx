@@ -112,7 +112,7 @@ const getTypeInfo = (type: string) => {
 
     case 'dictation':
       return {
-        title: 'Dictation to Documents',
+        title: 'Document Workspace',
         subtitle: 'Upload dictated instructions and receive polished finished documents',
         icon: FileText,
         label: 'Dictation'
@@ -140,10 +140,10 @@ const getTypeInfo = (type: string) => {
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-6">
-            Professional Transcription Pricing
+            Professional Transcription & Document Pricing
           </h1>
           <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-            Choose from AI transcription, Hybrid review, Human transcription, or Dictation-to-Document services designed for real professional workflow.
+            Choose from AI transcription, Hybrid review, Human transcription, or Document Workspace dictation services designed for real professional workflow.
             Save with bundled packages or pay as you go.
           </p>
         </div>
@@ -185,7 +185,7 @@ const getTypeInfo = (type: string) => {
                       <CardContent className="p-10">
                         <div className="text-center mb-10">
                           <h3 className="text-3xl font-bold text-[#003366] mb-4">
-                            Dictation to Documents
+                            Document Workspace
                           </h3>
                           
                           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
