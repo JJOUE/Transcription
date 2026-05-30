@@ -2037,6 +2037,11 @@ export default function TranscriptViewerPage() {
     }
     return counts;
   }, {});
+  const timestampIntervalLabel = timestampFrequency === 30
+    ? '30 seconds'
+    : timestampFrequency === 60
+    ? '60 seconds'
+    : '5 minutes';
   const speakerLabelPresets = [
     'MEMBER',
     'CLAIMANT',
@@ -2055,7 +2060,6 @@ export default function TranscriptViewerPage() {
     'Specialist',
   ];
   const futureWorkspaceTools = [
-    'Timestamp Tools',
     'Filler Word Tools',
     'Duplicate Word Tools',
     'Formatting Tools',
@@ -2475,6 +2479,37 @@ export default function TranscriptViewerPage() {
                         {showSpeakerLabels ? 'Shown' : 'Hidden'}
                       </p>
                     </div>
+                  </div>
+                </section>
+
+                <section className="space-y-3 border-t pt-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                    Timestamp Tools
+                  </h3>
+                  <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <div className="flex items-center justify-between gap-3 text-sm">
+                      <span className="text-gray-600">Current interval:</span>
+                      <span className="font-medium text-[#003366] text-right">{timestampIntervalLabel}</span>
+                    </div>
+                    <label className="block space-y-1.5 text-sm">
+                      <span className="font-medium text-gray-700">Frequency</span>
+                      <select
+                        value={timestampFrequency}
+                        onChange={(e) => setTimestampFrequency(Number(e.target.value) as 30 | 60 | 300)}
+                        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+                        disabled={!transcription.timestampedTranscript || transcription.timestampedTranscript.length === 0}
+                      >
+                        <option value={30}>Every 30 seconds</option>
+                        <option value={60}>Every 1 minute</option>
+                        <option value={300}>Every 5 minutes</option>
+                      </select>
+                    </label>
+                    <p className="text-xs text-gray-600">
+                      This changes how timestamps are displayed and exported. It does not change the original audio timing.
+                    </p>
+                    <p className="text-xs font-medium text-[#003366]">
+                      Changes apply immediately to the transcript view.
+                    </p>
                   </div>
                 </section>
 
