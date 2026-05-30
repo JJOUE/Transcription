@@ -2031,8 +2031,30 @@ export default function TranscriptViewerPage() {
     : 'Viewing';
   const transcriptWordCount = getWordCount(transcription.transcript);
   const speakerCount = orderedSpeakers.length;
+  const speakerSegmentCounts = (transcription.timestampedTranscript || []).reduce<Record<string, number>>((counts, segment) => {
+    if (segment.speaker && segment.speaker !== 'UU') {
+      counts[segment.speaker] = (counts[segment.speaker] || 0) + 1;
+    }
+    return counts;
+  }, {});
+  const speakerLabelPresets = [
+    'MEMBER',
+    'CLAIMANT',
+    'COUNSEL',
+    'WITNESS',
+    'OFFICER',
+    'ADJUDICATOR',
+    'REPRESENTATIVE',
+    'Interviewer',
+    'Participant',
+    'Host',
+    'Guest',
+    'Doctor',
+    'Patient',
+    'Nurse',
+    'Specialist',
+  ];
   const futureWorkspaceTools = [
-    'Speaker Tools',
     'Timestamp Tools',
     'Filler Word Tools',
     'Duplicate Word Tools',
@@ -2457,6 +2479,211 @@ export default function TranscriptViewerPage() {
                 </section>
 
                 <section className="space-y-3 border-t pt-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                      Speaker Tools
+                    </h3>
+                    <span className="text-xs text-gray-500">
+                      {speakerCount} speaker{speakerCount === 1 ? '' : 's'}
+                    </span>
+                  </div>
+
+                  {speakerCount > 0 ? (
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        {orderedSpeakers.map((speaker) => (
+                          <div key={`workspace-speaker-${speaker}`} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="text-xs text-gray-500">{speaker}</p>
+                                <p className="font-semibold text-gray-900 break-words">
+                                  {getSpeakerDisplayName(speaker)}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {speakerSegmentCounts[speaker] || 0} segment{speakerSegmentCounts[speaker] === 1 ? '' : 's'}
+                                </p>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => setEditingSpeaker(speaker)}
+                                disabled={saving}
+                              >
+                                Rename
+                              </Button>
+                            </div>
+
+                            {editingSpeaker === speaker && (
+                              <div className="mt-3 space-y-2">
+                                <input
+                                  type="text"
+                                  autoFocus
+                                  defaultValue={getSpeakerDisplayName(speaker)}
+                                  onBlur={(e) => {
+                                    const newName = e.target.value.trim();
+                                    if (newName) updateSpeakerName(speaker, newName);
+                                    else setEditingSpeaker(null);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      const newName = e.currentTarget.value.trim();
+                                      if (newName) updateSpeakerName(speaker, newName);
+                                      else setEditingSpeaker(null);
+                                    } else if (e.key === 'Escape') {
+                                      setEditingSpeaker(null);
+                                    }
+                                  }}
+                                  className="w-full rounded-md border border-blue-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
+                                  placeholder="Speaker name"
+                                />
+                                <select
+                                  defaultValue=""
+                                  onChange={(e) => {
+                                    const preset = e.currentTarget.value;
+                                    if (preset) {
+                                      updateSpeakerName(speaker, preset);
+                                      e.currentTarget.value = '';
+                                    }
+                                  }}
+                                  className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+                                  disabled={saving}
+                                >
+                                  <option value="">Preset label</option>
+                                  {speakerLabelPresets.map((preset) => (
+                                    <option key={`workspace-preset-${speaker}-${preset}`} value={preset}>
+                                      {preset}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="space-y-2 rounded-lg border border-gray-200 p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-medium text-gray-700">Speaker labels</span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8"
+                            onClick={() => setShowSpeakerLabels(prev => !prev)}
+                            disabled={saving}
+                          >
+                            {showSpeakerLabels ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+                            {showSpeakerLabels ? 'Hide' : 'Show'}
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 rounded-lg border border-gray-200 p-3">
+                        <p className="text-sm font-medium text-gray-700">Merge speakers</p>
+                        <div className="grid grid-cols-1 gap-2">
+                          <select
+                            value={mergeSourceSpeaker}
+                            onChange={(e) => setMergeSourceSpeaker(e.target.value)}
+                            className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+                            disabled={!isEditingSpeakerSegments || saving || speakerCount < 2}
+                          >
+                            <option value="">Merge from</option>
+                            {orderedSpeakers.map((speaker) => (
+                              <option key={`workspace-merge-source-${speaker}`} value={speaker}>
+                                {getSpeakerDisplayName(speaker)}
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            value={mergeTargetSpeaker}
+                            onChange={(e) => setMergeTargetSpeaker(e.target.value)}
+                            className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+                            disabled={!isEditingSpeakerSegments || saving || !mergeSourceSpeaker}
+                          >
+                            <option value="">Merge into</option>
+                            {orderedSpeakers
+                              .filter((speaker) => speaker !== mergeSourceSpeaker)
+                              .map((speaker) => (
+                                <option key={`workspace-merge-target-${speaker}`} value={speaker}>
+                                  {getSpeakerDisplayName(speaker)}
+                                </option>
+                              ))}
+                          </select>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-full justify-center"
+                            disabled={!isEditingSpeakerSegments || saving || !mergeSourceSpeaker || !mergeTargetSpeaker || mergeSourceSpeaker === mergeTargetSpeaker}
+                            onClick={() => mergeSpeakers(mergeSourceSpeaker, mergeTargetSpeaker)}
+                          >
+                            Merge Speakers
+                          </Button>
+                        </div>
+                        {!isEditingSpeakerSegments && (
+                          <p className="text-xs text-gray-500">
+                            Enter speaker edit mode to merge speakers.
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        {!isEditingSpeakerSegments ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-full justify-start"
+                            onClick={() => setIsEditingSpeakerSegments(true)}
+                            disabled={saving || !transcription.timestampedTranscript || transcription.timestampedTranscript.length === 0}
+                          >
+                            <Edit3 className="h-4 w-4 mr-2" />
+                            Edit Speakers
+                          </Button>
+                        ) : (
+                          <>
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="w-full justify-start bg-green-600 text-white hover:bg-green-700"
+                              onClick={saveSpeakerSegmentChanges}
+                              disabled={saving}
+                            >
+                              {saving ? (
+                                <LoadingSpinner size="sm" className="mr-2" />
+                              ) : (
+                                <Save className="h-4 w-4 mr-2" />
+                              )}
+                              Save Speaker Changes
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="w-full justify-start"
+                              onClick={() => {
+                                setIsEditingSpeakerSegments(false);
+                                loadTranscription();
+                              }}
+                              disabled={saving}
+                            >
+                              <X className="h-4 w-4 mr-2" />
+                              Cancel Speaker Edit
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-500">
+                      No detected speakers.
+                    </p>
+                  )}
+                </section>
+
+                <section className="space-y-3 border-t pt-4">
                   <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
                     Quick Tools
                   </h3>
@@ -2508,65 +2735,6 @@ export default function TranscriptViewerPage() {
                         </Button>
                       </>
                     )}
-
-                    {!isEditingSpeakerSegments && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="w-full justify-start"
-                        onClick={() => setIsEditingSpeakerSegments(true)}
-                        disabled={saving || !transcription.timestampedTranscript || transcription.timestampedTranscript.length === 0}
-                      >
-                        <Edit3 className="h-4 w-4 mr-2" />
-                        Edit Speakers
-                      </Button>
-                    )}
-
-                    {isEditingSpeakerSegments && (
-                      <>
-                        <Button
-                          type="button"
-                          size="sm"
-                          className="w-full justify-start bg-green-600 text-white hover:bg-green-700"
-                          onClick={saveSpeakerSegmentChanges}
-                          disabled={saving}
-                        >
-                          {saving ? (
-                            <LoadingSpinner size="sm" className="mr-2" />
-                          ) : (
-                            <Save className="h-4 w-4 mr-2" />
-                          )}
-                          Save Speaker Changes
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="w-full justify-start"
-                          onClick={() => {
-                            setIsEditingSpeakerSegments(false);
-                            loadTranscription();
-                          }}
-                          disabled={saving}
-                        >
-                          <X className="h-4 w-4 mr-2" />
-                          Cancel Speaker Edit
-                        </Button>
-                      </>
-                    )}
-
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start"
-                      onClick={() => setShowSpeakerLabels(prev => !prev)}
-                      disabled={saving || !transcription.timestampedTranscript || transcription.timestampedTranscript.length === 0}
-                    >
-                      {showSpeakerLabels ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
-                      Toggle Speaker Labels
-                    </Button>
 
                     <Button
                       type="button"
