@@ -47,7 +47,7 @@ export default function UploadPage() {
   const [patientName, setPatientName] = useState('');
   const [location, setLocation] = useState('');
   const [locationEnabled, setLocationEnabled] = useState(false);
-  const [includeFiller, setIncludeFiller] = useState(false);
+  const includeFiller = true;
 
   // Template file for human transcription
   const [templateFile, setTemplateFile] = useState<File | null>(null);
@@ -530,7 +530,7 @@ export default function UploadPage() {
           projectName: projectName.trim() || undefined,
           patientName: patientName.trim() || undefined,
           location: location.trim() || undefined,
-          // Filler words option
+          // Preserve verbatim transcription output; filler cleanup belongs in post-transcription tools.
           includeFiller,
           // Add-on options
           rushDelivery: (transcriptionMode === 'hybrid' || transcriptionMode === 'human') ? rushDelivery : false,
@@ -1149,58 +1149,6 @@ export default function UploadPage() {
                   </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Filler Words Option */}
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-[#003366]">
-                💬 Filler Words
-              </CardTitle>
-              <p className="text-sm text-gray-600 mt-2">
-                Choose whether to include or remove filler words (um, uh, like, you know, etc.)
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex-1">
-                  <div className="font-medium text-gray-900">Include Filler Words</div>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {includeFiller
-                      ? "Transcript will include all filler words for verbatim accuracy"
-                      : "Filler words will be removed for cleaner, more readable transcripts"}
-                  </p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer ml-4">
-                  <input
-                    type="checkbox"
-                    checked={includeFiller}
-                    onChange={(e) => setIncludeFiller(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#b29dd9]/30 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#b29dd9]"></div>
-                </label>
-              </div>
-
-              {/* Information box */}
-              <div className={`mt-4 p-4 border rounded-lg ${includeFiller ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'}`}>
-                <div className="flex items-start space-x-2">
-                  <div className={`mt-0.5 ${includeFiller ? 'text-amber-600' : 'text-green-600'}`}>
-                    {includeFiller ? '📝' : '✨'}
-                  </div>
-                  <div>
-                    <p className={`text-sm font-medium ${includeFiller ? 'text-amber-800' : 'text-green-800'}`}>
-                      {includeFiller ? 'Verbatim Mode' : 'Clean Mode'}
-                    </p>
-                    <p className={`text-sm mt-1 ${includeFiller ? 'text-amber-700' : 'text-green-700'}`}>
-                      {includeFiller
-                        ? 'Perfect for legal depositions, interviews, and situations requiring exact word-for-word transcripts.'
-                        : 'Ideal for business meetings, presentations, and content creation where readability is key.'}
-                    </p>
-                  </div>
-                </div>
-              </div>
             </CardContent>
           </Card>
 

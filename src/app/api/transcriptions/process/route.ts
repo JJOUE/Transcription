@@ -226,7 +226,7 @@ export async function POST(request: NextRequest) {
       enablePunctuation: true,
       speakerSensitivity: 0.6,
       domain: transcriptionJob.domain || 'general',
-      removeDisfluencies: !transcriptionJob.includeFiller
+      removeDisfluencies: false
     };
 
     let result;
