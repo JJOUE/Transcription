@@ -2024,6 +2024,22 @@ export default function TranscriptViewerPage() {
     );
   }
 
+  const workspaceMode = isEditingSpeakerSegments
+    ? 'Editing Speakers'
+    : isEditing
+    ? 'Editing Transcript'
+    : 'Viewing';
+  const transcriptWordCount = getWordCount(transcription.transcript);
+  const speakerCount = orderedSpeakers.length;
+  const futureWorkspaceTools = [
+    'Speaker Tools',
+    'Timestamp Tools',
+    'Filler Word Tools',
+    'Duplicate Word Tools',
+    'Formatting Tools',
+    'Export Tools',
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
@@ -2382,6 +2398,210 @@ export default function TranscriptViewerPage() {
                   )}
                 </div>
 
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg text-[#003366]">Transcript Workspace</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <section className="space-y-3">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                    Project Status
+                  </h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between gap-3">
+                      <span className="text-gray-600">Mode:</span>
+                      <span className="font-medium text-[#003366] text-right">{workspaceMode}</span>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <span className="text-gray-600">Status:</span>
+                      <span className="font-medium text-right">{saving ? 'Saving...' : 'Ready'}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600 block mb-1">File:</span>
+                      <p className="font-medium text-gray-900 break-words">
+                        {transcription.originalFilename || transcription.filename || 'Untitled transcript'}
+                      </p>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="space-y-3 border-t pt-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                    Transcript Snapshot
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="rounded-lg bg-gray-50 p-3">
+                      <p className="text-gray-500">Words</p>
+                      <p className="text-lg font-semibold text-[#003366]">{transcriptWordCount}</p>
+                    </div>
+                    <div className="rounded-lg bg-gray-50 p-3">
+                      <p className="text-gray-500">Speakers</p>
+                      <p className="text-lg font-semibold text-[#003366]">{speakerCount}</p>
+                    </div>
+                    <div className="rounded-lg bg-gray-50 p-3">
+                      <p className="text-gray-500">Timestamps</p>
+                      <p className="text-lg font-semibold text-[#003366]">
+                        {timestampFrequency === 300 ? '5m' : `${timestampFrequency}s`}
+                      </p>
+                    </div>
+                    <div className="rounded-lg bg-gray-50 p-3">
+                      <p className="text-gray-500">Labels</p>
+                      <p className="text-lg font-semibold text-[#003366]">
+                        {showSpeakerLabels ? 'Shown' : 'Hidden'}
+                      </p>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="space-y-3 border-t pt-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                    Quick Tools
+                  </h3>
+                  <div className="space-y-2">
+                    {!isEditing && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start"
+                        onClick={() => setIsEditing(true)}
+                        disabled={saving || transcription.status !== 'complete'}
+                      >
+                        <Edit3 className="h-4 w-4 mr-2" />
+                        Edit Transcript
+                      </Button>
+                    )}
+
+                    {isEditing && (
+                      <>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="w-full justify-start bg-green-600 text-white hover:bg-green-700"
+                          onClick={saveEdits}
+                          disabled={saving}
+                        >
+                          {saving ? (
+                            <LoadingSpinner size="sm" className="mr-2" />
+                          ) : (
+                            <Save className="h-4 w-4 mr-2" />
+                          )}
+                          Save Transcript
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full justify-start"
+                          onClick={() => {
+                            setIsEditing(false);
+                            setEditedSegments({});
+                            setEditedTranscript('');
+                          }}
+                          disabled={saving}
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          Cancel Edit
+                        </Button>
+                      </>
+                    )}
+
+                    {!isEditingSpeakerSegments && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start"
+                        onClick={() => setIsEditingSpeakerSegments(true)}
+                        disabled={saving || !transcription.timestampedTranscript || transcription.timestampedTranscript.length === 0}
+                      >
+                        <Edit3 className="h-4 w-4 mr-2" />
+                        Edit Speakers
+                      </Button>
+                    )}
+
+                    {isEditingSpeakerSegments && (
+                      <>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="w-full justify-start bg-green-600 text-white hover:bg-green-700"
+                          onClick={saveSpeakerSegmentChanges}
+                          disabled={saving}
+                        >
+                          {saving ? (
+                            <LoadingSpinner size="sm" className="mr-2" />
+                          ) : (
+                            <Save className="h-4 w-4 mr-2" />
+                          )}
+                          Save Speaker Changes
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full justify-start"
+                          onClick={() => {
+                            setIsEditingSpeakerSegments(false);
+                            loadTranscription();
+                          }}
+                          disabled={saving}
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          Cancel Speaker Edit
+                        </Button>
+                      </>
+                    )}
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={() => setShowSpeakerLabels(prev => !prev)}
+                      disabled={saving || !transcription.timestampedTranscript || transcription.timestampedTranscript.length === 0}
+                    >
+                      {showSpeakerLabels ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+                      Toggle Speaker Labels
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={() => setShowSearchPanel(true)}
+                      disabled={saving || !isEditing || !transcription.timestampedTranscript || transcription.timestampedTranscript.length === 0}
+                    >
+                      <Search className="h-4 w-4 mr-2" />
+                      Open Search
+                    </Button>
+                  </div>
+                </section>
+
+                <section className="space-y-3 border-t pt-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                    Future Tools
+                  </h3>
+                  <div className="space-y-2">
+                    {futureWorkspaceTools.map((tool) => (
+                      <Button
+                        key={tool}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-between text-gray-400"
+                        disabled
+                      >
+                        <span>{tool}</span>
+                        <span className="text-xs">Coming soon</span>
+                      </Button>
+                    ))}
+                  </div>
+                </section>
               </CardContent>
             </Card>
             </div>
