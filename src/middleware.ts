@@ -5,8 +5,22 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get('auth-token');
   const isAuthPage = request.nextUrl.pathname.startsWith('/signin') || 
                      request.nextUrl.pathname.startsWith('/signup');
-  const isProtectedRoute = request.nextUrl.pathname.startsWith('/admin') || 
-                           request.nextUrl.pathname.startsWith('/dashboard');
+  const protectedRoutePrefixes = [
+    '/admin',
+    '/billing',
+    '/dashboard',
+    '/debug-packages',
+    '/office',
+    '/profile',
+    '/test-transcription',
+    '/transcript',
+    '/transcriptions',
+    '/upload',
+  ];
+  const isProtectedRoute = protectedRoutePrefixes.some((prefix) =>
+    request.nextUrl.pathname === prefix ||
+    request.nextUrl.pathname.startsWith(`${prefix}/`)
+  );
 
   // Redirect to signin if accessing protected route without token
   if (isProtectedRoute && !token) {
@@ -22,5 +36,18 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/dashboard/:path*', '/signin', '/signup'],
+  matcher: [
+    '/admin/:path*',
+    '/billing/:path*',
+    '/dashboard/:path*',
+    '/debug-packages/:path*',
+    '/office/:path*',
+    '/profile/:path*',
+    '/test-transcription/:path*',
+    '/transcript/:path*',
+    '/transcriptions/:path*',
+    '/upload/:path*',
+    '/signin',
+    '/signup',
+  ],
 };
