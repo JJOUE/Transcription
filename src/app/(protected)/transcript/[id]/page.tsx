@@ -75,6 +75,7 @@ export default function TranscriptViewerPage() {
   const [timestampFrequency, setTimestampFrequency] = useState<30 | 60 | 300>(60); // 30s, 60s, 5min (300s)
   const [speakerNames, setSpeakerNames] = useState<Record<string, string>>({});
   const [editingSpeaker, setEditingSpeaker] = useState<string | null>(null);
+  const [speakerRenameSource, setSpeakerRenameSource] = useState<'toolbar' | 'sidebar' | null>(null);
   const [speakerOrder, setSpeakerOrder] = useState<string[]>([]);
   const [showSpeakerLabels, setShowSpeakerLabels] = useState(true);
   const [mergeSourceSpeaker, setMergeSourceSpeaker] = useState<string>('');
@@ -939,6 +940,7 @@ export default function TranscriptViewerPage() {
 
     setSpeakerNames(updatedNames);
     setEditingSpeaker(null);
+    setSpeakerRenameSource(null);
 
     // Save to database
     if (!transcription || !user) return;
@@ -963,6 +965,25 @@ export default function TranscriptViewerPage() {
         description: 'Unable to save speaker name. Please try again.',
         variant: 'destructive'
       });
+    }
+  };
+
+  const startSpeakerRename = (speaker: string, source: 'toolbar' | 'sidebar') => {
+    setEditingSpeaker(speaker);
+    setSpeakerRenameSource(source);
+  };
+
+  const cancelSpeakerRename = () => {
+    setEditingSpeaker(null);
+    setSpeakerRenameSource(null);
+  };
+
+  const commitSpeakerRename = (speaker: string, newName: string) => {
+    const trimmedName = newName.trim();
+    if (trimmedName) {
+      updateSpeakerName(speaker, trimmedName);
+    } else {
+      cancelSpeakerRename();
     }
   };
 
@@ -2238,28 +2259,26 @@ export default function TranscriptViewerPage() {
               {/* Speaker pills with highlight toggles */}
               {orderedSpeakers.map(speaker => (
                 <div key={speaker} className="flex items-center gap-0.5">
-                  {editingSpeaker === speaker ? (
+                  {editingSpeaker === speaker && speakerRenameSource === 'toolbar' ? (
                     <input
                       type="text"
                       autoFocus
                       defaultValue={getSpeakerDisplayName(speaker)}
                       onBlur={(e) => {
-                        const newName = e.target.value.trim();
-                        if (newName) updateSpeakerName(speaker, newName);
-                        else setEditingSpeaker(null);
+                        commitSpeakerRename(speaker, e.target.value);
                       }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
-                          const newName = e.currentTarget.value.trim();
-                          if (newName) updateSpeakerName(speaker, newName);
-                          else setEditingSpeaker(null);
-                        } else if (e.key === 'Escape') setEditingSpeaker(null);
+                          commitSpeakerRename(speaker, e.currentTarget.value);
+                        } else if (e.key === 'Escape') {
+                          cancelSpeakerRename();
+                        }
                       }}
                       className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getSpeakerColor(speaker)} border-2 border-blue-500 outline-none min-w-[80px]`}
                     />
                   ) : (
                     <button
-                      onClick={() => setEditingSpeaker(speaker)}
+                      onClick={() => startSpeakerRename(speaker, 'toolbar')}
                       className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getSpeakerColor(speaker)} hover:ring-2 hover:ring-blue-400 transition-all ${highlightedSpeakers.has(speaker) ? 'ring-2 ring-offset-1 ring-blue-500' : ''}`}
                       title="Click to rename"
                     >
@@ -2543,57 +2562,53 @@ export default function TranscriptViewerPage() {
                                 variant="ghost"
                                 size="sm"
                                 className="h-7 px-2 text-xs"
-                                onClick={() => setEditingSpeaker(speaker)}
+                                onClick={() => startSpeakerRename(speaker, 'sidebar')}
                                 disabled={saving}
                               >
                                 Rename
                               </Button>
                             </div>
 
-                            {editingSpeaker === speaker && (
+                            {editingSpeaker === speaker && speakerRenameSource === 'sidebar' && (
                               <div className="mt-3 space-y-2">
                                 <input
                                   type="text"
                                   autoFocus
                                   defaultValue={getSpeakerDisplayName(speaker)}
                                   onBlur={(e) => {
-                                    const newName = e.target.value.trim();
-                                    if (newName) updateSpeakerName(speaker, newName);
-                                    else setEditingSpeaker(null);
+                                    commitSpeakerRename(speaker, e.target.value);
                                   }}
                                   onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
-                                      const newName = e.currentTarget.value.trim();
-                                      if (newName) updateSpeakerName(speaker, newName);
-                                      else setEditingSpeaker(null);
+                                      commitSpeakerRename(speaker, e.currentTarget.value);
                                     } else if (e.key === 'Escape') {
-                                      setEditingSpeaker(null);
+                                      cancelSpeakerRename();
                                     }
                                   }}
                                   className="w-full rounded-md border border-blue-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
                                   placeholder="Speaker name"
                                 />
-                                <select
-                                  defaultValue=""
-                                  onChange={(e) => {
-                                    const preset = e.currentTarget.value;
-                                    if (preset) {
-                                      updateSpeakerName(speaker, preset);
-                                      e.currentTarget.value = '';
-                                    }
-                                  }}
-                                  className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
-                                  disabled={saving}
-                                >
-                                  <option value="">Preset label</option>
-                                  {speakerLabelPresets.map((preset) => (
-                                    <option key={`workspace-preset-${speaker}-${preset}`} value={preset}>
-                                      {preset}
-                                    </option>
-                                  ))}
-                                </select>
                               </div>
                             )}
+
+                            <select
+                              value=""
+                              onChange={(e) => {
+                                const preset = e.currentTarget.value;
+                                if (preset) {
+                                  updateSpeakerName(speaker, preset);
+                                }
+                              }}
+                              className="mt-3 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+                              disabled={saving}
+                            >
+                              <option value="">Preset label</option>
+                              {speakerLabelPresets.map((preset) => (
+                                <option key={`workspace-preset-${speaker}-${preset}`} value={preset}>
+                                  {preset}
+                                </option>
+                              ))}
+                            </select>
                           </div>
                         ))}
                       </div>
