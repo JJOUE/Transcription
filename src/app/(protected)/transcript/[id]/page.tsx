@@ -36,6 +36,7 @@ import { getTranscriptionById, updateTranscriptionStatus, TranscriptionJob } fro
 import { Timestamp } from 'firebase/firestore';
 import { formatTime, formatDuration } from '@/lib/utils';
 import { AudioPlayer, AudioPlayerRef } from '@/components/ui/AudioPlayer';
+import { formatTranscriptMechanically } from '@/lib/utils/transcript-processor';
 
 // Types for Speechmatics transcript data
 interface SpeechmaticsAlternative {
@@ -81,6 +82,8 @@ interface CleanupPreview {
     after: string;
   }>;
 }
+
+interface LightGrammarPreview extends CleanupPreview {}
 
 const cleanupOptionItems: Array<{ key: CleanupOptionKey; label: string }> = [
   { key: 'removeUm', label: 'remove um' },
@@ -152,6 +155,7 @@ export default function TranscriptViewerPage() {
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [cleanupOptions, setCleanupOptions] = useState<CleanupOptionsState>(initialCleanupOptions);
   const [cleanupPreview, setCleanupPreview] = useState<CleanupPreview | null>(null);
+  const [lightGrammarPreview, setLightGrammarPreview] = useState<LightGrammarPreview | null>(null);
 
   const handleTimestampFrequencyChange = (value: string) => {
     setTimestampFrequency(value === 'none' ? 'none' : Number(value) as 30 | 60 | 300);
@@ -907,6 +911,133 @@ export default function TranscriptViewerPage() {
 
   const clearCleanupPreview = () => {
     setCleanupPreview(null);
+  };
+
+  const clearLightGrammarPreview = () => {
+    setLightGrammarPreview(null);
+  };
+
+  const estimateLightGrammarChanges = (before: string, after: string) => {
+    if (before === after) return 0;
+
+    const patterns = [
+      / {2,}/g,
+      /\s+([.,!?;:])/g,
+      /[.!?](?=[A-Za-z])/g,
+      /[.!?]\s+[a-z]/g,
+      /(^|[.!?]\s+)So\s+(?!,)/g,
+      /(^|[.!?]\s+)(Good morning|Good afternoon|Good evening)\s+(?!,)/gi,
+    ];
+
+    const estimated = patterns.reduce((total, pattern) => {
+      return total + (before.match(pattern)?.length || 0);
+    }, 0);
+
+    return Math.max(1, estimated);
+  };
+
+  const buildLightGrammarPreview = (): LightGrammarPreview | null => {
+    if (!transcription) return null;
+
+    if (transcription.timestampedTranscript && transcription.timestampedTranscript.length > 0) {
+      let changeCount = 0;
+      let segmentCount = 0;
+      const examples: LightGrammarPreview['examples'] = [];
+
+      transcription.timestampedTranscript.forEach((segment, index) => {
+        const currentText = editedSegments[index] !== undefined ? editedSegments[index] : segment.text;
+        const formatted = formatTranscriptMechanically(currentText);
+
+        if (formatted !== currentText) {
+          changeCount += estimateLightGrammarChanges(currentText, formatted);
+          segmentCount++;
+
+          if (examples.length < 3) {
+            examples.push({
+              label: `Segment ${index + 1}`,
+              before: currentText,
+              after: formatted,
+            });
+          }
+        }
+      });
+
+      return { changeCount, segmentCount, examples };
+    }
+
+    const currentTranscript = editedTranscript || transcription.transcript || '';
+    const formatted = formatTranscriptMechanically(currentTranscript);
+
+    return {
+      changeCount: formatted === currentTranscript ? 0 : estimateLightGrammarChanges(currentTranscript, formatted),
+      segmentCount: formatted === currentTranscript ? 0 : 1,
+      examples: formatted === currentTranscript ? [] : [{
+        label: 'Transcript',
+        before: currentTranscript,
+        after: formatted,
+      }],
+    };
+  };
+
+  const previewLightGrammarPass = () => {
+    const preview = buildLightGrammarPreview();
+    if (!preview) return;
+
+    setLightGrammarPreview(preview);
+
+    toast({
+      title: 'Light Grammar Pass preview ready',
+      description: preview.changeCount > 0
+        ? `${preview.changeCount} proposed change(s) across ${preview.segmentCount} segment(s).`
+        : 'No mechanical formatting changes found.',
+    });
+  };
+
+  const applyLightGrammarPass = () => {
+    if (!lightGrammarPreview) {
+      toast({
+        title: 'Preview required',
+        description: 'Preview the Light Grammar Pass before applying it.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (lightGrammarPreview.changeCount === 0) {
+      toast({
+        title: 'No changes to apply',
+        description: 'The Light Grammar Pass did not find mechanical formatting changes.',
+      });
+      return;
+    }
+
+    if (!transcription) return;
+
+    if (transcription.timestampedTranscript && transcription.timestampedTranscript.length > 0) {
+      const nextEditedSegments = { ...editedSegments };
+
+      transcription.timestampedTranscript.forEach((segment, index) => {
+        const currentText = nextEditedSegments[index] !== undefined ? nextEditedSegments[index] : segment.text;
+        const formatted = formatTranscriptMechanically(currentText);
+
+        if (formatted !== currentText) {
+          nextEditedSegments[index] = formatted;
+        }
+      });
+
+      setEditedSegments(nextEditedSegments);
+    } else {
+      const currentTranscript = editedTranscript || transcription.transcript || '';
+      setEditedTranscript(formatTranscriptMechanically(currentTranscript));
+    }
+
+    setIsEditing(true);
+    setLightGrammarPreview(null);
+
+    toast({
+      title: 'Light Grammar Pass applied',
+      description: 'Review the transcript, then use Save Transcript to persist changes.',
+    });
   };
 
   const applySelectedCleanupToText = (text: string) => {
@@ -2791,6 +2922,71 @@ export default function TranscriptViewerPage() {
                     <p className="text-xs font-medium text-[#003366]">
                       Changes apply immediately to the transcript view.
                     </p>
+                  </div>
+                </section>
+
+                <section className="space-y-3 border-t pt-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                    Light Grammar Pass
+                  </h3>
+                  <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <p className="text-xs text-gray-600">
+                      Fixes spacing, punctuation spacing, sentence capitalization, and simple comma placement. This does not rewrite, summarize, paraphrase, or remove transcript wording.
+                    </p>
+
+                    {lightGrammarPreview && (
+                      <div className="space-y-2 rounded-md border border-blue-200 bg-white p-3">
+                        <div className="text-sm font-medium text-[#003366]">
+                          {lightGrammarPreview.changeCount} proposed change{lightGrammarPreview.changeCount === 1 ? '' : 's'}
+                        </div>
+                        <p className="text-xs text-gray-600">
+                          Across {lightGrammarPreview.segmentCount} segment{lightGrammarPreview.segmentCount === 1 ? '' : 's'}.
+                        </p>
+                        {lightGrammarPreview.examples.length > 0 && (
+                          <div className="space-y-2">
+                            {lightGrammarPreview.examples.map((example) => (
+                              <div key={example.label} className="space-y-1 text-xs">
+                                <p className="font-medium text-gray-700">{example.label}</p>
+                                <p className="text-gray-500 line-through">{example.before}</p>
+                                <p className="text-gray-800">{example.after}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start"
+                        onClick={previewLightGrammarPass}
+                        disabled={saving || (!transcription.timestampedTranscript?.length && !transcription.transcript)}
+                      >
+                        Preview Light Grammar Pass
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="w-full justify-start bg-green-600 text-white hover:bg-green-700"
+                        onClick={applyLightGrammarPass}
+                        disabled={saving || !lightGrammarPreview || lightGrammarPreview.changeCount === 0}
+                      >
+                        Apply Light Grammar Pass
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start"
+                        onClick={clearLightGrammarPreview}
+                        disabled={saving || !lightGrammarPreview}
+                      >
+                        Cancel / Clear Preview
+                      </Button>
+                    </div>
                   </div>
                 </section>
 
