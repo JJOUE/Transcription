@@ -83,7 +83,20 @@ interface CleanupPreview {
   }>;
 }
 
-interface LightGrammarPreview extends CleanupPreview {}
+type LightGrammarDecision = 'pending' | 'accepted' | 'skipped';
+
+interface LightGrammarChange {
+  id: string;
+  label: string;
+  before: string;
+  after: string;
+  segmentIndex?: number;
+  status: LightGrammarDecision;
+}
+
+interface LightGrammarPreview extends CleanupPreview {
+  changes: LightGrammarChange[];
+}
 
 const cleanupOptionItems: Array<{ key: CleanupOptionKey; label: string }> = [
   { key: 'removeUm', label: 'remove um' },
@@ -156,6 +169,8 @@ export default function TranscriptViewerPage() {
   const [cleanupOptions, setCleanupOptions] = useState<CleanupOptionsState>(initialCleanupOptions);
   const [cleanupPreview, setCleanupPreview] = useState<CleanupPreview | null>(null);
   const [lightGrammarPreview, setLightGrammarPreview] = useState<LightGrammarPreview | null>(null);
+  const [showLightGrammarReview, setShowLightGrammarReview] = useState(false);
+  const [lightGrammarDecisionHistory, setLightGrammarDecisionHistory] = useState<LightGrammarChange[][]>([]);
 
   const handleTimestampFrequencyChange = (value: string) => {
     setTimestampFrequency(value === 'none' ? 'none' : Number(value) as 30 | 60 | 300);
@@ -915,6 +930,8 @@ export default function TranscriptViewerPage() {
 
   const clearLightGrammarPreview = () => {
     setLightGrammarPreview(null);
+    setShowLightGrammarReview(false);
+    setLightGrammarDecisionHistory([]);
   };
 
   const estimateLightGrammarChanges = (before: string, after: string) => {
@@ -943,6 +960,7 @@ export default function TranscriptViewerPage() {
       let changeCount = 0;
       let segmentCount = 0;
       const examples: LightGrammarPreview['examples'] = [];
+      const changes: LightGrammarChange[] = [];
 
       transcription.timestampedTranscript.forEach((segment, index) => {
         const currentText = editedSegments[index] !== undefined ? editedSegments[index] : segment.text;
@@ -959,23 +977,40 @@ export default function TranscriptViewerPage() {
               after: formatted,
             });
           }
+
+          changes.push({
+            id: `segment-${index}`,
+            label: `Segment ${index + 1}`,
+            segmentIndex: index,
+            before: currentText,
+            after: formatted,
+            status: 'pending',
+          });
         }
       });
 
-      return { changeCount, segmentCount, examples };
+      return { changeCount, segmentCount, examples, changes };
     }
 
     const currentTranscript = editedTranscript || transcription.transcript || '';
     const formatted = formatTranscriptMechanically(currentTranscript);
+    const hasChange = formatted !== currentTranscript;
 
     return {
-      changeCount: formatted === currentTranscript ? 0 : estimateLightGrammarChanges(currentTranscript, formatted),
-      segmentCount: formatted === currentTranscript ? 0 : 1,
-      examples: formatted === currentTranscript ? [] : [{
+      changeCount: hasChange ? estimateLightGrammarChanges(currentTranscript, formatted) : 0,
+      segmentCount: hasChange ? 1 : 0,
+      examples: hasChange ? [{
         label: 'Transcript',
         before: currentTranscript,
         after: formatted,
-      }],
+      }] : [],
+      changes: hasChange ? [{
+        id: 'transcript',
+        label: 'Transcript',
+        before: currentTranscript,
+        after: formatted,
+        status: 'pending',
+      }] : [],
     };
   };
 
@@ -984,6 +1019,8 @@ export default function TranscriptViewerPage() {
     if (!preview) return;
 
     setLightGrammarPreview(preview);
+    setLightGrammarDecisionHistory([]);
+    setShowLightGrammarReview(false);
 
     toast({
       title: 'Light Grammar Pass preview ready',
@@ -993,7 +1030,45 @@ export default function TranscriptViewerPage() {
     });
   };
 
-  const applyLightGrammarPass = () => {
+  const updateLightGrammarChangeStatus = (changeId: string, status: LightGrammarDecision) => {
+    if (!lightGrammarPreview) return;
+
+    setLightGrammarDecisionHistory(prev => [...prev, lightGrammarPreview.changes]);
+    setLightGrammarPreview({
+      ...lightGrammarPreview,
+      changes: lightGrammarPreview.changes.map(change =>
+        change.id === changeId ? { ...change, status } : change
+      ),
+    });
+  };
+
+  const acceptAllLightGrammarChanges = () => {
+    if (!lightGrammarPreview) return;
+
+    setLightGrammarDecisionHistory(prev => [...prev, lightGrammarPreview.changes]);
+    setLightGrammarPreview({
+      ...lightGrammarPreview,
+      changes: lightGrammarPreview.changes.map(change =>
+        change.status === 'pending' ? { ...change, status: 'accepted' } : change
+      ),
+    });
+  };
+
+  const undoLightGrammarDecision = () => {
+    setLightGrammarDecisionHistory(prev => {
+      const previous = prev[prev.length - 1];
+      if (!previous || !lightGrammarPreview) return prev;
+
+      setLightGrammarPreview({
+        ...lightGrammarPreview,
+        changes: previous,
+      });
+
+      return prev.slice(0, -1);
+    });
+  };
+
+  const applyAcceptedLightGrammarChanges = () => {
     if (!lightGrammarPreview) {
       toast({
         title: 'Preview required',
@@ -1003,10 +1078,12 @@ export default function TranscriptViewerPage() {
       return;
     }
 
-    if (lightGrammarPreview.changeCount === 0) {
+    const acceptedChanges = lightGrammarPreview.changes.filter(change => change.status === 'accepted');
+
+    if (acceptedChanges.length === 0) {
       toast({
         title: 'No changes to apply',
-        description: 'The Light Grammar Pass did not find mechanical formatting changes.',
+        description: 'Accept at least one Light Grammar Pass change before applying.',
       });
       return;
     }
@@ -1016,26 +1093,27 @@ export default function TranscriptViewerPage() {
     if (transcription.timestampedTranscript && transcription.timestampedTranscript.length > 0) {
       const nextEditedSegments = { ...editedSegments };
 
-      transcription.timestampedTranscript.forEach((segment, index) => {
-        const currentText = nextEditedSegments[index] !== undefined ? nextEditedSegments[index] : segment.text;
-        const formatted = formatTranscriptMechanically(currentText);
-
-        if (formatted !== currentText) {
-          nextEditedSegments[index] = formatted;
+      acceptedChanges.forEach((change) => {
+        if (change.segmentIndex !== undefined) {
+          nextEditedSegments[change.segmentIndex] = change.after;
         }
       });
 
       setEditedSegments(nextEditedSegments);
     } else {
-      const currentTranscript = editedTranscript || transcription.transcript || '';
-      setEditedTranscript(formatTranscriptMechanically(currentTranscript));
+      const acceptedTranscriptChange = acceptedChanges.find(change => change.id === 'transcript');
+      if (acceptedTranscriptChange) {
+        setEditedTranscript(acceptedTranscriptChange.after);
+      }
     }
 
     setIsEditing(true);
     setLightGrammarPreview(null);
+    setShowLightGrammarReview(false);
+    setLightGrammarDecisionHistory([]);
 
     toast({
-      title: 'Light Grammar Pass applied',
+      title: 'Accepted changes applied',
       description: 'Review the transcript, then use Save Transcript to persist changes.',
     });
   };
@@ -2441,6 +2519,9 @@ export default function TranscriptViewerPage() {
     : isEditing
     ? 'Editing Transcript'
     : 'Viewing';
+  const acceptedLightGrammarCount = lightGrammarPreview?.changes.filter(change => change.status === 'accepted').length || 0;
+  const skippedLightGrammarCount = lightGrammarPreview?.changes.filter(change => change.status === 'skipped').length || 0;
+  const pendingLightGrammarCount = lightGrammarPreview?.changes.filter(change => change.status === 'pending').length || 0;
   const transcriptWordCount = getWordCount(transcription.transcript);
   const speakerCount = orderedSpeakers.length;
   const speakerSegmentCounts = (transcription.timestampedTranscript || []).reduce<Record<string, number>>((counts, segment) => {
@@ -2483,6 +2564,121 @@ export default function TranscriptViewerPage() {
       <Header />
 
       <main className="container mx-auto px-4 py-8 flex-1">
+        {showLightGrammarReview && lightGrammarPreview && (
+          <div className="fixed inset-0 z-50 bg-black/40 px-4 py-6">
+            <div className="mx-auto flex h-full max-w-6xl flex-col rounded-lg bg-white shadow-xl">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 p-4">
+                <div>
+                  <h2 className="text-xl font-semibold text-[#003366]">Light Grammar Pass Review</h2>
+                  <p className="text-sm text-gray-600">
+                    {lightGrammarPreview.changeCount} proposed change{lightGrammarPreview.changeCount === 1 ? '' : 's'} across {lightGrammarPreview.segmentCount} segment{lightGrammarPreview.segmentCount === 1 ? '' : 's'}.
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {pendingLightGrammarCount} pending · {acceptedLightGrammarCount} accepted · {skippedLightGrammarCount} skipped
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={acceptAllLightGrammarChanges}
+                    disabled={saving || pendingLightGrammarCount === 0}
+                  >
+                    Accept All Changes
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={undoLightGrammarDecision}
+                    disabled={saving || lightGrammarDecisionHistory.length === 0}
+                  >
+                    Undo
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="bg-green-600 text-white hover:bg-green-700"
+                    onClick={applyAcceptedLightGrammarChanges}
+                    disabled={saving || acceptedLightGrammarCount === 0}
+                  >
+                    Apply Accepted Changes
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={clearLightGrammarPreview}
+                    disabled={saving}
+                  >
+                    Cancel / Clear Preview
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowLightGrammarReview(false)}
+                    disabled={saving}
+                  >
+                    Close Review
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4">
+                <div className="space-y-4">
+                  {lightGrammarPreview.changes.map((change) => (
+                    <div
+                      key={change.id}
+                      className="rounded-lg border border-gray-200 bg-gray-50 p-4"
+                    >
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <h3 className="font-semibold text-[#003366]">{change.label}</h3>
+                          <p className="text-xs uppercase tracking-wide text-gray-500">
+                            Status: {change.status}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={change.status === 'accepted' ? 'default' : 'outline'}
+                            onClick={() => updateLightGrammarChangeStatus(change.id, 'accepted')}
+                            disabled={saving}
+                          >
+                            Accept this change
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={change.status === 'skipped' ? 'default' : 'outline'}
+                            onClick={() => updateLightGrammarChangeStatus(change.id, 'skipped')}
+                            disabled={saving}
+                          >
+                            Skip this change
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <div className="rounded-md border border-red-100 bg-white p-3">
+                          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-red-700">Before</p>
+                          <p className="whitespace-pre-wrap text-sm text-gray-700">{change.before}</p>
+                        </div>
+                        <div className="rounded-md border border-green-100 bg-white p-3">
+                          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-green-700">After</p>
+                          <p className="whitespace-pre-wrap text-sm text-gray-900">{change.after}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header Section */}
         <div className="mb-6">
           <Button 
@@ -2627,161 +2823,6 @@ export default function TranscriptViewerPage() {
               </Button>
             )}
           </div>
-
-          {/* Speaker controls row */}
-          {transcription.timestampedTranscript && transcription.timestampedTranscript.length > 0 && orderedSpeakers.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-gray-200/60">
-              {/* Timestamp frequency */}
-              <div className="flex items-center gap-1.5 mr-2">
-                <Clock className="h-3.5 w-3.5 text-blue-600" />
-                <select
-                  value={timestampFrequency}
-                  onChange={(e) => handleTimestampFrequencyChange(e.target.value)}
-                  className="border border-gray-300 rounded-md px-2 py-1 text-xs bg-white hover:bg-gray-50 focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="none">No timestamps</option>
-                  <option value={30}>30s</option>
-                  <option value={60}>60s</option>
-                  <option value={300}>5m</option>
-                </select>
-              </div>
-
-              <div className="h-4 w-px bg-gray-300 mr-1" />
-
-              {/* Speaker pills with highlight toggles */}
-              {orderedSpeakers.map(speaker => (
-                <div key={speaker} className="flex items-center gap-0.5">
-                  {editingSpeaker === speaker && speakerRenameSource === 'toolbar' ? (
-                    <input
-                      type="text"
-                      autoFocus
-                      defaultValue={getSpeakerDisplayName(speaker)}
-                      onBlur={(e) => {
-                        commitSpeakerRename(speaker, e.target.value);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          commitSpeakerRename(speaker, e.currentTarget.value);
-                        } else if (e.key === 'Escape') {
-                          cancelSpeakerRename();
-                        }
-                      }}
-                      className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getSpeakerColor(speaker)} border-2 border-blue-500 outline-none min-w-[80px]`}
-                    />
-                  ) : (
-                    <button
-                      onClick={() => startSpeakerRename(speaker, 'toolbar')}
-                      className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getSpeakerColor(speaker)} hover:ring-2 hover:ring-blue-400 transition-all ${highlightedSpeakers.has(speaker) ? 'ring-2 ring-offset-1 ring-blue-500' : ''}`}
-                      title="Click to rename"
-                    >
-                      {getSpeakerDisplayName(speaker)}
-                    </button>
-                  )}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); toggleHighlightSpeaker(speaker); }}
-                    className={`p-0.5 rounded-full transition-all ${highlightedSpeakers.has(speaker) ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
-                    title={highlightedSpeakers.has(speaker) ? 'Remove highlight' : 'Highlight speaker'}
-                  >
-                    <Eye className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-
-              {highlightedSpeakers.size > 0 && (
-                <button
-                  onClick={clearHighlightedSpeakers}
-                  className="text-xs text-gray-500 hover:text-gray-700 underline ml-1"
-                >
-                  Clear filters
-                </button>
-              )}
-
-              <div className="h-4 w-px bg-gray-300 mx-1" />
-
-              <Button
-                variant="outline"
-                onClick={() => setShowSpeakerLabels(prev => !prev)}
-                size="sm"
-                className="border-gray-300 text-gray-700 hover:bg-gray-50"
-              >
-                {showSpeakerLabels ? <EyeOff className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
-                {showSpeakerLabels ? 'Hide labels' : 'Show labels'}
-              </Button>
-
-              {isEditingSpeakerSegments && orderedSpeakers.length > 1 && (
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs text-gray-500">Merge:</span>
-                  <select
-                    value={mergeSourceSpeaker}
-                    onChange={(e) => setMergeSourceSpeaker(e.target.value)}
-                    className="border border-gray-300 rounded-md px-2 py-1 text-xs bg-white"
-                  >
-                    <option value="">From</option>
-                    {orderedSpeakers.map((speaker) => (
-                      <option key={`merge-source-${speaker}`} value={speaker}>
-                        {getSpeakerDisplayName(speaker)}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={mergeTargetSpeaker}
-                    onChange={(e) => setMergeTargetSpeaker(e.target.value)}
-                    className="border border-gray-300 rounded-md px-2 py-1 text-xs bg-white"
-                    disabled={!mergeSourceSpeaker}
-                  >
-                    <option value="">Into</option>
-                    {orderedSpeakers
-                      .filter((speaker) => speaker !== mergeSourceSpeaker)
-                      .map((speaker) => (
-                        <option key={`merge-target-${speaker}`} value={speaker}>
-                          {getSpeakerDisplayName(speaker)}
-                        </option>
-                      ))}
-                  </select>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={!mergeSourceSpeaker || !mergeTargetSpeaker || mergeSourceSpeaker === mergeTargetSpeaker}
-                    onClick={() => mergeSpeakers(mergeSourceSpeaker, mergeTargetSpeaker)}
-                  >
-                    Merge
-                  </Button>
-                </div>
-              )}
-
-              {/* Edit speakers button */}
-              {isEditingSpeakerSegments ? (
-                <>
-                  <Button
-                    onClick={saveSpeakerSegmentChanges}
-                    disabled={saving}
-                    size="sm"
-                    className="bg-green-600 text-white hover:bg-green-700 h-7 text-xs"
-                  >
-                    {saving ? <><LoadingSpinner size="sm" className="mr-1" />Saving...</> : <><Save className="h-3 w-3 mr-1" />Save Speakers</>}
-                  </Button>
-                  <Button
-                    onClick={() => { setIsEditingSpeakerSegments(false); loadTranscription(); }}
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs"
-                  >
-                    Cancel
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  onClick={() => setIsEditingSpeakerSegments(true)}
-                  size="sm"
-                  variant="outline"
-                  className="border-blue-300 text-blue-700 hover:bg-blue-50 h-7 text-xs"
-                >
-                  <Edit3 className="h-3 w-3 mr-1" />
-                  Edit Speakers
-                </Button>
-              )}
-            </div>
-          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
@@ -2971,10 +3012,10 @@ export default function TranscriptViewerPage() {
                         type="button"
                         size="sm"
                         className="w-full justify-start bg-green-600 text-white hover:bg-green-700"
-                        onClick={applyLightGrammarPass}
+                        onClick={() => setShowLightGrammarReview(true)}
                         disabled={saving || !lightGrammarPreview || lightGrammarPreview.changeCount === 0}
                       >
-                        Apply Light Grammar Pass
+                        Review All Changes
                       </Button>
                       <Button
                         type="button"
