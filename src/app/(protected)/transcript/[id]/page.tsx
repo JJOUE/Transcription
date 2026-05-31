@@ -202,6 +202,8 @@ export default function TranscriptViewerPage() {
   const [lightGrammarPreview, setLightGrammarPreview] = useState<LightGrammarPreview | null>(null);
   const [showLightGrammarReview, setShowLightGrammarReview] = useState(false);
   const [lightGrammarDecisionHistory, setLightGrammarDecisionHistory] = useState<LightGrammarChange[][]>([]);
+  const [showUnsavedLeavePrompt, setShowUnsavedLeavePrompt] = useState(false);
+  const pendingLeaveActionRef = useRef<(() => void) | null>(null);
 
   const handleTimestampFrequencyChange = (value: string) => {
     setTimestampFrequency(value === 'none' ? 'none' : Number(value) as 30 | 60 | 300);
@@ -432,8 +434,43 @@ export default function TranscriptViewerPage() {
     setCurrentTime(time);
   };
 
+  const hasUnsavedTranscriptChanges = () => {
+    if (!transcription) return false;
+
+    if (Object.keys(editedSegments).length > 0) {
+      return true;
+    }
+
+    if (!transcription.timestampedTranscript || transcription.timestampedTranscript.length === 0) {
+      return editedTranscript.trim() !== (transcription.transcript || '').trim();
+    }
+
+    return false;
+  };
+
+  const getDraftTranscriptText = () => {
+    if (!transcription) return '';
+
+    if (transcription.timestampedTranscript && transcription.timestampedTranscript.length > 0) {
+      return transcription.timestampedTranscript
+        .map((segment, index) => editedSegments[index] !== undefined ? editedSegments[index] : segment.text)
+        .join(' ');
+    }
+
+    return isEditing ? editedTranscript : (transcription.transcript || '');
+  };
+
+  const discardTranscriptChanges = () => {
+    setIsEditing(false);
+    setEditedSegments({});
+    setEditedTranscript(transcription?.transcript || '');
+    clearLightGrammarPreview();
+    clearCleanupPreview();
+    clearFormattingPreview();
+  };
+
   const saveEdits = async () => {
-    if (!transcription) return;
+    if (!transcription) return false;
 
     try {
       setSaving(true);
@@ -524,6 +561,7 @@ export default function TranscriptViewerPage() {
         title: 'Changes saved',
         description: 'Transcript has been updated successfully'
       });
+      return true;
 
     } catch (error) {
       console.error('[Save] Error saving transcript:', error);
@@ -532,8 +570,49 @@ export default function TranscriptViewerPage() {
         description: 'Unable to save changes. Please try again.',
         variant: 'destructive'
       });
+      return false;
     } finally {
       setSaving(false);
+    }
+  };
+
+  const requestLeaveEditor = (action: () => void) => {
+    if (!hasUnsavedTranscriptChanges()) {
+      action();
+      return;
+    }
+
+    pendingLeaveActionRef.current = action;
+    setShowUnsavedLeavePrompt(true);
+  };
+
+  const confirmSaveAndLeave = async () => {
+    const saved = await saveEdits();
+    if (!saved) return;
+
+    setShowUnsavedLeavePrompt(false);
+    const action = pendingLeaveActionRef.current;
+    pendingLeaveActionRef.current = null;
+    action?.();
+  };
+
+  const confirmDiscardAndLeave = () => {
+    discardTranscriptChanges();
+    setShowUnsavedLeavePrompt(false);
+    const action = pendingLeaveActionRef.current;
+    pendingLeaveActionRef.current = null;
+    action?.();
+  };
+
+  const cancelLeaveEditor = () => {
+    setShowUnsavedLeavePrompt(false);
+    pendingLeaveActionRef.current = null;
+  };
+
+  const saveAndDownload = async () => {
+    const saved = await saveEdits();
+    if (saved) {
+      exportTranscript(selectedFormat);
     }
   };
 
@@ -630,7 +709,7 @@ export default function TranscriptViewerPage() {
       // Generate template data with current transcript content
       const templateData = generateTemplateData({
         ...transcription,
-        transcript: isEditing ? editedTranscript : (transcription.transcript || '')
+        transcript: getDraftTranscriptText()
       }, userData);
 
       if (format === 'pdf') {
@@ -1068,6 +1147,15 @@ export default function TranscriptViewerPage() {
   };
 
   const previewLightGrammarPass = () => {
+    if (!isEditing) {
+      toast({
+        title: 'Edit Transcript required',
+        description: 'Click Edit Transcript before using transcript-changing tools.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     const preview = buildLightGrammarPreview();
     if (!preview) return;
 
@@ -1122,6 +1210,15 @@ export default function TranscriptViewerPage() {
   };
 
   const applyAcceptedLightGrammarChanges = () => {
+    if (!isEditing) {
+      toast({
+        title: 'Edit Transcript required',
+        description: 'Click Edit Transcript before applying transcript-changing tools.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     if (!lightGrammarPreview) {
       toast({
         title: 'Preview required',
@@ -1305,6 +1402,15 @@ export default function TranscriptViewerPage() {
   };
 
   const previewSelectedCleanup = () => {
+    if (!isEditing) {
+      toast({
+        title: 'Edit Transcript required',
+        description: 'Click Edit Transcript before using transcript-changing tools.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     if (!hasSelectedCleanupOptions) {
       toast({
         title: 'No cleanup options selected',
@@ -1368,6 +1474,15 @@ export default function TranscriptViewerPage() {
   };
 
   const applyAcceptedCleanupChanges = () => {
+    if (!isEditing) {
+      toast({
+        title: 'Edit Transcript required',
+        description: 'Click Edit Transcript before applying transcript-changing tools.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     if (!cleanupPreview) {
       toast({
         title: 'Preview required',
@@ -1497,6 +1612,15 @@ export default function TranscriptViewerPage() {
   };
 
   const previewSelectedFormatting = () => {
+    if (!isEditing) {
+      toast({
+        title: 'Edit Transcript required',
+        description: 'Click Edit Transcript before using transcript-changing tools.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     if (!hasSelectedFormattingOptions) {
       toast({
         title: 'No formatting options selected',
@@ -1560,6 +1684,15 @@ export default function TranscriptViewerPage() {
   };
 
   const applyAcceptedFormattingChanges = () => {
+    if (!isEditing) {
+      toast({
+        title: 'Edit Transcript required',
+        description: 'Click Edit Transcript before applying transcript-changing tools.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     if (!formattingPreview) {
       toast({
         title: 'Preview required',
@@ -1653,6 +1786,40 @@ export default function TranscriptViewerPage() {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isEditing, showSearchPanel, searchMatches, currentMatchIndex]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!hasUnsavedTranscriptChanges()) return;
+
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [editedSegments, editedTranscript, transcription]);
+
+  useEffect(() => {
+    const handleDocumentClick = (event: MouseEvent) => {
+      if (!hasUnsavedTranscriptChanges()) return;
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+      const target = event.target as HTMLElement | null;
+      const link = target?.closest('a[href]') as HTMLAnchorElement | null;
+      if (!link || link.target === '_blank' || link.hasAttribute('download')) return;
+
+      const nextUrl = new URL(link.href, window.location.href);
+      if (nextUrl.origin !== window.location.origin || nextUrl.href === window.location.href) return;
+
+      event.preventDefault();
+      requestLeaveEditor(() => {
+        window.location.href = nextUrl.href;
+      });
+    };
+
+    document.addEventListener('click', handleDocumentClick, true);
+    return () => document.removeEventListener('click', handleDocumentClick, true);
+  }, [editedSegments, editedTranscript, transcription]);
 
   const formatTimestamp = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
@@ -2787,7 +2954,7 @@ export default function TranscriptViewerPage() {
         <main className="container mx-auto px-4 py-8 flex-1">
           <Button
             variant="ghost"
-            onClick={() => router.back()}
+            onClick={() => requestLeaveEditor(() => router.back())}
             className="mb-4 hover:bg-gray-100"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -2833,6 +3000,7 @@ export default function TranscriptViewerPage() {
   const acceptedFormattingCount = formattingPreview?.changes.filter(change => change.status === 'accepted').length || 0;
   const skippedFormattingCount = formattingPreview?.changes.filter(change => change.status === 'skipped').length || 0;
   const pendingFormattingCount = formattingPreview?.changes.filter(change => change.status === 'pending').length || 0;
+  const hasUnsavedTranscriptDraft = hasUnsavedTranscriptChanges();
   const transcriptWordCount = getWordCount(transcription.transcript);
   const speakerCount = orderedSpeakers.length;
   const speakerSegmentCounts = (transcription.timestampedTranscript || []).reduce<Record<string, number>>((counts, segment) => {
@@ -2874,6 +3042,47 @@ export default function TranscriptViewerPage() {
       <Header />
 
       <main className="container mx-auto px-4 py-8 flex-1">
+        {showUnsavedLeavePrompt && (
+          <div className="fixed inset-0 z-[60] bg-black/40 px-4 py-6">
+            <div className="mx-auto mt-24 max-w-lg rounded-lg bg-white p-5 shadow-xl">
+              <h2 className="text-lg font-semibold text-[#003366]">Unsaved transcript changes</h2>
+              <p className="mt-2 text-sm text-gray-700">
+                Save your transcript changes before leaving, discard them, or stay on this page.
+              </p>
+              <div className="mt-5 flex flex-wrap justify-end gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  className="bg-green-600 text-white hover:bg-green-700"
+                  onClick={confirmSaveAndLeave}
+                  disabled={saving}
+                >
+                  {saving ? <LoadingSpinner size="sm" className="mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                  Save Transcript
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={confirmDiscardAndLeave}
+                  disabled={saving}
+                >
+                  Discard Changes
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={cancelLeaveEditor}
+                  disabled={saving}
+                >
+                  Cancel / Stay
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {showCleanupReview && cleanupPreview && (
           <div className="fixed inset-0 z-50 bg-black/40 px-4 py-6">
             <div className="mx-auto flex h-full max-w-6xl flex-col rounded-lg bg-white shadow-xl">
@@ -3365,6 +3574,51 @@ export default function TranscriptViewerPage() {
           </div>
         </div>
 
+        {hasUnsavedTranscriptDraft && (
+          <div className="sticky top-[7.75rem] z-30 -mx-4 mb-6 border-y border-amber-200 bg-amber-50 px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="font-medium text-amber-900">Unsaved transcript changes</p>
+                <p className="text-sm text-amber-800">
+                  Save Transcript to keep your edits, or discard them before leaving.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  className="bg-green-600 text-white hover:bg-green-700"
+                  onClick={saveEdits}
+                  disabled={saving}
+                >
+                  {saving ? <LoadingSpinner size="sm" className="mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                  Save Transcript
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={saveAndDownload}
+                  disabled={saving}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Save & Download
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={discardTranscriptChanges}
+                  disabled={saving}
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Discard Changes
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
           {/* Audio Player Section */}
           <div className="lg:col-span-1">
@@ -3476,6 +3730,72 @@ export default function TranscriptViewerPage() {
 
                 <section className="space-y-3 border-t pt-4">
                   <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                    Edit Transcript
+                  </h3>
+                  <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    {!isEditing ? (
+                      <>
+                        <p className="text-xs text-gray-600">
+                          Read-only view. Click Edit Transcript to make changes.
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full justify-start"
+                          onClick={() => setIsEditing(true)}
+                          disabled={saving || transcription.status !== 'complete'}
+                        >
+                          <Edit3 className="h-4 w-4 mr-2" />
+                          Edit Transcript
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        {hasUnsavedTranscriptDraft && (
+                          <p className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
+                            Unsaved transcript changes are ready to save.
+                          </p>
+                        )}
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="w-full justify-start bg-green-600 text-white hover:bg-green-700"
+                          onClick={saveEdits}
+                          disabled={saving}
+                        >
+                          {saving ? <LoadingSpinner size="sm" className="mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                          Save Transcript
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full justify-start"
+                          onClick={discardTranscriptChanges}
+                          disabled={saving}
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          Discard Changes / Cancel Edit
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full justify-start"
+                          onClick={() => setShowSearchPanel(true)}
+                          disabled={saving || !transcription.timestampedTranscript || transcription.timestampedTranscript.length === 0}
+                        >
+                          <Search className="h-4 w-4 mr-2" />
+                          Open Search
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </section>
+
+                <section className="space-y-3 border-t pt-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
                     Timestamp Tools
                   </h3>
                   <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
@@ -3511,6 +3831,11 @@ export default function TranscriptViewerPage() {
                     Light Grammar Pass
                   </h3>
                   <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    {!isEditing && (
+                      <p className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
+                        Click Edit Transcript before using transcript-changing tools.
+                      </p>
+                    )}
                     <p className="text-xs text-gray-600">
                       Fixes spacing, punctuation spacing, sentence capitalization, and simple comma placement. This does not rewrite, summarize, paraphrase, or remove transcript wording.
                     </p>
@@ -3544,7 +3869,7 @@ export default function TranscriptViewerPage() {
                         size="sm"
                         className="w-full justify-start"
                         onClick={previewLightGrammarPass}
-                        disabled={saving || (!transcription.timestampedTranscript?.length && !transcription.transcript)}
+                        disabled={saving || !isEditing || (!transcription.timestampedTranscript?.length && !transcription.transcript)}
                       >
                         Preview Light Grammar Pass
                       </Button>
@@ -3553,7 +3878,7 @@ export default function TranscriptViewerPage() {
                         size="sm"
                         className="w-full justify-start bg-green-600 text-white hover:bg-green-700"
                         onClick={() => setShowLightGrammarReview(true)}
-                        disabled={saving || !lightGrammarPreview || lightGrammarPreview.changeCount === 0}
+                        disabled={saving || !isEditing || !lightGrammarPreview || lightGrammarPreview.changeCount === 0}
                       >
                         Review All Changes
                       </Button>
@@ -3563,7 +3888,7 @@ export default function TranscriptViewerPage() {
                         size="sm"
                         className="w-full justify-start"
                         onClick={clearLightGrammarPreview}
-                        disabled={saving || !lightGrammarPreview}
+                        disabled={saving || !isEditing || !lightGrammarPreview}
                       >
                         Cancel / Clear Preview
                       </Button>
@@ -3576,6 +3901,11 @@ export default function TranscriptViewerPage() {
                     Filler & Duplicate Word Tools
                   </h3>
                   <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    {!isEditing && (
+                      <p className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
+                        Click Edit Transcript before using transcript-changing tools.
+                      </p>
+                    )}
                     <p className="text-xs text-gray-600">
                       These tools apply only the options you select. They do not rewrite or summarize the transcript.
                     </p>
@@ -3591,7 +3921,7 @@ export default function TranscriptViewerPage() {
                             checked={cleanupOptions[option.key]}
                             onChange={() => toggleCleanupOption(option.key)}
                             className="mt-0.5 rounded border-gray-300"
-                            disabled={saving}
+                            disabled={saving || !isEditing}
                           />
                           <span>{option.label}</span>
                         </label>
@@ -3627,7 +3957,7 @@ export default function TranscriptViewerPage() {
                         size="sm"
                         className="w-full justify-start"
                         onClick={previewSelectedCleanup}
-                        disabled={saving || !hasSelectedCleanupOptions || (!transcription.timestampedTranscript?.length && !transcription.transcript)}
+                        disabled={saving || !isEditing || !hasSelectedCleanupOptions || (!transcription.timestampedTranscript?.length && !transcription.transcript)}
                       >
                         Preview Selected Cleanup
                       </Button>
@@ -3636,7 +3966,7 @@ export default function TranscriptViewerPage() {
                         size="sm"
                         className="w-full justify-start bg-green-600 text-white hover:bg-green-700"
                         onClick={() => setShowCleanupReview(true)}
-                        disabled={saving || !cleanupPreview || cleanupPreview.changeCount === 0}
+                        disabled={saving || !isEditing || !cleanupPreview || cleanupPreview.changeCount === 0}
                       >
                         Review All Changes
                       </Button>
@@ -3646,7 +3976,7 @@ export default function TranscriptViewerPage() {
                         size="sm"
                         className="w-full justify-start"
                         onClick={clearCleanupPreview}
-                        disabled={saving || !cleanupPreview}
+                        disabled={saving || !isEditing || !cleanupPreview}
                       >
                         Cancel / Clear Preview
                       </Button>
@@ -3659,6 +3989,11 @@ export default function TranscriptViewerPage() {
                     Formatting Tools
                   </h3>
                   <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    {!isEditing && (
+                      <p className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
+                        Click Edit Transcript before using transcript-changing tools.
+                      </p>
+                    )}
                     <p className="text-xs text-gray-600">
                       Optional formatting changes apply only after you preview and accept them. They do not rewrite, summarize, or change transcript wording.
                     </p>
@@ -3669,7 +4004,7 @@ export default function TranscriptViewerPage() {
                         checked={formattingOptions.useEmDashForEllipses}
                         onChange={() => toggleFormattingOption('useEmDashForEllipses')}
                         className="mt-0.5 rounded border-gray-300"
-                        disabled={saving}
+                        disabled={saving || !isEditing}
                       />
                       <span>Use em dash for ellipses/trail-offs</span>
                     </label>
@@ -3703,7 +4038,7 @@ export default function TranscriptViewerPage() {
                         size="sm"
                         className="w-full justify-start"
                         onClick={previewSelectedFormatting}
-                        disabled={saving || !hasSelectedFormattingOptions || (!transcription.timestampedTranscript?.length && !transcription.transcript)}
+                        disabled={saving || !isEditing || !hasSelectedFormattingOptions || (!transcription.timestampedTranscript?.length && !transcription.transcript)}
                       >
                         Preview Selected Formatting
                       </Button>
@@ -3712,7 +4047,7 @@ export default function TranscriptViewerPage() {
                         size="sm"
                         className="w-full justify-start bg-green-600 text-white hover:bg-green-700"
                         onClick={() => setShowFormattingReview(true)}
-                        disabled={saving || !formattingPreview || formattingPreview.changeCount === 0}
+                        disabled={saving || !isEditing || !formattingPreview || formattingPreview.changeCount === 0}
                       >
                         Review All Changes
                       </Button>
@@ -3722,7 +4057,7 @@ export default function TranscriptViewerPage() {
                         size="sm"
                         className="w-full justify-start"
                         onClick={clearFormattingPreview}
-                        disabled={saving || !formattingPreview}
+                        disabled={saving || !isEditing || !formattingPreview}
                       >
                         Cancel / Clear Preview
                       </Button>
@@ -3742,6 +4077,11 @@ export default function TranscriptViewerPage() {
 
                   {speakerCount > 0 ? (
                     <div className="space-y-3">
+                      {!isEditingSpeakerSegments && (
+                        <p className="rounded-md border border-blue-200 bg-blue-50 p-2 text-xs text-blue-900">
+                          Use Edit Speakers before renaming, applying presets, merging, or reassigning speakers.
+                        </p>
+                      )}
                       <div className="space-y-2">
                         {orderedSpeakers.map((speaker) => (
                           <div key={`workspace-speaker-${speaker}`} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
@@ -3761,7 +4101,7 @@ export default function TranscriptViewerPage() {
                                 size="sm"
                                 className="h-7 px-2 text-xs"
                                 onClick={() => startSpeakerRename(speaker, 'sidebar')}
-                                disabled={saving}
+                                disabled={saving || !isEditingSpeakerSegments}
                               >
                                 Rename
                               </Button>
@@ -3798,7 +4138,7 @@ export default function TranscriptViewerPage() {
                                 }
                               }}
                               className="mt-3 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
-                              disabled={saving}
+                              disabled={saving || !isEditingSpeakerSegments}
                             >
                               <option value="">Preset label</option>
                               {speakerLabelPresets.map((preset) => (
@@ -3933,73 +4273,6 @@ export default function TranscriptViewerPage() {
 
                 <section className="space-y-3 border-t pt-4">
                   <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-                    Quick Tools
-                  </h3>
-                  <div className="space-y-2">
-                    {!isEditing && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="w-full justify-start"
-                        onClick={() => setIsEditing(true)}
-                        disabled={saving || transcription.status !== 'complete'}
-                      >
-                        <Edit3 className="h-4 w-4 mr-2" />
-                        Edit Transcript
-                      </Button>
-                    )}
-
-                    {isEditing && (
-                      <>
-                        <Button
-                          type="button"
-                          size="sm"
-                          className="w-full justify-start bg-green-600 text-white hover:bg-green-700"
-                          onClick={saveEdits}
-                          disabled={saving}
-                        >
-                          {saving ? (
-                            <LoadingSpinner size="sm" className="mr-2" />
-                          ) : (
-                            <Save className="h-4 w-4 mr-2" />
-                          )}
-                          Save Transcript
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="w-full justify-start"
-                          onClick={() => {
-                            setIsEditing(false);
-                            setEditedSegments({});
-                            setEditedTranscript('');
-                          }}
-                          disabled={saving}
-                        >
-                          <X className="h-4 w-4 mr-2" />
-                          Cancel Edit
-                        </Button>
-                      </>
-                    )}
-
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start"
-                      onClick={() => setShowSearchPanel(true)}
-                      disabled={saving || !isEditing || !transcription.timestampedTranscript || transcription.timestampedTranscript.length === 0}
-                    >
-                      <Search className="h-4 w-4 mr-2" />
-                      Open Search
-                    </Button>
-                  </div>
-                </section>
-
-                <section className="space-y-3 border-t pt-4">
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
                     Future Tools
                   </h3>
                   <div className="space-y-2">
@@ -4095,11 +4368,7 @@ export default function TranscriptViewerPage() {
                   {isEditing && (
                     <div className="flex gap-2">
                       <Button
-                        onClick={() => {
-                          setIsEditing(false);
-                          setEditedSegments({});
-                          setEditedTranscript('');
-                        }}
+                        onClick={discardTranscriptChanges}
                         disabled={saving}
                         variant="outline"
                         size="sm"
@@ -4149,6 +4418,16 @@ export default function TranscriptViewerPage() {
                 ) : (
                   <div className="space-y-4">
                     <div className="bg-white rounded-lg border border-gray-200 p-6">
+                      {!isEditing && (
+                        <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+                          Read-only view. Click Edit Transcript to make changes.
+                        </div>
+                      )}
+                      {isEditing && hasUnsavedTranscriptDraft && (
+                        <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                          You have unsaved transcript changes. Use Save Transcript to keep them.
+                        </div>
+                      )}
                       <div className="prose max-w-none">
                         {renderTimestampedTranscript()}
                       </div>
