@@ -224,6 +224,93 @@ const PROTECTED_TERMS = [
 ];
 
 /**
+ * Apply only mechanical formatting fixes to transcript text.
+ *
+ * This does not remove words, rewrite phrasing, apply Canadian spelling,
+ * change speaker labels, or change timestamps. It is intentionally limited to
+ * punctuation spacing, sentence capitalization, and a few greeting/comma fixes.
+ */
+export function formatTranscriptMechanically(text: string): string {
+  if (!text || typeof text !== 'string') {
+    return text;
+  }
+
+  const protectedFragments = new Map<string, string>();
+  let protectedIndex = 0;
+  const protect = (value: string) => {
+    const token = `__MECH_PROTECTED_${protectedIndex}__`;
+    protectedFragments.set(token, value);
+    protectedIndex += 1;
+    return token;
+  };
+
+  let formatted = text;
+
+  // Protect initials and common abbreviations before sentence-spacing rules.
+  formatted = formatted.replace(/\b(?:[A-Z]\.){2,}(?=\s|$)/g, protect);
+  formatted = formatted.replace(/\b(?:e\.g\.|i\.e\.)/gi, protect);
+
+  // Remove duplicate spaces and fix spacing before punctuation.
+  formatted = formatted.replace(/ {2,}/g, ' ');
+  formatted = formatted.replace(/\s+([.,!?;:])/g, '$1');
+
+  // Add missing space after sentence punctuation when another word follows.
+  formatted = formatted.replace(/([.!?])(?=[A-Za-z])/g, '$1 ');
+
+  // Capitalize the first letter after sentence-ending punctuation.
+  formatted = formatted.replace(
+    /([.!?]\s+)([a-z])/g,
+    (_match, prefix: string, letter: string) => `${prefix}${letter.toUpperCase()}`
+  );
+
+  // Add comma after sentence-opening "So" only.
+  formatted = formatted.replace(/(^|[.!?]\s+)So\s+(?!,)/g, '$1So, ');
+
+  // Add comma after common sentence-opening greetings.
+  formatted = formatted.replace(
+    /(^|[.!?]\s+)(Good morning|Good afternoon|Good evening)\s+(?!,)/gi,
+    (_match, prefix: string, greeting: string) => `${prefix}${greeting}, `
+  );
+
+  protectedFragments.forEach((original, token) => {
+    formatted = formatted.replace(new RegExp(token, 'g'), original);
+  });
+
+  return formatted.trim();
+}
+
+/**
+ * Demonstration examples for the mechanical formatter.
+ * Useful for manual verification before wiring into any production flow.
+ */
+export function demonstrateMechanicalFormatting(): void {
+  const examples = [
+    ['Hello.There', 'Hello. There'],
+    ['What happened?She left.', 'What happened? She left.'],
+    ['hello. there', 'hello. There'],
+    ['A.G. Smith met J.R. Smith near the U.S. border.', 'A.G. Smith met J.R. Smith near the U.S. border.'],
+    ['Use e.g. this format and i.e. this explanation.', 'Use e.g. this format and i.e. this explanation.'],
+    ['Hello ,  world', 'Hello, world'],
+    ['So I went home.', 'So, I went home.'],
+    ['I was so tired.', 'I was so tired.'],
+    ['Good morning everyone', 'Good morning, everyone'],
+    ['Good afternoon everyone', 'Good afternoon, everyone'],
+    ['Good evening everyone', 'Good evening, everyone'],
+  ];
+
+  console.log('[TranscriptProcessor] Mechanical Formatting Examples:');
+  examples.forEach(([input, expected], index) => {
+    const output = formatTranscriptMechanically(input);
+    console.log(`Example ${index + 1}:`, {
+      input,
+      output,
+      expected,
+      match: output === expected,
+    });
+  });
+}
+
+/**
  * Normalize whitespace in transcript
  * - Remove multiple consecutive spaces
  * - Fix spacing around punctuation
