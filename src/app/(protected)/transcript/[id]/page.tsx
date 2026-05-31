@@ -98,6 +98,14 @@ interface FillerCleanupPreview extends CleanupPreview {
   changes: CleanupChange[];
 }
 
+interface FormattingOptionsState {
+  useEmDashForEllipses: boolean;
+}
+
+interface FormattingPreview extends CleanupPreview {
+  changes: CleanupChange[];
+}
+
 interface LightGrammarChange {
   id: string;
   label: string;
@@ -137,6 +145,10 @@ const initialCleanupOptions: CleanupOptionsState = {
   removeDuplicateAdjacentWords: false,
   removeSentenceOpeningSo: false,
   removeSentenceOpeningBut: false,
+};
+
+const initialFormattingOptions: FormattingOptionsState = {
+  useEmDashForEllipses: false,
 };
 
 export default function TranscriptViewerPage() {
@@ -183,6 +195,10 @@ export default function TranscriptViewerPage() {
   const [cleanupPreview, setCleanupPreview] = useState<FillerCleanupPreview | null>(null);
   const [showCleanupReview, setShowCleanupReview] = useState(false);
   const [cleanupDecisionHistory, setCleanupDecisionHistory] = useState<CleanupChange[][]>([]);
+  const [formattingOptions, setFormattingOptions] = useState<FormattingOptionsState>(initialFormattingOptions);
+  const [formattingPreview, setFormattingPreview] = useState<FormattingPreview | null>(null);
+  const [showFormattingReview, setShowFormattingReview] = useState(false);
+  const [formattingDecisionHistory, setFormattingDecisionHistory] = useState<CleanupChange[][]>([]);
   const [lightGrammarPreview, setLightGrammarPreview] = useState<LightGrammarPreview | null>(null);
   const [showLightGrammarReview, setShowLightGrammarReview] = useState(false);
   const [lightGrammarDecisionHistory, setLightGrammarDecisionHistory] = useState<LightGrammarChange[][]>([]);
@@ -953,6 +969,24 @@ export default function TranscriptViewerPage() {
     setLightGrammarDecisionHistory([]);
   };
 
+  const hasSelectedFormattingOptions = Object.values(formattingOptions).some(Boolean);
+
+  const toggleFormattingOption = (option: keyof FormattingOptionsState) => {
+    setFormattingOptions(prev => ({
+      ...prev,
+      [option]: !prev[option],
+    }));
+    setFormattingPreview(null);
+    setShowFormattingReview(false);
+    setFormattingDecisionHistory([]);
+  };
+
+  const clearFormattingPreview = () => {
+    setFormattingPreview(null);
+    setShowFormattingReview(false);
+    setFormattingDecisionHistory([]);
+  };
+
   const estimateLightGrammarChanges = (before: string, after: string) => {
     if (before === after) return 0;
 
@@ -1379,6 +1413,198 @@ export default function TranscriptViewerPage() {
 
     toast({
       title: 'Accepted cleanup changes applied',
+      description: 'Review the transcript, then use Save Transcript to persist changes.',
+    });
+  };
+
+  const applySelectedFormattingToText = (text: string) => {
+    if (!formattingOptions.useEmDashForEllipses) {
+      return { text, changeCount: 0 };
+    }
+
+    const matches = text.match(/\.\.\./g);
+    const changeCount = matches?.length || 0;
+
+    if (changeCount === 0) {
+      return { text, changeCount: 0 };
+    }
+
+    return {
+      text: text.replace(/\.\.\./g, '—'),
+      changeCount,
+    };
+  };
+
+  const buildFormattingPreview = (): FormattingPreview | null => {
+    if (!transcription) return null;
+
+    if (transcription.timestampedTranscript && transcription.timestampedTranscript.length > 0) {
+      let changeCount = 0;
+      let segmentCount = 0;
+      const examples: FormattingPreview['examples'] = [];
+      const changes: CleanupChange[] = [];
+
+      transcription.timestampedTranscript.forEach((segment, index) => {
+        const currentText = editedSegments[index] !== undefined ? editedSegments[index] : segment.text;
+        const formatted = applySelectedFormattingToText(currentText);
+
+        if (formatted.text !== currentText) {
+          changeCount += formatted.changeCount;
+          segmentCount++;
+
+          if (examples.length < 3) {
+            examples.push({
+              label: `Segment ${index + 1}`,
+              before: currentText,
+              after: formatted.text,
+            });
+          }
+
+          changes.push({
+            id: `segment-${index}`,
+            label: `Segment ${index + 1}`,
+            segmentIndex: index,
+            before: currentText,
+            after: formatted.text,
+            status: 'pending',
+          });
+        }
+      });
+
+      return { changeCount, segmentCount, examples, changes };
+    }
+
+    const currentTranscript = editedTranscript || transcription.transcript || '';
+    const formatted = applySelectedFormattingToText(currentTranscript);
+    const hasChange = formatted.text !== currentTranscript;
+
+    return {
+      changeCount: hasChange ? formatted.changeCount : 0,
+      segmentCount: hasChange ? 1 : 0,
+      examples: hasChange ? [{
+        label: 'Transcript',
+        before: currentTranscript,
+        after: formatted.text,
+      }] : [],
+      changes: hasChange ? [{
+        id: 'transcript',
+        label: 'Transcript',
+        before: currentTranscript,
+        after: formatted.text,
+        status: 'pending',
+      }] : [],
+    };
+  };
+
+  const previewSelectedFormatting = () => {
+    if (!hasSelectedFormattingOptions) {
+      toast({
+        title: 'No formatting options selected',
+        description: 'Select at least one formatting option to preview changes.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const preview = buildFormattingPreview();
+    if (!preview) return;
+
+    setFormattingPreview(preview);
+    setFormattingDecisionHistory([]);
+    setShowFormattingReview(false);
+
+    toast({
+      title: 'Formatting preview ready',
+      description: preview.changeCount > 0
+        ? `${preview.changeCount} proposed change(s) across ${preview.segmentCount} segment(s).`
+        : 'No matching formatting patterns found.',
+    });
+  };
+
+  const updateFormattingChangeStatus = (changeId: string, status: LightGrammarDecision) => {
+    if (!formattingPreview) return;
+
+    setFormattingDecisionHistory(prev => [...prev, formattingPreview.changes]);
+    setFormattingPreview({
+      ...formattingPreview,
+      changes: formattingPreview.changes.map(change =>
+        change.id === changeId ? { ...change, status } : change
+      ),
+    });
+  };
+
+  const acceptAllFormattingChanges = () => {
+    if (!formattingPreview) return;
+
+    setFormattingDecisionHistory(prev => [...prev, formattingPreview.changes]);
+    setFormattingPreview({
+      ...formattingPreview,
+      changes: formattingPreview.changes.map(change =>
+        change.status === 'pending' ? { ...change, status: 'accepted' } : change
+      ),
+    });
+  };
+
+  const undoFormattingDecision = () => {
+    setFormattingDecisionHistory(prev => {
+      const previous = prev[prev.length - 1];
+      if (!previous || !formattingPreview) return prev;
+
+      setFormattingPreview({
+        ...formattingPreview,
+        changes: previous,
+      });
+
+      return prev.slice(0, -1);
+    });
+  };
+
+  const applyAcceptedFormattingChanges = () => {
+    if (!formattingPreview) {
+      toast({
+        title: 'Preview required',
+        description: 'Preview the selected formatting before applying it.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const acceptedChanges = formattingPreview.changes.filter(change => change.status === 'accepted');
+
+    if (acceptedChanges.length === 0) {
+      toast({
+        title: 'No changes to apply',
+        description: 'Accept at least one formatting change before applying.',
+      });
+      return;
+    }
+
+    if (!transcription) return;
+
+    if (transcription.timestampedTranscript && transcription.timestampedTranscript.length > 0) {
+      const nextEditedSegments = { ...editedSegments };
+
+      acceptedChanges.forEach((change) => {
+        if (change.segmentIndex !== undefined) {
+          nextEditedSegments[change.segmentIndex] = change.after;
+        }
+      });
+
+      setEditedSegments(nextEditedSegments);
+    } else {
+      const acceptedTranscriptChange = acceptedChanges.find(change => change.id === 'transcript');
+      if (acceptedTranscriptChange) {
+        setEditedTranscript(acceptedTranscriptChange.after);
+      }
+    }
+
+    setIsEditing(true);
+    setFormattingPreview(null);
+    setShowFormattingReview(false);
+    setFormattingDecisionHistory([]);
+
+    toast({
+      title: 'Accepted formatting changes applied',
       description: 'Review the transcript, then use Save Transcript to persist changes.',
     });
   };
@@ -2604,6 +2830,9 @@ export default function TranscriptViewerPage() {
   const acceptedCleanupCount = cleanupPreview?.changes.filter(change => change.status === 'accepted').length || 0;
   const skippedCleanupCount = cleanupPreview?.changes.filter(change => change.status === 'skipped').length || 0;
   const pendingCleanupCount = cleanupPreview?.changes.filter(change => change.status === 'pending').length || 0;
+  const acceptedFormattingCount = formattingPreview?.changes.filter(change => change.status === 'accepted').length || 0;
+  const skippedFormattingCount = formattingPreview?.changes.filter(change => change.status === 'skipped').length || 0;
+  const pendingFormattingCount = formattingPreview?.changes.filter(change => change.status === 'pending').length || 0;
   const transcriptWordCount = getWordCount(transcription.transcript);
   const speakerCount = orderedSpeakers.length;
   const speakerSegmentCounts = (transcription.timestampedTranscript || []).reduce<Record<string, number>>((counts, segment) => {
@@ -2637,7 +2866,6 @@ export default function TranscriptViewerPage() {
     'Specialist',
   ];
   const futureWorkspaceTools = [
-    'Formatting Tools',
     'Export Tools',
   ];
 
@@ -2852,6 +3080,121 @@ export default function TranscriptViewerPage() {
                             size="sm"
                             variant={change.status === 'skipped' ? 'default' : 'outline'}
                             onClick={() => updateLightGrammarChangeStatus(change.id, 'skipped')}
+                            disabled={saving}
+                          >
+                            Skip this change
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <div className="rounded-md border border-red-100 bg-white p-3">
+                          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-red-700">Before</p>
+                          <p className="whitespace-pre-wrap text-sm text-gray-700">{change.before}</p>
+                        </div>
+                        <div className="rounded-md border border-green-100 bg-white p-3">
+                          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-green-700">After</p>
+                          <p className="whitespace-pre-wrap text-sm text-gray-900">{change.after}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showFormattingReview && formattingPreview && (
+          <div className="fixed inset-0 z-50 bg-black/40 px-4 py-6">
+            <div className="mx-auto flex h-full max-w-6xl flex-col rounded-lg bg-white shadow-xl">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 p-4">
+                <div>
+                  <h2 className="text-xl font-semibold text-[#003366]">Formatting Tools Review</h2>
+                  <p className="text-sm text-gray-600">
+                    {formattingPreview.changeCount} proposed change{formattingPreview.changeCount === 1 ? '' : 's'} across {formattingPreview.segmentCount} segment{formattingPreview.segmentCount === 1 ? '' : 's'}.
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {pendingFormattingCount} pending · {acceptedFormattingCount} accepted · {skippedFormattingCount} skipped
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={acceptAllFormattingChanges}
+                    disabled={saving || pendingFormattingCount === 0}
+                  >
+                    Accept All Changes
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={undoFormattingDecision}
+                    disabled={saving || formattingDecisionHistory.length === 0}
+                  >
+                    Undo
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="bg-green-600 text-white hover:bg-green-700"
+                    onClick={applyAcceptedFormattingChanges}
+                    disabled={saving || acceptedFormattingCount === 0}
+                  >
+                    Apply Accepted Changes
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={clearFormattingPreview}
+                    disabled={saving}
+                  >
+                    Cancel / Clear Preview
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowFormattingReview(false)}
+                    disabled={saving}
+                  >
+                    Close Review
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4">
+                <div className="space-y-4">
+                  {formattingPreview.changes.map((change) => (
+                    <div
+                      key={change.id}
+                      className="rounded-lg border border-gray-200 bg-gray-50 p-4"
+                    >
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <h3 className="font-semibold text-[#003366]">{change.label}</h3>
+                          <p className="text-xs uppercase tracking-wide text-gray-500">
+                            Status: {change.status}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={change.status === 'accepted' ? 'default' : 'outline'}
+                            onClick={() => updateFormattingChangeStatus(change.id, 'accepted')}
+                            disabled={saving}
+                          >
+                            Accept this change
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={change.status === 'skipped' ? 'default' : 'outline'}
+                            onClick={() => updateFormattingChangeStatus(change.id, 'skipped')}
                             disabled={saving}
                           >
                             Skip this change
@@ -3304,6 +3647,82 @@ export default function TranscriptViewerPage() {
                         className="w-full justify-start"
                         onClick={clearCleanupPreview}
                         disabled={saving || !cleanupPreview}
+                      >
+                        Cancel / Clear Preview
+                      </Button>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="space-y-3 border-t pt-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                    Formatting Tools
+                  </h3>
+                  <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <p className="text-xs text-gray-600">
+                      Optional formatting changes apply only after you preview and accept them. They do not rewrite, summarize, or change transcript wording.
+                    </p>
+
+                    <label className="flex items-start gap-2 text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={formattingOptions.useEmDashForEllipses}
+                        onChange={() => toggleFormattingOption('useEmDashForEllipses')}
+                        className="mt-0.5 rounded border-gray-300"
+                        disabled={saving}
+                      />
+                      <span>Use em dash for ellipses/trail-offs</span>
+                    </label>
+
+                    {formattingPreview && (
+                      <div className="space-y-2 rounded-md border border-blue-200 bg-white p-3">
+                        <div className="text-sm font-medium text-[#003366]">
+                          {formattingPreview.changeCount} proposed change{formattingPreview.changeCount === 1 ? '' : 's'}
+                        </div>
+                        <p className="text-xs text-gray-600">
+                          Across {formattingPreview.segmentCount} segment{formattingPreview.segmentCount === 1 ? '' : 's'}.
+                        </p>
+                        {formattingPreview.examples.length > 0 && (
+                          <div className="space-y-2">
+                            {formattingPreview.examples.map((example) => (
+                              <div key={example.label} className="space-y-1 text-xs">
+                                <p className="font-medium text-gray-700">{example.label}</p>
+                                <p className="text-gray-500 line-through">{example.before}</p>
+                                <p className="text-gray-800">{example.after}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start"
+                        onClick={previewSelectedFormatting}
+                        disabled={saving || !hasSelectedFormattingOptions || (!transcription.timestampedTranscript?.length && !transcription.transcript)}
+                      >
+                        Preview Selected Formatting
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="w-full justify-start bg-green-600 text-white hover:bg-green-700"
+                        onClick={() => setShowFormattingReview(true)}
+                        disabled={saving || !formattingPreview || formattingPreview.changeCount === 0}
+                      >
+                        Review All Changes
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start"
+                        onClick={clearFormattingPreview}
+                        disabled={saving || !formattingPreview}
                       >
                         Cancel / Clear Preview
                       </Button>
