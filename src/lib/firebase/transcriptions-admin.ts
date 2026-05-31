@@ -33,6 +33,7 @@ export interface TranscriptionJob {
   createdAt: FirebaseFirestore.Timestamp;
   updatedAt: FirebaseFirestore.Timestamp;
   completedAt?: FirebaseFirestore.Timestamp;
+  expectedSpeakerCount?: 1 | 2 | 3 | 4 | 5; // Client's expected speaker count for review/cleanup metadata
   // Add-on options
   rushDelivery?: boolean; // Whether rush delivery (24-48hr) was requested
   multipleSpeakers?: boolean; // Whether multiple speakers (3+) option was selected

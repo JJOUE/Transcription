@@ -29,11 +29,26 @@ interface UploadFile {
   duration: number; // in seconds (exact duration)
 }
 
+type ExpectedSpeakerCountChoice = '1' | '2' | '3' | '4' | '5' | 'unknown';
+
+const expectedSpeakerCountOptions: Array<{
+  value: ExpectedSpeakerCountChoice;
+  label: string;
+}> = [
+  { value: '1', label: '1 speaker' },
+  { value: '2', label: '2 speakers' },
+  { value: '3', label: '3 speakers' },
+  { value: '4', label: '4 speakers' },
+  { value: '5', label: '5+ speakers' },
+  { value: 'unknown', label: 'Not sure' },
+];
+
 export default function UploadPage() {
   const [uploadedFiles, setUploadedFiles] = useState<UploadFile[]>([]);
   const [transcriptionMode, setTranscriptionMode] = useState('ai');
   const [transcriptionLanguage, setTranscriptionLanguage] = useState('en');
   const [transcriptionDomain, setTranscriptionDomain] = useState<TranscriptionDomain>('general');
+  const [expectedSpeakerCount, setExpectedSpeakerCount] = useState<ExpectedSpeakerCountChoice>('unknown');
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -532,6 +547,9 @@ export default function UploadPage() {
           location: location.trim() || undefined,
           // Preserve verbatim transcription output; filler cleanup belongs in post-transcription tools.
           includeFiller,
+          ...(expectedSpeakerCount !== 'unknown' && {
+            expectedSpeakerCount: Number(expectedSpeakerCount) as 1 | 2 | 3 | 4 | 5
+          }),
           // Add-on options
           rushDelivery: (transcriptionMode === 'hybrid' || transcriptionMode === 'human') ? rushDelivery : false,
           multipleSpeakers: (transcriptionMode === 'hybrid' || transcriptionMode === 'human') ? multipleSpeakers : false,
@@ -1226,6 +1244,40 @@ export default function UploadPage() {
                   <div><strong>Date & Time:</strong> Upload time will be used</div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Speaker Count Expectation */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-[#003366]">
+                How many people are speaking in this file?
+              </CardTitle>
+              <p className="text-sm text-gray-600 mt-2">
+                This helps with review and speaker cleanup. It does not affect pricing.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <RadioGroup
+                value={expectedSpeakerCount}
+                onValueChange={(value) => setExpectedSpeakerCount(value as ExpectedSpeakerCountChoice)}
+                className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3"
+              >
+                {expectedSpeakerCountOptions.map((option) => (
+                  <Label
+                    key={option.value}
+                    htmlFor={`expected-speakers-${option.value}`}
+                    className={`cursor-pointer border rounded-lg p-3 flex items-center justify-between gap-2 transition-colors ${
+                      expectedSpeakerCount === option.value
+                        ? 'border-[#b29dd9] ring-2 ring-[#b29dd9] bg-[#b29dd9]/5'
+                        : 'border-gray-200 hover:border-[#b29dd9] hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="text-sm font-medium text-gray-900">{option.label}</span>
+                    <RadioGroupItem value={option.value} id={`expected-speakers-${option.value}`} />
+                  </Label>
+                ))}
+              </RadioGroup>
             </CardContent>
           </Card>
 

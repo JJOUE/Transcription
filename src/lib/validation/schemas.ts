@@ -117,6 +117,13 @@ export const CreateTranscriptionJobSchema = z.object({
     .optional(),
   // Filler words option
   includeFiller: z.boolean().optional(),
+  expectedSpeakerCount: z.union([
+    z.literal(1),
+    z.literal(2),
+    z.literal(3),
+    z.literal(4),
+    z.literal(5),
+  ]).optional(),
   // Add-on options
   rushDelivery: z.boolean().optional(),
   multipleSpeakers: z.boolean().optional(),
