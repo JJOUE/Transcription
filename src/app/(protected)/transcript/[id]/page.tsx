@@ -2648,7 +2648,7 @@ export default function TranscriptViewerPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
           {/* Audio Player Section */}
           <div className="lg:col-span-1">
-            <div className="sticky top-[11rem] z-30 space-y-4">
+            <div className="sticky top-[11rem] z-30 space-y-4 lg:max-h-[calc(100vh-12rem)] lg:overflow-y-auto lg:overscroll-contain lg:pb-8 lg:pr-2">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg text-[#003366]">Audio Player</CardTitle>
