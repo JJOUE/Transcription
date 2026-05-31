@@ -57,6 +57,59 @@ interface SpeechmaticsTranscript {
 
 type TranscriptData = string | SpeechmaticsTranscript | unknown;
 
+type CleanupOptionKey =
+  | 'removeUm'
+  | 'removeUh'
+  | 'removeAh'
+  | 'removeYouKnow'
+  | 'removeIMean'
+  | 'removeLike'
+  | 'removeSortOf'
+  | 'removeKindOf'
+  | 'removeDuplicateAdjacentWords'
+  | 'removeSentenceOpeningSo'
+  | 'removeSentenceOpeningBut';
+
+type CleanupOptionsState = Record<CleanupOptionKey, boolean>;
+
+interface CleanupPreview {
+  changeCount: number;
+  segmentCount: number;
+  examples: Array<{
+    label: string;
+    before: string;
+    after: string;
+  }>;
+}
+
+const cleanupOptionItems: Array<{ key: CleanupOptionKey; label: string }> = [
+  { key: 'removeUm', label: 'remove um' },
+  { key: 'removeUh', label: 'remove uh' },
+  { key: 'removeAh', label: 'remove ah' },
+  { key: 'removeYouKnow', label: 'remove you know' },
+  { key: 'removeIMean', label: 'remove I mean' },
+  { key: 'removeLike', label: 'remove like' },
+  { key: 'removeSortOf', label: 'remove sort of' },
+  { key: 'removeKindOf', label: 'remove kind of' },
+  { key: 'removeDuplicateAdjacentWords', label: 'remove duplicate adjacent words' },
+  { key: 'removeSentenceOpeningSo', label: 'remove sentence-opening so only' },
+  { key: 'removeSentenceOpeningBut', label: 'remove sentence-opening but only' },
+];
+
+const initialCleanupOptions: CleanupOptionsState = {
+  removeUm: false,
+  removeUh: false,
+  removeAh: false,
+  removeYouKnow: false,
+  removeIMean: false,
+  removeLike: false,
+  removeSortOf: false,
+  removeKindOf: false,
+  removeDuplicateAdjacentWords: false,
+  removeSentenceOpeningSo: false,
+  removeSentenceOpeningBut: false,
+};
+
 export default function TranscriptViewerPage() {
   const params = useParams();
   const id = params?.id as string;
@@ -97,6 +150,8 @@ export default function TranscriptViewerPage() {
   const [searchMatches, setSearchMatches] = useState<{segmentIndex: number, matchIndex: number}[]>([]);
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
   const [caseSensitive, setCaseSensitive] = useState(false);
+  const [cleanupOptions, setCleanupOptions] = useState<CleanupOptionsState>(initialCleanupOptions);
+  const [cleanupPreview, setCleanupPreview] = useState<CleanupPreview | null>(null);
 
   const audioPlayerRef = useRef<AudioPlayerRef>(null);
   const contentEditableRefs = useRef<Record<number, HTMLDivElement | null>>({});
@@ -833,6 +888,206 @@ export default function TranscriptViewerPage() {
       title: 'Replaced',
       description: 'Replaced current match. Click "Save Changes" to persist.',
       variant: 'default'
+    });
+  };
+
+  const hasSelectedCleanupOptions = Object.values(cleanupOptions).some(Boolean);
+
+  const toggleCleanupOption = (option: CleanupOptionKey) => {
+    setCleanupOptions(prev => ({
+      ...prev,
+      [option]: !prev[option],
+    }));
+    setCleanupPreview(null);
+  };
+
+  const clearCleanupPreview = () => {
+    setCleanupPreview(null);
+  };
+
+  const applySelectedCleanupToText = (text: string) => {
+    let nextText = text;
+    let changeCount = 0;
+
+    const replaceAndCount = (pattern: RegExp, replacement: string | ((match: string, ...args: any[]) => string)) => {
+      nextText = nextText.replace(pattern, (...args) => {
+        changeCount++;
+        return typeof replacement === 'function' ? replacement(...args) : replacement;
+      });
+    };
+
+    if (cleanupOptions.removeUm) {
+      replaceAndCount(/\bum\b[,]?\s*/gi, '');
+    }
+
+    if (cleanupOptions.removeUh) {
+      replaceAndCount(/\buh\b[,]?\s*/gi, '');
+    }
+
+    if (cleanupOptions.removeAh) {
+      replaceAndCount(/\bah\b[,]?\s*/gi, '');
+    }
+
+    if (cleanupOptions.removeYouKnow) {
+      replaceAndCount(/(^|[.!?]\s+)you know,\s+/gi, (_match, prefix: string) => prefix);
+      replaceAndCount(/,\s*you know,\s*/gi, ' ');
+    }
+
+    if (cleanupOptions.removeIMean) {
+      replaceAndCount(/\bi mean\b[,]?\s*/gi, '');
+    }
+
+    if (cleanupOptions.removeLike) {
+      replaceAndCount(/(^|[.!?]\s+)like,\s*like,?\s+/gi, (_match, prefix: string) => prefix);
+      replaceAndCount(/,\s*like,\s*like,\s*/gi, ' ');
+      replaceAndCount(/(^|[.!?]\s+)like,\s+/gi, (_match, prefix: string) => prefix);
+      replaceAndCount(/,\s*like,\s*/gi, ' ');
+    }
+
+    if (cleanupOptions.removeSortOf) {
+      replaceAndCount(/\bsort of\b[,]?\s*/gi, '');
+    }
+
+    if (cleanupOptions.removeKindOf) {
+      replaceAndCount(/\bkind of\b[,]?\s*/gi, '');
+    }
+
+    if (cleanupOptions.removeDuplicateAdjacentWords) {
+      replaceAndCount(/\b([A-Za-z]+)(\s+)\1\b/gi, (_match, word: string) => word);
+    }
+
+    if (cleanupOptions.removeSentenceOpeningSo) {
+      replaceAndCount(/(^|[.!?]\s+)so\b[,]?\s+/gi, (_match, prefix: string) => prefix);
+    }
+
+    if (cleanupOptions.removeSentenceOpeningBut) {
+      replaceAndCount(/(^|[.!?]\s+)but\b[,]?\s+/gi, (_match, prefix: string) => prefix);
+    }
+
+    if (changeCount > 0) {
+      nextText = nextText
+        .replace(/\s+([,.!?;:])/g, '$1')
+        .replace(/[ \t]{2,}/g, ' ')
+        .trim();
+    }
+
+    return {
+      text: nextText,
+      changeCount: nextText === text ? 0 : changeCount,
+    };
+  };
+
+  const buildCleanupPreview = (): CleanupPreview | null => {
+    if (!transcription) return null;
+
+    if (transcription.timestampedTranscript && transcription.timestampedTranscript.length > 0) {
+      let changeCount = 0;
+      let segmentCount = 0;
+      const examples: CleanupPreview['examples'] = [];
+
+      transcription.timestampedTranscript.forEach((segment, index) => {
+        const currentText = editedSegments[index] !== undefined ? editedSegments[index] : segment.text;
+        const cleaned = applySelectedCleanupToText(currentText);
+
+        if (cleaned.text !== currentText) {
+          changeCount += cleaned.changeCount;
+          segmentCount++;
+
+          if (examples.length < 3) {
+            examples.push({
+              label: `Segment ${index + 1}`,
+              before: currentText,
+              after: cleaned.text,
+            });
+          }
+        }
+      });
+
+      return { changeCount, segmentCount, examples };
+    }
+
+    const currentTranscript = editedTranscript || transcription.transcript || '';
+    const cleaned = applySelectedCleanupToText(currentTranscript);
+
+    return {
+      changeCount: cleaned.text === currentTranscript ? 0 : cleaned.changeCount,
+      segmentCount: cleaned.text === currentTranscript ? 0 : 1,
+      examples: cleaned.text === currentTranscript ? [] : [{
+        label: 'Transcript',
+        before: currentTranscript,
+        after: cleaned.text,
+      }],
+    };
+  };
+
+  const previewSelectedCleanup = () => {
+    if (!hasSelectedCleanupOptions) {
+      toast({
+        title: 'No cleanup options selected',
+        description: 'Select at least one option to preview changes.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const preview = buildCleanupPreview();
+    if (!preview) return;
+
+    setCleanupPreview(preview);
+
+    toast({
+      title: 'Cleanup preview ready',
+      description: preview.changeCount > 0
+        ? `${preview.changeCount} proposed change(s) across ${preview.segmentCount} segment(s).`
+        : 'No matching filler or duplicate word patterns found.',
+    });
+  };
+
+  const applySelectedCleanup = () => {
+    if (!cleanupPreview) {
+      toast({
+        title: 'Preview required',
+        description: 'Preview the selected cleanup before applying it.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (cleanupPreview.changeCount === 0) {
+      toast({
+        title: 'No changes to apply',
+        description: 'The selected cleanup options did not find matching text.',
+      });
+      return;
+    }
+
+    if (!transcription) return;
+
+    if (transcription.timestampedTranscript && transcription.timestampedTranscript.length > 0) {
+      const nextEditedSegments = { ...editedSegments };
+
+      transcription.timestampedTranscript.forEach((segment, index) => {
+        const currentText = nextEditedSegments[index] !== undefined ? nextEditedSegments[index] : segment.text;
+        const cleaned = applySelectedCleanupToText(currentText);
+
+        if (cleaned.text !== currentText) {
+          nextEditedSegments[index] = cleaned.text;
+        }
+      });
+
+      setEditedSegments(nextEditedSegments);
+    } else {
+      const currentTranscript = editedTranscript || transcription.transcript || '';
+      const cleaned = applySelectedCleanupToText(currentTranscript);
+      setEditedTranscript(cleaned.text);
+    }
+
+    setIsEditing(true);
+    setCleanupPreview(null);
+
+    toast({
+      title: 'Cleanup applied',
+      description: 'Review the transcript, then use Save Transcript to persist changes.',
     });
   };
 
@@ -2081,8 +2336,6 @@ export default function TranscriptViewerPage() {
     'Specialist',
   ];
   const futureWorkspaceTools = [
-    'Filler Word Tools',
-    'Duplicate Word Tools',
     'Formatting Tools',
     'Export Tools',
   ];
@@ -2529,6 +2782,89 @@ export default function TranscriptViewerPage() {
                     <p className="text-xs font-medium text-[#003366]">
                       Changes apply immediately to the transcript view.
                     </p>
+                  </div>
+                </section>
+
+                <section className="space-y-3 border-t pt-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                    Filler & Duplicate Word Tools
+                  </h3>
+                  <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <p className="text-xs text-gray-600">
+                      These tools apply only the options you select. They do not rewrite or summarize the transcript.
+                    </p>
+                    <p className="text-xs text-amber-700">
+                      Some filler phrases may change nuance. Preview changes carefully before applying.
+                    </p>
+
+                    <div className="space-y-2">
+                      {cleanupOptionItems.map((option) => (
+                        <label key={option.key} className="flex items-start gap-2 text-sm text-gray-700">
+                          <input
+                            type="checkbox"
+                            checked={cleanupOptions[option.key]}
+                            onChange={() => toggleCleanupOption(option.key)}
+                            className="mt-0.5 rounded border-gray-300"
+                            disabled={saving}
+                          />
+                          <span>{option.label}</span>
+                        </label>
+                      ))}
+                    </div>
+
+                    {cleanupPreview && (
+                      <div className="space-y-2 rounded-md border border-blue-200 bg-white p-3">
+                        <div className="text-sm font-medium text-[#003366]">
+                          {cleanupPreview.changeCount} proposed change{cleanupPreview.changeCount === 1 ? '' : 's'}
+                        </div>
+                        <p className="text-xs text-gray-600">
+                          Across {cleanupPreview.segmentCount} segment{cleanupPreview.segmentCount === 1 ? '' : 's'}.
+                        </p>
+                        {cleanupPreview.examples.length > 0 && (
+                          <div className="space-y-2">
+                            {cleanupPreview.examples.map((example) => (
+                              <div key={example.label} className="space-y-1 text-xs">
+                                <p className="font-medium text-gray-700">{example.label}</p>
+                                <p className="text-gray-500 line-through">{example.before}</p>
+                                <p className="text-gray-800">{example.after}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start"
+                        onClick={previewSelectedCleanup}
+                        disabled={saving || !hasSelectedCleanupOptions || (!transcription.timestampedTranscript?.length && !transcription.transcript)}
+                      >
+                        Preview Selected Cleanup
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="w-full justify-start bg-green-600 text-white hover:bg-green-700"
+                        onClick={applySelectedCleanup}
+                        disabled={saving || !cleanupPreview || cleanupPreview.changeCount === 0}
+                      >
+                        Apply Selected Cleanup
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start"
+                        onClick={clearCleanupPreview}
+                        disabled={saving || !cleanupPreview}
+                      >
+                        Cancel / Clear Preview
+                      </Button>
+                    </div>
                   </div>
                 </section>
 
