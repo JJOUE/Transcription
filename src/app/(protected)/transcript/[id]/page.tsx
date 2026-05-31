@@ -125,7 +125,7 @@ export default function TranscriptViewerPage() {
   const [editedSegments, setEditedSegments] = useState<{[key: number]: string}>({});
   const [saving, setSaving] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState<'pdf' | 'docx' | 'srt' | 'vtt'>('pdf');
-  const [timestampFrequency, setTimestampFrequency] = useState<30 | 60 | 300>(60); // 30s, 60s, 5min (300s)
+  const [timestampFrequency, setTimestampFrequency] = useState<30 | 60 | 300 | 'none'>(60); // 30s, 60s, 5min (300s), or no display timestamps
   const [speakerNames, setSpeakerNames] = useState<Record<string, string>>({});
   const [editingSpeaker, setEditingSpeaker] = useState<string | null>(null);
   const [speakerRenameSource, setSpeakerRenameSource] = useState<'toolbar' | 'sidebar' | null>(null);
@@ -152,6 +152,10 @@ export default function TranscriptViewerPage() {
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [cleanupOptions, setCleanupOptions] = useState<CleanupOptionsState>(initialCleanupOptions);
   const [cleanupPreview, setCleanupPreview] = useState<CleanupPreview | null>(null);
+
+  const handleTimestampFrequencyChange = (value: string) => {
+    setTimestampFrequency(value === 'none' ? 'none' : Number(value) as 30 | 60 | 300);
+  };
 
   const audioPlayerRef = useRef<AudioPlayerRef>(null);
   const contentEditableRefs = useRef<Record<number, HTMLDivElement | null>>({});
@@ -1683,7 +1687,8 @@ export default function TranscriptViewerPage() {
     let currentSpeaker: string | undefined | null = null;
     let speakerParagraphs: ParagraphPiece[][] = [];
     let currentParagraph: ParagraphPiece[] = [];
-    let nextTimestampTarget = timestampFrequency;
+    const activeTimestampFrequency = timestampFrequency === 'none' ? null : timestampFrequency;
+    let nextTimestampTarget = activeTimestampFrequency;
     let pendingTimestamp:
       | { time: number; content: string }
       | null = null;
@@ -1725,12 +1730,12 @@ export default function TranscriptViewerPage() {
       }
 
       // Intervals for inline timestamps
-      if (segment.start >= nextTimestampTarget && !pendingTimestamp) {
+      if (activeTimestampFrequency !== null && nextTimestampTarget !== null && segment.start >= nextTimestampTarget && !pendingTimestamp) {
         pendingTimestamp = {
           time: nextTimestampTarget,
           content: formatTimestamp(nextTimestampTarget)
         };
-        nextTimestampTarget += timestampFrequency;
+        nextTimestampTarget += activeTimestampFrequency;
       }
 
       const segmentText = normalizeSegmentText(segment.text);
@@ -2313,7 +2318,9 @@ export default function TranscriptViewerPage() {
     }
     return counts;
   }, {});
-  const timestampIntervalLabel = timestampFrequency === 30
+  const timestampIntervalLabel = timestampFrequency === 'none'
+    ? 'No timestamps'
+    : timestampFrequency === 30
     ? '30 seconds'
     : timestampFrequency === 60
     ? '60 seconds'
@@ -2498,9 +2505,10 @@ export default function TranscriptViewerPage() {
                 <Clock className="h-3.5 w-3.5 text-blue-600" />
                 <select
                   value={timestampFrequency}
-                  onChange={(e) => setTimestampFrequency(Number(e.target.value) as 30 | 60 | 300)}
+                  onChange={(e) => handleTimestampFrequencyChange(e.target.value)}
                   className="border border-gray-300 rounded-md px-2 py-1 text-xs bg-white hover:bg-gray-50 focus:ring-1 focus:ring-blue-500"
                 >
+                  <option value="none">No timestamps</option>
                   <option value={30}>30s</option>
                   <option value={60}>60s</option>
                   <option value={300}>5m</option>
@@ -2742,7 +2750,7 @@ export default function TranscriptViewerPage() {
                     <div className="rounded-lg bg-gray-50 p-3">
                       <p className="text-gray-500">Timestamps</p>
                       <p className="text-lg font-semibold text-[#003366]">
-                        {timestampFrequency === 300 ? '5m' : `${timestampFrequency}s`}
+                        {timestampFrequency === 'none' ? 'None' : timestampFrequency === 300 ? '5m' : `${timestampFrequency}s`}
                       </p>
                     </div>
                     <div className="rounded-lg bg-gray-50 p-3">
@@ -2767,10 +2775,11 @@ export default function TranscriptViewerPage() {
                       <span className="font-medium text-gray-700">Frequency</span>
                       <select
                         value={timestampFrequency}
-                        onChange={(e) => setTimestampFrequency(Number(e.target.value) as 30 | 60 | 300)}
+                        onChange={(e) => handleTimestampFrequencyChange(e.target.value)}
                         className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
                         disabled={!transcription.timestampedTranscript || transcription.timestampedTranscript.length === 0}
                       >
+                        <option value="none">No timestamps</option>
                         <option value={30}>Every 30 seconds</option>
                         <option value={60}>Every 1 minute</option>
                         <option value={300}>Every 5 minutes</option>

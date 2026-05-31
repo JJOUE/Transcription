@@ -96,7 +96,7 @@ export function generateTemplateData(transcription: TranscriptionJob, userData?:
 }
 
 export interface ExportOptions {
-  timestampFrequency?: 30 | 60 | 300; // 30s, 60s, or 5min
+  timestampFrequency?: 30 | 60 | 300 | 'none'; // 30s, 60s, 5min, or no interval timestamps
   speakerNames?: Record<string, string>;
   getSpeakerColor?: (speaker: string | undefined) => string;
   getSpeakerDisplayName?: (speaker: string | undefined) => string;
@@ -109,6 +109,7 @@ export async function exportTranscriptPDF(templateData: TranscriptTemplateData, 
 
   // Default options
   const timestampFrequency = options?.timestampFrequency || 60;
+  const activeTimestampFrequency = timestampFrequency === 'none' ? null : timestampFrequency;
   const speakerNames = options?.speakerNames || {};
 
   // Helper function to get speaker display name
@@ -311,17 +312,17 @@ export async function exportTranscriptPDF(templateData: TranscriptTemplateData, 
 
         currentSpeaker = segment.speaker;
         // Set the first timestamp target based on the frequency
-        nextTimestampTarget = timestampFrequency;
+        nextTimestampTarget = activeTimestampFrequency || 60;
       }
 
       // Check if we've passed a timestamp target - handle multiple missed timestamps
-      while (segment.start >= nextTimestampTarget) {
+      while (activeTimestampFrequency !== null && segment.start >= nextTimestampTarget) {
         // If we already have a pending timestamp, we need to insert it first
         if (pendingTimestamp && accumulatedText.trim()) {
           addCurrentSegment();
         }
         pendingTimestamp = formatTimestamp(nextTimestampTarget);
-        nextTimestampTarget += timestampFrequency;
+        nextTimestampTarget += activeTimestampFrequency;
       }
 
       // Check for sentence end to insert timestamp
@@ -452,6 +453,7 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
   }
 
   const timestampFrequency = options?.timestampFrequency || 60;
+  const activeTimestampFrequency = timestampFrequency === 'none' ? null : timestampFrequency;
   const speakerNames = options?.speakerNames || {};
 
   const getSpeakerDisplayName = (speaker: string | undefined): string => {
@@ -548,17 +550,17 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
 
       currentSpeaker = segment.speaker;
       // Set the first timestamp target based on the frequency
-      nextTimestampTarget = timestampFrequency;
+      nextTimestampTarget = activeTimestampFrequency || 60;
     }
 
     // Check if we've passed a timestamp target - handle multiple missed timestamps
-    while (segment.start >= nextTimestampTarget) {
+    while (activeTimestampFrequency !== null && segment.start >= nextTimestampTarget) {
       // If we already have a pending timestamp, we need to insert it first
       if (pendingTimestamp && accumulatedText.trim()) {
         addCurrentSegment();
       }
       pendingTimestamp = formatTimestamp(nextTimestampTarget);
-      nextTimestampTarget += timestampFrequency;
+      nextTimestampTarget += activeTimestampFrequency;
     }
 
     // Check for sentence end to insert timestamp
