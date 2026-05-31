@@ -85,6 +85,19 @@ interface CleanupPreview {
 
 type LightGrammarDecision = 'pending' | 'accepted' | 'skipped';
 
+interface CleanupChange {
+  id: string;
+  label: string;
+  before: string;
+  after: string;
+  segmentIndex?: number;
+  status: LightGrammarDecision;
+}
+
+interface FillerCleanupPreview extends CleanupPreview {
+  changes: CleanupChange[];
+}
+
 interface LightGrammarChange {
   id: string;
   label: string;
@@ -167,7 +180,9 @@ export default function TranscriptViewerPage() {
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [cleanupOptions, setCleanupOptions] = useState<CleanupOptionsState>(initialCleanupOptions);
-  const [cleanupPreview, setCleanupPreview] = useState<CleanupPreview | null>(null);
+  const [cleanupPreview, setCleanupPreview] = useState<FillerCleanupPreview | null>(null);
+  const [showCleanupReview, setShowCleanupReview] = useState(false);
+  const [cleanupDecisionHistory, setCleanupDecisionHistory] = useState<CleanupChange[][]>([]);
   const [lightGrammarPreview, setLightGrammarPreview] = useState<LightGrammarPreview | null>(null);
   const [showLightGrammarReview, setShowLightGrammarReview] = useState(false);
   const [lightGrammarDecisionHistory, setLightGrammarDecisionHistory] = useState<LightGrammarChange[][]>([]);
@@ -922,10 +937,14 @@ export default function TranscriptViewerPage() {
       [option]: !prev[option],
     }));
     setCleanupPreview(null);
+    setShowCleanupReview(false);
+    setCleanupDecisionHistory([]);
   };
 
   const clearCleanupPreview = () => {
     setCleanupPreview(null);
+    setShowCleanupReview(false);
+    setCleanupDecisionHistory([]);
   };
 
   const clearLightGrammarPreview = () => {
@@ -1190,13 +1209,14 @@ export default function TranscriptViewerPage() {
     };
   };
 
-  const buildCleanupPreview = (): CleanupPreview | null => {
+  const buildCleanupPreview = (): FillerCleanupPreview | null => {
     if (!transcription) return null;
 
     if (transcription.timestampedTranscript && transcription.timestampedTranscript.length > 0) {
       let changeCount = 0;
       let segmentCount = 0;
-      const examples: CleanupPreview['examples'] = [];
+      const examples: FillerCleanupPreview['examples'] = [];
+      const changes: CleanupChange[] = [];
 
       transcription.timestampedTranscript.forEach((segment, index) => {
         const currentText = editedSegments[index] !== undefined ? editedSegments[index] : segment.text;
@@ -1213,23 +1233,40 @@ export default function TranscriptViewerPage() {
               after: cleaned.text,
             });
           }
+
+          changes.push({
+            id: `segment-${index}`,
+            label: `Segment ${index + 1}`,
+            segmentIndex: index,
+            before: currentText,
+            after: cleaned.text,
+            status: 'pending',
+          });
         }
       });
 
-      return { changeCount, segmentCount, examples };
+      return { changeCount, segmentCount, examples, changes };
     }
 
     const currentTranscript = editedTranscript || transcription.transcript || '';
     const cleaned = applySelectedCleanupToText(currentTranscript);
+    const hasChange = cleaned.text !== currentTranscript;
 
     return {
-      changeCount: cleaned.text === currentTranscript ? 0 : cleaned.changeCount,
-      segmentCount: cleaned.text === currentTranscript ? 0 : 1,
-      examples: cleaned.text === currentTranscript ? [] : [{
+      changeCount: hasChange ? cleaned.changeCount : 0,
+      segmentCount: hasChange ? 1 : 0,
+      examples: hasChange ? [{
         label: 'Transcript',
         before: currentTranscript,
         after: cleaned.text,
-      }],
+      }] : [],
+      changes: hasChange ? [{
+        id: 'transcript',
+        label: 'Transcript',
+        before: currentTranscript,
+        after: cleaned.text,
+        status: 'pending',
+      }] : [],
     };
   };
 
@@ -1247,6 +1284,8 @@ export default function TranscriptViewerPage() {
     if (!preview) return;
 
     setCleanupPreview(preview);
+    setCleanupDecisionHistory([]);
+    setShowCleanupReview(false);
 
     toast({
       title: 'Cleanup preview ready',
@@ -1256,7 +1295,45 @@ export default function TranscriptViewerPage() {
     });
   };
 
-  const applySelectedCleanup = () => {
+  const updateCleanupChangeStatus = (changeId: string, status: LightGrammarDecision) => {
+    if (!cleanupPreview) return;
+
+    setCleanupDecisionHistory(prev => [...prev, cleanupPreview.changes]);
+    setCleanupPreview({
+      ...cleanupPreview,
+      changes: cleanupPreview.changes.map(change =>
+        change.id === changeId ? { ...change, status } : change
+      ),
+    });
+  };
+
+  const acceptAllCleanupChanges = () => {
+    if (!cleanupPreview) return;
+
+    setCleanupDecisionHistory(prev => [...prev, cleanupPreview.changes]);
+    setCleanupPreview({
+      ...cleanupPreview,
+      changes: cleanupPreview.changes.map(change =>
+        change.status === 'pending' ? { ...change, status: 'accepted' } : change
+      ),
+    });
+  };
+
+  const undoCleanupDecision = () => {
+    setCleanupDecisionHistory(prev => {
+      const previous = prev[prev.length - 1];
+      if (!previous || !cleanupPreview) return prev;
+
+      setCleanupPreview({
+        ...cleanupPreview,
+        changes: previous,
+      });
+
+      return prev.slice(0, -1);
+    });
+  };
+
+  const applyAcceptedCleanupChanges = () => {
     if (!cleanupPreview) {
       toast({
         title: 'Preview required',
@@ -1266,10 +1343,12 @@ export default function TranscriptViewerPage() {
       return;
     }
 
-    if (cleanupPreview.changeCount === 0) {
+    const acceptedChanges = cleanupPreview.changes.filter(change => change.status === 'accepted');
+
+    if (acceptedChanges.length === 0) {
       toast({
         title: 'No changes to apply',
-        description: 'The selected cleanup options did not find matching text.',
+        description: 'Accept at least one cleanup change before applying.',
       });
       return;
     }
@@ -1279,27 +1358,27 @@ export default function TranscriptViewerPage() {
     if (transcription.timestampedTranscript && transcription.timestampedTranscript.length > 0) {
       const nextEditedSegments = { ...editedSegments };
 
-      transcription.timestampedTranscript.forEach((segment, index) => {
-        const currentText = nextEditedSegments[index] !== undefined ? nextEditedSegments[index] : segment.text;
-        const cleaned = applySelectedCleanupToText(currentText);
-
-        if (cleaned.text !== currentText) {
-          nextEditedSegments[index] = cleaned.text;
+      acceptedChanges.forEach((change) => {
+        if (change.segmentIndex !== undefined) {
+          nextEditedSegments[change.segmentIndex] = change.after;
         }
       });
 
       setEditedSegments(nextEditedSegments);
     } else {
-      const currentTranscript = editedTranscript || transcription.transcript || '';
-      const cleaned = applySelectedCleanupToText(currentTranscript);
-      setEditedTranscript(cleaned.text);
+      const acceptedTranscriptChange = acceptedChanges.find(change => change.id === 'transcript');
+      if (acceptedTranscriptChange) {
+        setEditedTranscript(acceptedTranscriptChange.after);
+      }
     }
 
     setIsEditing(true);
     setCleanupPreview(null);
+    setShowCleanupReview(false);
+    setCleanupDecisionHistory([]);
 
     toast({
-      title: 'Cleanup applied',
+      title: 'Accepted cleanup changes applied',
       description: 'Review the transcript, then use Save Transcript to persist changes.',
     });
   };
@@ -2522,6 +2601,9 @@ export default function TranscriptViewerPage() {
   const acceptedLightGrammarCount = lightGrammarPreview?.changes.filter(change => change.status === 'accepted').length || 0;
   const skippedLightGrammarCount = lightGrammarPreview?.changes.filter(change => change.status === 'skipped').length || 0;
   const pendingLightGrammarCount = lightGrammarPreview?.changes.filter(change => change.status === 'pending').length || 0;
+  const acceptedCleanupCount = cleanupPreview?.changes.filter(change => change.status === 'accepted').length || 0;
+  const skippedCleanupCount = cleanupPreview?.changes.filter(change => change.status === 'skipped').length || 0;
+  const pendingCleanupCount = cleanupPreview?.changes.filter(change => change.status === 'pending').length || 0;
   const transcriptWordCount = getWordCount(transcription.transcript);
   const speakerCount = orderedSpeakers.length;
   const speakerSegmentCounts = (transcription.timestampedTranscript || []).reduce<Record<string, number>>((counts, segment) => {
@@ -2564,6 +2646,121 @@ export default function TranscriptViewerPage() {
       <Header />
 
       <main className="container mx-auto px-4 py-8 flex-1">
+        {showCleanupReview && cleanupPreview && (
+          <div className="fixed inset-0 z-50 bg-black/40 px-4 py-6">
+            <div className="mx-auto flex h-full max-w-6xl flex-col rounded-lg bg-white shadow-xl">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 p-4">
+                <div>
+                  <h2 className="text-xl font-semibold text-[#003366]">Filler & Duplicate Word Review</h2>
+                  <p className="text-sm text-gray-600">
+                    {cleanupPreview.changeCount} proposed change{cleanupPreview.changeCount === 1 ? '' : 's'} across {cleanupPreview.segmentCount} segment{cleanupPreview.segmentCount === 1 ? '' : 's'}.
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {pendingCleanupCount} pending · {acceptedCleanupCount} accepted · {skippedCleanupCount} skipped
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={acceptAllCleanupChanges}
+                    disabled={saving || pendingCleanupCount === 0}
+                  >
+                    Accept All Changes
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={undoCleanupDecision}
+                    disabled={saving || cleanupDecisionHistory.length === 0}
+                  >
+                    Undo
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="bg-green-600 text-white hover:bg-green-700"
+                    onClick={applyAcceptedCleanupChanges}
+                    disabled={saving || acceptedCleanupCount === 0}
+                  >
+                    Apply Accepted Changes
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={clearCleanupPreview}
+                    disabled={saving}
+                  >
+                    Cancel / Clear Preview
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowCleanupReview(false)}
+                    disabled={saving}
+                  >
+                    Close Review
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4">
+                <div className="space-y-4">
+                  {cleanupPreview.changes.map((change) => (
+                    <div
+                      key={change.id}
+                      className="rounded-lg border border-gray-200 bg-gray-50 p-4"
+                    >
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <h3 className="font-semibold text-[#003366]">{change.label}</h3>
+                          <p className="text-xs uppercase tracking-wide text-gray-500">
+                            Status: {change.status}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={change.status === 'accepted' ? 'default' : 'outline'}
+                            onClick={() => updateCleanupChangeStatus(change.id, 'accepted')}
+                            disabled={saving}
+                          >
+                            Accept this change
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={change.status === 'skipped' ? 'default' : 'outline'}
+                            onClick={() => updateCleanupChangeStatus(change.id, 'skipped')}
+                            disabled={saving}
+                          >
+                            Skip this change
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <div className="rounded-md border border-red-100 bg-white p-3">
+                          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-red-700">Before</p>
+                          <p className="whitespace-pre-wrap text-sm text-gray-700">{change.before}</p>
+                        </div>
+                        <div className="rounded-md border border-green-100 bg-white p-3">
+                          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-green-700">After</p>
+                          <p className="whitespace-pre-wrap text-sm text-gray-900">{change.after}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {showLightGrammarReview && lightGrammarPreview && (
           <div className="fixed inset-0 z-50 bg-black/40 px-4 py-6">
             <div className="mx-auto flex h-full max-w-6xl flex-col rounded-lg bg-white shadow-xl">
@@ -3095,10 +3292,10 @@ export default function TranscriptViewerPage() {
                         type="button"
                         size="sm"
                         className="w-full justify-start bg-green-600 text-white hover:bg-green-700"
-                        onClick={applySelectedCleanup}
+                        onClick={() => setShowCleanupReview(true)}
                         disabled={saving || !cleanupPreview || cleanupPreview.changeCount === 0}
                       >
-                        Apply Selected Cleanup
+                        Review All Changes
                       </Button>
                       <Button
                         type="button"
