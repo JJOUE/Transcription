@@ -151,6 +151,21 @@ const initialFormattingOptions: FormattingOptionsState = {
   useEmDashForEllipses: false,
 };
 
+const normalizeTranscriptSegmentText = (text: string) =>
+  text
+    .replace(/\s+([,.!?;:])/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const joinTranscriptSegmentTexts = (segments: string[]) =>
+  segments
+    .map(normalizeTranscriptSegmentText)
+    .filter(Boolean)
+    .join(' ')
+    .replace(/\s+([,.!?;:])/g, '$1')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
+
 export default function TranscriptViewerPage() {
   const params = useParams();
   const id = params?.id as string;
@@ -452,9 +467,11 @@ export default function TranscriptViewerPage() {
     if (!transcription) return '';
 
     if (transcription.timestampedTranscript && transcription.timestampedTranscript.length > 0) {
-      return transcription.timestampedTranscript
-        .map((segment, index) => editedSegments[index] !== undefined ? editedSegments[index] : segment.text)
-        .join(' ');
+      return joinTranscriptSegmentTexts(
+        transcription.timestampedTranscript.map((segment, index) =>
+          editedSegments[index] !== undefined ? editedSegments[index] : segment.text
+        )
+      );
     }
 
     return isEditing ? editedTranscript : (transcription.transcript || '');
@@ -492,9 +509,9 @@ export default function TranscriptViewerPage() {
         });
 
         // Generate new plain transcript from segments
-        const updatedPlainTranscript = updatedTimestampedTranscript
-          .map(seg => seg.text)
-          .join(' ');
+        const updatedPlainTranscript = joinTranscriptSegmentTexts(
+          updatedTimestampedTranscript.map(seg => seg.text)
+        );
 
         console.log('[Save] Updated segments count:', Object.keys(editedSegments).length);
 
@@ -2314,12 +2331,6 @@ export default function TranscriptViewerPage() {
       | { type: 'text'; content: string }
       | { type: 'timestamp'; time: number; content: string };
 
-    const normalizeSegmentText = (text: string) =>
-      text
-        .replace(/\s+([,.!?;:])/g, '$1')
-        .replace(/\s+/g, ' ')
-        .trim();
-
     const shouldBreakParagraph = (
       paragraphText: string,
       currentSegment: typeof transcription.timestampedTranscript[number],
@@ -2393,9 +2404,15 @@ export default function TranscriptViewerPage() {
     };
 
     const appendText = (text: string) => {
-      const normalized = normalizeSegmentText(text);
+      const normalized = normalizeTranscriptSegmentText(text);
       if (!normalized) return;
-      currentParagraph.push({ type: 'text', content: normalized });
+
+      const lastPiece = currentParagraph[currentParagraph.length - 1];
+      if (lastPiece?.type === 'text') {
+        lastPiece.content = joinTranscriptSegmentTexts([lastPiece.content, normalized]);
+      } else {
+        currentParagraph.push({ type: 'text', content: normalized });
+      }
     };
 
     for (let i = 0; i < transcription.timestampedTranscript.length; i++) {
@@ -2419,7 +2436,7 @@ export default function TranscriptViewerPage() {
         nextTimestampTarget += activeTimestampFrequency;
       }
 
-      const segmentText = normalizeSegmentText(segment.text);
+      const segmentText = normalizeTranscriptSegmentText(segment.text);
       if (segmentText) {
         appendText(segmentText);
       }
@@ -2684,9 +2701,11 @@ export default function TranscriptViewerPage() {
                   const editorKey = `editor-${groupIndex}`;
 
                   // Combine all segments in this group into one continuous text
-                  const groupText = group.segments.map(seg =>
-                    editedSegments[seg.index] !== undefined ? editedSegments[seg.index] : seg.text
-                  ).join(' ');
+                  const groupText = joinTranscriptSegmentTexts(
+                    group.segments.map(seg =>
+                      editedSegments[seg.index] !== undefined ? editedSegments[seg.index] : seg.text
+                    )
+                  );
 
                   return (
                     <div
