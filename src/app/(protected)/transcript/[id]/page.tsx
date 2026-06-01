@@ -166,6 +166,25 @@ const joinTranscriptSegmentTexts = (segments: string[]) =>
     .replace(/[ \t]{2,}/g, ' ')
     .trim();
 
+const endsWithProtectedAbbreviation = (text: string) =>
+  /\b(?:[A-Z]\.){2,}$/i.test(text.trim()) || /\b(?:e\.g\.|i\.e\.)$/i.test(text.trim());
+
+const endsWithUrlOrFileName = (text: string) =>
+  /(?:https?:\/\/|www\.)\S+[.!?]?$/i.test(text.trim()) ||
+  /\b\S+\.(?:com|ca|org|net|gov|edu|pdf|docx?|xlsx?|pptx?|txt|csv|mp3|mp4|wav)$/i.test(text.trim());
+
+const shouldCapitalizeNextSegmentStart = (previousText: string) => {
+  const trimmed = previousText.trim();
+  return /[.!?]$/.test(trimmed) &&
+    !endsWithProtectedAbbreviation(trimmed) &&
+    !endsWithUrlOrFileName(trimmed);
+};
+
+const capitalizeFirstRealWord = (text: string) =>
+  text.replace(/^(\s*["'“‘(\[]*)([a-z])/, (_match, prefix: string, letter: string) =>
+    `${prefix}${letter.toUpperCase()}`
+  );
+
 export default function TranscriptViewerPage() {
   const params = useParams();
   const id = params?.id as string;
@@ -1113,7 +1132,15 @@ export default function TranscriptViewerPage() {
 
       transcription.timestampedTranscript.forEach((segment, index) => {
         const currentText = editedSegments[index] !== undefined ? editedSegments[index] : segment.text;
-        const formatted = formatTranscriptMechanically(currentText);
+        const previousText = index > 0
+          ? editedSegments[index - 1] !== undefined
+            ? editedSegments[index - 1]
+            : transcription.timestampedTranscript?.[index - 1]?.text || ''
+          : '';
+        const boundaryAwareText = previousText && shouldCapitalizeNextSegmentStart(previousText)
+          ? capitalizeFirstRealWord(currentText)
+          : currentText;
+        const formatted = formatTranscriptMechanically(boundaryAwareText);
 
         if (formatted !== currentText) {
           changeCount += estimateLightGrammarChanges(currentText, formatted);

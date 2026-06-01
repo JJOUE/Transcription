@@ -246,6 +246,11 @@ export function formatTranscriptMechanically(text: string): string {
 
   let formatted = text;
 
+  // Protect dots that should not be treated as sentence boundaries.
+  formatted = formatted.replace(/\b(?:https?:\/\/|www\.)\S+/gi, protect);
+  formatted = formatted.replace(/\b[\w.-]+\.(?:com|ca|org|net|gov|edu|pdf|docx?|xlsx?|pptx?|txt|csv|mp3|mp4|wav)\b/gi, protect);
+  formatted = formatted.replace(/\b\d+\.\d+\b/g, protect);
+
   // Protect initials and common abbreviations before sentence-spacing rules.
   formatted = formatted.replace(/\b(?:[A-Z]\.){2,}(?=\s|$)/g, protect);
   formatted = formatted.replace(/\b(?:e\.g\.|i\.e\.)/gi, protect);
@@ -259,8 +264,8 @@ export function formatTranscriptMechanically(text: string): string {
 
   // Capitalize the first letter after sentence-ending punctuation.
   formatted = formatted.replace(
-    /([.!?]\s+)([a-z])/g,
-    (_match, prefix: string, letter: string) => `${prefix}${letter.toUpperCase()}`
+    /([.!?]\s+)(["'“‘(\[]*)([a-z])/g,
+    (_match, prefix: string, opener: string, letter: string) => `${prefix}${opener}${letter.toUpperCase()}`
   );
 
   // Add comma after sentence-opening "So" only.
@@ -288,8 +293,13 @@ export function demonstrateMechanicalFormatting(): void {
     ['Hello.There', 'Hello. There'],
     ['What happened?She left.', 'What happened? She left.'],
     ['hello. there', 'hello. There'],
+    ["everyone. i'm your host", "everyone. I'm your host"],
+    ['this is nice.it works', 'this is nice. It works'],
+    ['okay! next item', 'okay! Next item'],
+    ['what happened? she left', 'what happened? She left'],
     ['A.G. Smith met J.R. Smith near the U.S. border.', 'A.G. Smith met J.R. Smith near the U.S. border.'],
     ['Use e.g. this format and i.e. this explanation.', 'Use e.g. this format and i.e. this explanation.'],
+    ['Visit example.com for report.docx version 2.5.', 'Visit example.com for report.docx version 2.5.'],
     ['Hello ,  world', 'Hello, world'],
     ['So I went home.', 'So, I went home.'],
     ['I was so tired.', 'I was so tired.'],
