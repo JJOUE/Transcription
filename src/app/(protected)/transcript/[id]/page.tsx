@@ -3813,6 +3813,29 @@ export default function TranscriptViewerPage() {
                   </div>
                 </section>
 
+                {transcription.projectDictionaryTerms && transcription.projectDictionaryTerms.length > 0 && (
+                  <section className="space-y-3 border-t pt-4">
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                      Project Dictionary
+                    </h3>
+                    <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                      <p className="text-xs text-gray-600">
+                        Project-only reference terms supplied at upload. These are not reused on future jobs or added to shared dictionaries.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {transcription.projectDictionaryTerms.map((term) => (
+                          <span
+                            key={term}
+                            className="rounded-full border border-blue-200 bg-white px-2.5 py-1 text-xs font-medium text-[#003366]"
+                          >
+                            {term}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </section>
+                )}
+
                 <section className="space-y-3 border-t pt-4">
                   <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
                     Timestamp Tools

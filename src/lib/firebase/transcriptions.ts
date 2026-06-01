@@ -30,6 +30,7 @@ export interface TranscriptionJob {
   minutesFromSubscription?: number; // Minutes covered by subscription (if any)
   creditsUsed: number; // Credits used for minutes not covered by subscription
   specialInstructions?: string;
+  projectDictionaryTerms?: string[]; // Project-only names/terms supplied at upload time
   transcript?: string;
   timestampedTranscript?: TranscriptSegment[]; // New field for timestamped data
   transcriptStoragePath?: string; // Path to transcript in Storage (for large files)

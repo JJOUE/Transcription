@@ -96,6 +96,14 @@ export const CreateTranscriptionJobSchema = z.object({
   officeNotes: z.string()
     .max(1000, 'Office notes too long')
     .optional(),
+  projectDictionaryTerms: z.array(
+    z.string()
+      .trim()
+      .min(1, 'Dictionary term cannot be empty')
+      .max(100, 'Dictionary term too long')
+  )
+    .max(100, 'Too many project dictionary terms')
+    .optional(),
   // Template metadata fields
   clientName: z.string()
     .max(200, 'Client name too long')

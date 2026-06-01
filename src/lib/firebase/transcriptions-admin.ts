@@ -28,6 +28,7 @@ export interface TranscriptionJob {
   duration: number; // in seconds (exact duration)
   creditsUsed: number;
   specialInstructions?: string;
+  projectDictionaryTerms?: string[]; // Project-only names/terms supplied at upload time
   transcript?: string;
   timestampedTranscript?: TranscriptSegment[]; // New field for timestamped data
   createdAt: FirebaseFirestore.Timestamp;

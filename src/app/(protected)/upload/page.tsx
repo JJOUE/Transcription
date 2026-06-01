@@ -50,6 +50,7 @@ export default function UploadPage() {
   const [transcriptionDomain, setTranscriptionDomain] = useState<TranscriptionDomain>('general');
   const [expectedSpeakerCount, setExpectedSpeakerCount] = useState<ExpectedSpeakerCountChoice>('unknown');
   const [specialInstructions, setSpecialInstructions] = useState('');
+  const [projectDictionaryInput, setProjectDictionaryInput] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{[key: string]: number}>({});
@@ -545,6 +546,13 @@ export default function UploadPage() {
           projectName: projectName.trim() || undefined,
           patientName: patientName.trim() || undefined,
           location: location.trim() || undefined,
+          ...(projectDictionaryInput.trim() && {
+            projectDictionaryTerms: projectDictionaryInput
+              .split(/\r?\n|,/)
+              .map(term => term.trim())
+              .filter(Boolean)
+              .slice(0, 100)
+          }),
           // Preserve verbatim transcription output; filler cleanup belongs in post-transcription tools.
           includeFiller,
           ...(expectedSpeakerCount !== 'unknown' && {
@@ -1244,6 +1252,30 @@ export default function UploadPage() {
                   <div><strong>Date & Time:</strong> Upload time will be used</div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Project Dictionary */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-[#003366]">
+                Names/terms for this project
+              </CardTitle>
+              <p className="text-sm text-gray-600 mt-2">
+                Add names, brands, places, product terms, legal or medical terms, acronyms, or preferred spellings that may appear in this file. One term per line is best.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                placeholder="e.g.&#10;Dr. Nguyen&#10;WCB&#10;acetaminophen&#10;Queen's Bench"
+                value={projectDictionaryInput}
+                onChange={(e) => setProjectDictionaryInput(e.target.value)}
+                rows={5}
+                className="min-h-[140px]"
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                These terms are saved for this project only. They are not reused on future jobs or added to any shared dictionary.
+              </p>
             </CardContent>
           </Card>
 
