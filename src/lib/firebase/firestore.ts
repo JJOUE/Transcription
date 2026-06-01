@@ -1,10 +1,10 @@
-import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from './config';
 
 export const getAllUsers = async () => {
   try {
     const usersRef = collection(db, 'users');
-    const q = query(usersRef, orderBy('createdAt', 'desc'), limit(100));
+    const q = query(usersRef, orderBy('createdAt', 'desc'));
     const snapshot = await getDocs(q);
     
     return snapshot.docs.map(doc => ({

@@ -299,6 +299,7 @@ export default function UserManagementPage() {
       (filterFreeTrial === 'none' && !user.freeTrialActive && !(user.freeTrialMinutesUsed || 0));
     return matchesSearch && matchesRole && matchesFreeTrial;
   });
+  const hasActiveFilters = searchTerm.trim() !== '' || filterRole !== 'all' || filterFreeTrial !== 'all';
 
 
   if (authLoading || loading) {
@@ -375,7 +376,7 @@ export default function UserManagementPage() {
         <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg font-semibold text-[#003366]">
-              Users ({filteredUsers.length})
+              Users ({hasActiveFilters ? `${filteredUsers.length} of ${users.length}` : users.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
