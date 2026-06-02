@@ -23,6 +23,14 @@ import { createTranscriptionJobAPI, getModeDetails } from '@/lib/api/transcripti
 import { TranscriptionMode, TranscriptionJob, TranscriptionDomain } from '@/lib/firebase/transcriptions';
 import { formatDuration, getBillingMinutes } from '@/lib/utils';
 import { PricingSettings, getPricingSettings } from '@/lib/firebase/settings';
+import {
+  ClientDictionaryTerm,
+  dedupeDictionaryTerms,
+  getClientDictionaryTerms,
+  getNormalizedClientDictionaryKey,
+  parseDictionaryTermsInput,
+  saveClientDictionaryTerms,
+} from '@/lib/firebase/client-dictionary';
 
 interface UploadFile {
   file: File;
@@ -51,6 +59,10 @@ export default function UploadPage() {
   const [expectedSpeakerCount, setExpectedSpeakerCount] = useState<ExpectedSpeakerCountChoice>('unknown');
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [projectDictionaryInput, setProjectDictionaryInput] = useState('');
+  const [clientDictionaryTerms, setClientDictionaryTerms] = useState<ClientDictionaryTerm[]>([]);
+  const [selectedClientDictionaryTerms, setSelectedClientDictionaryTerms] = useState<Set<string>>(new Set());
+  const [saveNewDictionaryTerms, setSaveNewDictionaryTerms] = useState(false);
+  const [clientDictionaryLoading, setClientDictionaryLoading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{[key: string]: number}>({});
@@ -104,6 +116,47 @@ export default function UploadPage() {
   } = useWallet();
   const { toast } = useToast();
   const router = useRouter();
+
+  useEffect(() => {
+    const loadClientDictionary = async () => {
+      if (!user?.uid) {
+        setClientDictionaryTerms([]);
+        setSelectedClientDictionaryTerms(new Set());
+        return;
+      }
+
+      try {
+        setClientDictionaryLoading(true);
+        const terms = await getClientDictionaryTerms(user.uid);
+        setClientDictionaryTerms(terms);
+      } catch (error) {
+        console.error('Error loading client dictionary terms:', error);
+        toast({
+          title: 'Dictionary unavailable',
+          description: 'Saved terms could not be loaded right now. You can still add project terms manually.',
+          variant: 'default',
+        });
+      } finally {
+        setClientDictionaryLoading(false);
+      }
+    };
+
+    loadClientDictionary();
+  }, [user?.uid, toast]);
+
+  const toggleSelectedClientDictionaryTerm = (normalizedTerm: string) => {
+    setSelectedClientDictionaryTerms(prev => {
+      const next = new Set(prev);
+
+      if (next.has(normalizedTerm)) {
+        next.delete(normalizedTerm);
+      } else {
+        next.add(normalizedTerm);
+      }
+
+      return next;
+    });
+  };
 
   // Log authentication and configuration status on mount
   useEffect(() => {
@@ -455,6 +508,18 @@ export default function UploadPage() {
 
       // Track subscription minutes used across all files
       let totalCostProcessed = 0; // Track total cost of files being processed
+      const typedProjectDictionaryTerms = parseDictionaryTermsInput(projectDictionaryInput);
+      const selectedSavedDictionaryTerms = clientDictionaryTerms
+        .filter(term => selectedClientDictionaryTerms.has(term.normalizedTerm))
+        .map(term => term.term);
+      const projectDictionaryTerms = dedupeDictionaryTerms([
+        ...selectedSavedDictionaryTerms,
+        ...typedProjectDictionaryTerms,
+      ]);
+      const savedClientDictionaryKeys = new Set(clientDictionaryTerms.map(term => term.normalizedTerm));
+      const newTermsToSaveForFutureJobs = typedProjectDictionaryTerms.filter(term =>
+        !savedClientDictionaryKeys.has(getNormalizedClientDictionaryKey(term))
+      );
 
       // Upload files to Firebase Storage and create transcription jobs
       const uploadPromises = uploadedFiles.map(async (uploadFile, index) => {
@@ -546,12 +611,8 @@ export default function UploadPage() {
           projectName: projectName.trim() || undefined,
           patientName: patientName.trim() || undefined,
           location: location.trim() || undefined,
-          ...(projectDictionaryInput.trim() && {
-            projectDictionaryTerms: projectDictionaryInput
-              .split(/\r?\n|,/)
-              .map(term => term.trim())
-              .filter(Boolean)
-              .slice(0, 100)
+          ...(projectDictionaryTerms.length > 0 && {
+            projectDictionaryTerms
           }),
           // Preserve verbatim transcription output; filler cleanup belongs in post-transcription tools.
           includeFiller,
@@ -792,6 +853,10 @@ export default function UploadPage() {
       });
       
       await Promise.all(uploadPromises);
+
+      if (saveNewDictionaryTerms && newTermsToSaveForFutureJobs.length > 0) {
+        await saveClientDictionaryTerms(user.uid, newTermsToSaveForFutureJobs);
+      }
       
       toast({
         title: 'Upload successful!',
@@ -801,6 +866,9 @@ export default function UploadPage() {
       // Reset form
       setUploadedFiles([]);
       setSpecialInstructions('');
+      setProjectDictionaryInput('');
+      setSaveNewDictionaryTerms(false);
+      setSelectedClientDictionaryTerms(new Set());
       setUploadProgress({});
 
       router.push('/transcriptions');
@@ -1266,6 +1334,50 @@ export default function UploadPage() {
               </p>
             </CardHeader>
             <CardContent>
+              <div className="mb-4 space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                <div>
+                  <h4 className="text-sm font-semibold text-[#003366]">Saved terms for future jobs</h4>
+                  <p className="text-xs text-gray-600">
+                    Select any saved private terms to include in this project.
+                  </p>
+                </div>
+                {clientDictionaryLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <LoadingSpinner size="sm" />
+                    Loading saved terms...
+                  </div>
+                ) : clientDictionaryTerms.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {clientDictionaryTerms.map((term) => {
+                      const selected = selectedClientDictionaryTerms.has(term.normalizedTerm);
+
+                      return (
+                        <label
+                          key={term.id}
+                          className={`cursor-pointer rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                            selected
+                              ? 'border-[#003366] bg-[#003366] text-white'
+                              : 'border-gray-300 bg-white text-gray-700 hover:border-[#003366]'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            onChange={() => toggleSelectedClientDictionaryTerm(term.normalizedTerm)}
+                            className="sr-only"
+                          />
+                          {term.term}
+                        </label>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-600">
+                    No saved terms yet. Add project terms below and choose to save them for future jobs.
+                  </p>
+                )}
+              </div>
+
               <Textarea
                 placeholder="e.g.&#10;Dr. Nguyen&#10;WCB&#10;acetaminophen&#10;Queen's Bench"
                 value={projectDictionaryInput}
@@ -1273,8 +1385,17 @@ export default function UploadPage() {
                 rows={5}
                 className="min-h-[140px]"
               />
+              <label className="mt-3 flex items-start gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={saveNewDictionaryTerms}
+                  onChange={(e) => setSaveNewDictionaryTerms(e.target.checked)}
+                  className="mt-0.5 rounded border-gray-300"
+                />
+                <span>Save these new terms for future jobs.</span>
+              </label>
               <p className="text-xs text-gray-500 mt-2">
-                These terms are saved for this project only. They are not reused on future jobs or added to any shared dictionary.
+                Selected saved terms and new project terms are saved on this job. New terms are reused only if you choose to save them, and they are never added to a shared dictionary.
               </p>
             </CardContent>
           </Card>

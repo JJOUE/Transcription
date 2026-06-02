@@ -63,6 +63,11 @@ service cloud.firestore {
         // Users can delete their own packages, admins can delete any packages
         allow delete: if isOwnerOrAdmin(userId);
       }
+
+      // Private reusable dictionary terms saved by the user for future jobs
+      match /clientDictionaryTerms/{termId} {
+        allow read, create, update, delete: if isOwnerOrAdmin(userId);
+      }
     }
 
     // Transcriptions collection
