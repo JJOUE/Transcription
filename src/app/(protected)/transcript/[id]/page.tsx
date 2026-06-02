@@ -210,6 +210,9 @@ export default function TranscriptViewerPage() {
   const [timestampFrequency, setTimestampFrequency] = useState<30 | 60 | 300 | 'none'>(60); // 30s, 60s, 5min (300s), or no display timestamps
   const [speakerNames, setSpeakerNames] = useState<Record<string, string>>({});
   const [sidebarSpeakerNameDrafts, setSidebarSpeakerNameDrafts] = useState<Record<string, string>>({});
+  const [paragraphSpeakerSelections, setParagraphSpeakerSelections] = useState<Record<number, string>>({});
+  const [paragraphSpeakerNameDrafts, setParagraphSpeakerNameDrafts] = useState<Record<number, string>>({});
+  const [activeParagraphSpeakerMenu, setActiveParagraphSpeakerMenu] = useState<number | null>(null);
   const [inlineEditingSpeaker, setInlineEditingSpeaker] = useState<string | null>(null);
   const [inlineSpeakerNameDraft, setInlineSpeakerNameDraft] = useState('');
   const [speakerOrder, setSpeakerOrder] = useState<string[]>([]);
@@ -344,6 +347,9 @@ export default function TranscriptViewerPage() {
       setEditedSegments({});
       setDeletedSegmentIndexes(new Set());
       setSpeakerSegmentsDirty(false);
+      setParagraphSpeakerSelections({});
+      setParagraphSpeakerNameDrafts({});
+      setActiveParagraphSpeakerMenu(null);
 
       // Load saved speaker names
       if (transcriptionData.speakerNames) {
@@ -534,6 +540,9 @@ export default function TranscriptViewerPage() {
     setEditedSegments({});
     setDeletedSegmentIndexes(new Set());
     setSpeakerSegmentsDirty(false);
+    setParagraphSpeakerSelections({});
+    setParagraphSpeakerNameDrafts({});
+    setActiveParagraphSpeakerMenu(null);
     setEditedTranscript(transcription?.transcript || '');
     clearLightGrammarPreview();
     clearCleanupPreview();
@@ -600,6 +609,9 @@ export default function TranscriptViewerPage() {
         setEditedSegments({});
         setDeletedSegmentIndexes(new Set());
         setSpeakerSegmentsDirty(false);
+        setParagraphSpeakerSelections({});
+        setParagraphSpeakerNameDrafts({});
+        setActiveParagraphSpeakerMenu(null);
 
         // Reload from server to verify persistence
         console.log('[Save] Reloading transcript to verify save...');
@@ -1999,6 +2011,121 @@ export default function TranscriptViewerPage() {
     }));
   };
 
+  const getNextSpeakerKey = () => {
+    const existingSpeakerKeys = new Set<string>([
+      ...Object.keys(speakerNames),
+      ...speakerOrder,
+      ...(transcription?.timestampedTranscript || [])
+        .map(segment => segment.speaker)
+        .filter((speaker): speaker is string => Boolean(speaker) && speaker !== 'UU')
+    ]);
+
+    let nextSpeakerNumber = 1;
+    existingSpeakerKeys.forEach((speaker) => {
+      const match = /^S(\d+)$/.exec(speaker);
+      if (match) {
+        nextSpeakerNumber = Math.max(nextSpeakerNumber, Number(match[1]) + 1);
+      }
+    });
+
+    let nextSpeakerKey = `S${nextSpeakerNumber}`;
+    while (existingSpeakerKeys.has(nextSpeakerKey)) {
+      nextSpeakerNumber += 1;
+      nextSpeakerKey = `S${nextSpeakerNumber}`;
+    }
+
+    return nextSpeakerKey;
+  };
+
+  const applyExistingSpeakerToParagraph = (segmentIndex: number) => {
+    const selectedSpeaker = paragraphSpeakerSelections[segmentIndex];
+
+    if (!selectedSpeaker) {
+      toast({
+        title: 'Choose a speaker',
+        description: 'Select an existing speaker before applying it to this paragraph.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    changeSpeakerForSegment(segmentIndex, selectedSpeaker);
+    setParagraphSpeakerSelections(prev => {
+      const next = { ...prev };
+      delete next[segmentIndex];
+      return next;
+    });
+    setActiveParagraphSpeakerMenu(null);
+
+    toast({
+      title: 'Speaker updated',
+      description: `Paragraph assigned to ${getSpeakerDisplayName(selectedSpeaker)}. Use Save Transcript to persist.`
+    });
+  };
+
+  const applyCustomSpeakerToParagraph = async (segmentIndex: number) => {
+    const customName = (paragraphSpeakerNameDrafts[segmentIndex] || '').trim();
+
+    if (!customName) {
+      toast({
+        title: 'Enter a speaker name',
+        description: 'Type a speaker name before applying it to this paragraph.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const existingSpeaker = orderedSpeakers.find(
+      speaker => getSpeakerDisplayName(speaker).trim().toLowerCase() === customName.toLowerCase()
+    );
+    const speakerKey = existingSpeaker || getNextSpeakerKey();
+
+    if (!existingSpeaker) {
+      await updateSpeakerName(speakerKey, customName);
+      setSpeakerOrder(prev => {
+        const currentOrder = prev.length > 0 ? prev : orderedSpeakers;
+        return currentOrder.includes(speakerKey) ? currentOrder : [...currentOrder, speakerKey];
+      });
+    }
+
+    changeSpeakerForSegment(segmentIndex, speakerKey);
+    setParagraphSpeakerSelections(prev => ({
+      ...prev,
+      [segmentIndex]: speakerKey
+    }));
+    setParagraphSpeakerNameDrafts(prev => {
+      const next = { ...prev };
+      delete next[segmentIndex];
+      return next;
+    });
+    setActiveParagraphSpeakerMenu(null);
+
+    toast({
+      title: 'Speaker updated',
+      description: `Paragraph assigned to ${customName}. Use Save Transcript to persist the paragraph assignment.`
+    });
+  };
+
+  const removeSpeakerFromParagraph = (segmentIndex: number) => {
+    changeSpeakerForSegment(segmentIndex, undefined);
+    setParagraphSpeakerSelections(prev => {
+      const next = { ...prev };
+      delete next[segmentIndex];
+      return next;
+    });
+    setParagraphSpeakerNameDrafts(prev => {
+      const next = { ...prev };
+      delete next[segmentIndex];
+      return next;
+    });
+    setActiveParagraphSpeakerMenu(null);
+
+    toast({
+      title: 'Speaker label removed',
+      description: 'Paragraph speaker label removed. Use Save Transcript to persist.'
+    });
+  };
+
   const applySidebarSpeakerName = (speaker: string) => {
     if (!isEditing) {
       toast({
@@ -2115,7 +2242,7 @@ export default function TranscriptViewerPage() {
     if (updateSpeakerBlockSegments([{ startIndex: block.startIndex, endIndex: block.endIndex, speaker: previousSpeaker }])) {
       toast({
         title: 'Speaker block merged',
-        description: `Current block assigned to ${getSpeakerDisplayName(previousSpeaker)}. Use Save Speaker Changes to persist.`
+        description: `Current block assigned to ${getSpeakerDisplayName(previousSpeaker)}. Use Save Transcript to persist.`
       });
     }
   };
@@ -2130,7 +2257,7 @@ export default function TranscriptViewerPage() {
     if (updateSpeakerBlockSegments([{ startIndex: nextBlock.startIndex, endIndex: nextBlock.endIndex, speaker: block.speaker }])) {
       toast({
         title: 'Speaker block merged',
-        description: `Next block assigned to ${getSpeakerDisplayName(block.speaker)}. Use Save Speaker Changes to persist.`
+        description: `Next block assigned to ${getSpeakerDisplayName(block.speaker)}. Use Save Transcript to persist.`
       });
     }
   };
@@ -2145,7 +2272,7 @@ export default function TranscriptViewerPage() {
     if (updateSpeakerBlockSegments([{ startIndex: previousBlock.endIndex, endIndex: previousBlock.endIndex, speaker: block.speaker }])) {
       toast({
         title: 'Speaker boundary moved',
-        description: 'Boundary moved up one segment. Use Save Speaker Changes to persist.'
+        description: 'Boundary moved up one segment. Use Save Transcript to persist.'
       });
     }
   };
@@ -2159,7 +2286,7 @@ export default function TranscriptViewerPage() {
     if (updateSpeakerBlockSegments([{ startIndex: block.startIndex, endIndex: block.startIndex, speaker: previousSpeaker }])) {
       toast({
         title: 'Speaker boundary moved',
-        description: 'Boundary moved down one segment. Use Save Speaker Changes to persist.'
+        description: 'Boundary moved down one segment. Use Save Transcript to persist.'
       });
     }
   };
@@ -2171,7 +2298,7 @@ export default function TranscriptViewerPage() {
     if (updateSpeakerBlockSegments([{ startIndex: block.startIndex, endIndex: block.endIndex, speaker: newSpeaker }])) {
       toast({
         title: 'Speaker block changed',
-        description: `Current block assigned to ${getSpeakerDisplayName(newSpeaker)}. Use Save Speaker Changes to persist.`
+        description: `Current block assigned to ${getSpeakerDisplayName(newSpeaker)}. Use Save Transcript to persist.`
       });
     }
   };
@@ -2416,7 +2543,7 @@ export default function TranscriptViewerPage() {
   };
 
   // Change speaker for a specific segment
-  const changeSpeakerForSegment = (segmentIndex: number, newSpeaker: string) => {
+  const changeSpeakerForSegment = (segmentIndex: number, newSpeaker: string | undefined) => {
     if (!transcription?.timestampedTranscript) return;
 
     const updatedTranscript = [...transcription.timestampedTranscript];
@@ -3067,6 +3194,9 @@ export default function TranscriptViewerPage() {
                 if (deletedSegmentIndexes.has(index)) return null;
 
                 const currentSegmentText = editedSegments[index] !== undefined ? editedSegments[index] : segment.text;
+                const currentSpeaker = segment.speaker && segment.speaker !== 'UU' ? segment.speaker : '';
+                const selectedParagraphSpeaker = paragraphSpeakerSelections[index] ?? currentSpeaker;
+                const paragraphSpeakerNameDraft = paragraphSpeakerNameDrafts[index] || '';
                 const isNewSpeaker = index === 0 || transcription.timestampedTranscript?.[index - 1]?.speaker !== segment.speaker;
                 const isEmptyDraft = currentSegmentText.trim().length === 0;
                 const hasSearchHighlight = searchMatches.some(match => match.segmentIndex === index);
@@ -3094,6 +3224,153 @@ export default function TranscriptViewerPage() {
                         </span>
                       </div>
                     )}
+
+                    <div
+                      className="relative border-b border-gray-100 bg-white px-4 py-3"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                          Speaker
+                        </span>
+                        <button
+                          type="button"
+                          className={`rounded-full px-2.5 py-1 text-xs font-semibold transition hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-200 ${currentSpeaker ? getSpeakerColor(currentSpeaker) : 'border border-dashed border-gray-300 bg-gray-50 text-gray-600'}`}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setParagraphSpeakerSelections(prev => ({
+                              ...prev,
+                              [index]: selectedParagraphSpeaker
+                            }));
+                            setActiveParagraphSpeakerMenu(prev => prev === index ? null : index);
+                          }}
+                        >
+                          {currentSpeaker ? getSpeakerDisplayName(currentSpeaker) : 'Add speaker label'}
+                        </button>
+                        <span className="text-xs text-gray-400">
+                          {formatTimestamp(segment.start)}
+                        </span>
+                      </div>
+
+                      {activeParagraphSpeakerMenu === index && (
+                        <div
+                          className="mt-3 max-w-xl rounded-lg border border-blue-200 bg-blue-50 p-3 shadow-sm"
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
+                            <select
+                              value={selectedParagraphSpeaker}
+                              onChange={(e) => setParagraphSpeakerSelections(prev => ({
+                                ...prev,
+                                [index]: e.target.value
+                              }))}
+                              className="min-w-44 rounded-md border border-blue-200 bg-white px-2 py-1.5 text-xs text-gray-800"
+                              disabled={saving}
+                              aria-label={`Speaker for paragraph ${index + 1}`}
+                            >
+                              <option value="">Choose existing speaker</option>
+                              {orderedSpeakers.map((speaker) => (
+                                <option key={`paragraph-speaker-${index}-${speaker}`} value={speaker}>
+                                  {getSpeakerDisplayName(speaker)}
+                                </option>
+                              ))}
+                            </select>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-8 bg-white"
+                              disabled={saving || !selectedParagraphSpeaker || selectedParagraphSpeaker === currentSpeaker}
+                              onClick={() => applyExistingSpeakerToParagraph(index)}
+                            >
+                              Apply
+                            </Button>
+                            {currentSpeaker && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-8 bg-white text-red-700 hover:bg-red-50"
+                                disabled={saving}
+                                onClick={() => removeSpeakerFromParagraph(index)}
+                              >
+                                Remove label
+                              </Button>
+                            )}
+                          </div>
+
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <input
+                              type="text"
+                              value={paragraphSpeakerNameDraft}
+                              onChange={(e) => setParagraphSpeakerNameDrafts(prev => ({
+                                ...prev,
+                                [index]: e.target.value
+                              }))}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  applyCustomSpeakerToParagraph(index);
+                                } else if (e.key === 'Escape') {
+                                  setParagraphSpeakerNameDrafts(prev => {
+                                    const next = { ...prev };
+                                    delete next[index];
+                                    return next;
+                                  });
+                                  setActiveParagraphSpeakerMenu(null);
+                                }
+                              }}
+                              className="min-w-48 flex-1 rounded-md border border-blue-200 bg-white px-2 py-1.5 text-xs text-gray-800 outline-none focus:ring-2 focus:ring-blue-200"
+                              placeholder="Type custom speaker name"
+                              disabled={saving}
+                              aria-label={`Custom speaker name for paragraph ${index + 1}`}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-8 bg-white"
+                              disabled={saving || paragraphSpeakerNameDraft.trim().length === 0}
+                              onClick={() => applyCustomSpeakerToParagraph(index)}
+                            >
+                              Add / Apply
+                            </Button>
+                          </div>
+
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {speakerLabelPresets.map((preset) => (
+                              <Button
+                                key={`paragraph-speaker-preset-${index}-${preset}`}
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-7 bg-white px-2 text-[11px]"
+                                disabled={saving}
+                                onClick={() => setParagraphSpeakerNameDrafts(prev => ({
+                                  ...prev,
+                                  [index]: preset
+                                }))}
+                              >
+                                {preset}
+                              </Button>
+                            ))}
+                          </div>
+
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="mt-2 h-7 px-2 text-xs text-gray-600"
+                            onClick={() => setActiveParagraphSpeakerMenu(null)}
+                          >
+                            Close
+                          </Button>
+                        </div>
+                      )}
+                    </div>
 
                     <div className="p-4">
                       {hasSearchHighlight ? (
