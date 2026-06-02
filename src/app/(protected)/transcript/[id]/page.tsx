@@ -208,6 +208,8 @@ export default function TranscriptViewerPage() {
   const [timestampFrequency, setTimestampFrequency] = useState<30 | 60 | 300 | 'none'>(60); // 30s, 60s, 5min (300s), or no display timestamps
   const [speakerNames, setSpeakerNames] = useState<Record<string, string>>({});
   const [sidebarSpeakerNameDrafts, setSidebarSpeakerNameDrafts] = useState<Record<string, string>>({});
+  const [inlineEditingSpeaker, setInlineEditingSpeaker] = useState<string | null>(null);
+  const [inlineSpeakerNameDraft, setInlineSpeakerNameDraft] = useState('');
   const [speakerOrder, setSpeakerOrder] = useState<string[]>([]);
   const [showSpeakerLabels, setShowSpeakerLabels] = useState(true);
   const [mergeSourceSpeaker, setMergeSourceSpeaker] = useState<string>('');
@@ -2002,6 +2004,38 @@ export default function TranscriptViewerPage() {
     updateSpeakerName(speaker, trimmedName);
   };
 
+  const startInlineSpeakerNameEdit = (speaker: string | undefined) => {
+    if (!speaker || !isEditingSpeakerSegments) return;
+
+    setInlineEditingSpeaker(speaker);
+    setInlineSpeakerNameDraft(getSpeakerDisplayName(speaker));
+    setSelectedSegments(new Set());
+    window.getSelection()?.removeAllRanges();
+  };
+
+  const cancelInlineSpeakerNameEdit = () => {
+    setInlineEditingSpeaker(null);
+    setInlineSpeakerNameDraft('');
+  };
+
+  const saveInlineSpeakerNameEdit = async (speaker: string) => {
+    if (!isEditingSpeakerSegments) return;
+
+    const trimmedName = inlineSpeakerNameDraft.trim();
+
+    if (!trimmedName) {
+      toast({
+        title: 'Speaker name required',
+        description: 'Enter a speaker name before saving it.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    await updateSpeakerName(speaker, trimmedName);
+    cancelInlineSpeakerNameEdit();
+  };
+
   // Drag and drop handlers
   const handleDragStart = (e: React.DragEvent, speaker: string) => {
     setDraggedSpeaker(speaker);
@@ -2129,6 +2163,7 @@ export default function TranscriptViewerPage() {
   // Handle text selection in edit mode
   const handleTextSelection = () => {
     if (!isEditingSpeakerSegments || !transcription?.timestampedTranscript) return;
+    if (inlineEditingSpeaker) return;
 
     // Don't clear selection while dragging the panel
     if (isDragging) return;
@@ -2569,9 +2604,79 @@ export default function TranscriptViewerPage() {
                         {/* Show speaker label on new speaker blocks */}
                         {isNewSpeaker && showSpeakerLabels && (
                           <div className="flex items-center gap-2 mb-2">
-                            <div className={`px-3 py-1 rounded-full text-xs font-semibold ${getSpeakerColor(segment.speaker)}`}>
-                              {getSpeakerDisplayName(segment.speaker)}
-                            </div>
+                            {inlineEditingSpeaker === segment.speaker ? (
+                              <div
+                                className="flex flex-wrap items-center gap-2"
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <input
+                                  type="text"
+                                  value={inlineSpeakerNameDraft}
+                                  onChange={(e) => setInlineSpeakerNameDraft(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && segment.speaker) {
+                                      e.preventDefault();
+                                      saveInlineSpeakerNameEdit(segment.speaker);
+                                    } else if (e.key === 'Escape') {
+                                      e.preventDefault();
+                                      cancelInlineSpeakerNameEdit();
+                                    }
+                                  }}
+                                  onBlur={cancelInlineSpeakerNameEdit}
+                                  className="min-w-40 rounded-md border border-blue-300 bg-white px-2 py-1 text-xs font-medium outline-none focus:ring-2 focus:ring-blue-200"
+                                  autoFocus
+                                />
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  className="h-7 px-2 text-xs bg-green-600 text-white hover:bg-green-700"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (segment.speaker) {
+                                      saveInlineSpeakerNameEdit(segment.speaker);
+                                    }
+                                  }}
+                                  disabled={saving || !inlineSpeakerNameDraft.trim()}
+                                >
+                                  Save
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 px-2 text-xs"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    cancelInlineSpeakerNameEdit();
+                                  }}
+                                  disabled={saving}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                className={`px-3 py-1 rounded-full text-xs font-semibold transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-300 ${getSpeakerColor(segment.speaker)}`}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  startInlineSpeakerNameEdit(segment.speaker);
+                                }}
+                                title="Click to rename this speaker"
+                              >
+                                {getSpeakerDisplayName(segment.speaker)}
+                              </button>
+                            )}
                             <span className="text-xs text-gray-500 font-mono">
                               {formatTimestamp(segment.start)}
                             </span>
