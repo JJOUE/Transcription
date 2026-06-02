@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
-import { getTranscriptionById, updateTranscriptionStatus, TranscriptionJob } from '@/lib/firebase/transcriptions';
+import { getTranscriptionById, updateTranscriptionStatus, TranscriptionJob, TranscriptSegment } from '@/lib/firebase/transcriptions';
 import { Timestamp } from 'firebase/firestore';
 import { formatTime, formatDuration } from '@/lib/utils';
 import { AudioPlayer, AudioPlayerRef } from '@/components/ui/AudioPlayer';
@@ -117,6 +117,11 @@ interface LightGrammarChange {
 
 interface LightGrammarPreview extends CleanupPreview {
   changes: LightGrammarChange[];
+}
+
+interface DraftTranscriptForExport {
+  plainTranscript: string;
+  timestampedTranscript?: TranscriptSegment[];
 }
 
 const cleanupOptionItems: Array<{ key: CleanupOptionKey; label: string }> = [
@@ -481,19 +486,33 @@ export default function TranscriptViewerPage() {
     return false;
   };
 
-  const getDraftTranscriptText = () => {
-    if (!transcription) return '';
-
-    if (transcription.timestampedTranscript && transcription.timestampedTranscript.length > 0) {
-      return joinTranscriptSegmentTexts(
-        transcription.timestampedTranscript.map((segment, index) =>
-          editedSegments[index] !== undefined ? editedSegments[index] : segment.text
-        )
-      );
+  const getDraftTimestampedTranscript = (): TranscriptSegment[] | undefined => {
+    if (!transcription?.timestampedTranscript || transcription.timestampedTranscript.length === 0) {
+      return undefined;
     }
 
-    return isEditing ? editedTranscript : (transcription.transcript || '');
+    return transcription.timestampedTranscript.map((segment, index) => ({
+      ...segment,
+      text: editedSegments[index] !== undefined ? editedSegments[index] : segment.text
+    }));
   };
+
+  const getDraftPlainTranscript = () => {
+    if (!transcription) return '';
+
+    const draftTimestampedTranscript = getDraftTimestampedTranscript();
+
+    if (draftTimestampedTranscript && draftTimestampedTranscript.length > 0) {
+      return joinTranscriptSegmentTexts(draftTimestampedTranscript.map(segment => segment.text));
+    }
+
+    return editedTranscript || transcription.transcript || '';
+  };
+
+  const getDraftTranscriptForExport = (): DraftTranscriptForExport => ({
+    plainTranscript: getDraftPlainTranscript(),
+    timestampedTranscript: getDraftTimestampedTranscript()
+  });
 
   const discardTranscriptChanges = () => {
     setIsEditing(false);
@@ -514,22 +533,12 @@ export default function TranscriptViewerPage() {
       console.log('[Save] hasTimestampedTranscript:', !!transcription.timestampedTranscript);
       console.log('[Save] transcriptStoragePath:', transcription.transcriptStoragePath);
 
+      const draftTimestampedTranscript = getDraftTimestampedTranscript();
+      const draftPlainTranscript = getDraftPlainTranscript();
+
       // Check if we have edited segments (inline editing)
-      if (Object.keys(editedSegments).length > 0 && transcription.timestampedTranscript) {
+      if (Object.keys(editedSegments).length > 0 && draftTimestampedTranscript) {
         console.log('[Save] Saving edited segments...');
-
-        // Apply edited segments to timestampedTranscript
-        const updatedTimestampedTranscript = transcription.timestampedTranscript.map((segment, index) => {
-          if (editedSegments[index] !== undefined) {
-            return { ...segment, text: editedSegments[index] };
-          }
-          return segment;
-        });
-
-        // Generate new plain transcript from segments
-        const updatedPlainTranscript = joinTranscriptSegmentTexts(
-          updatedTimestampedTranscript.map(seg => seg.text)
-        );
 
         console.log('[Save] Updated segments count:', Object.keys(editedSegments).length);
 
@@ -544,8 +553,8 @@ export default function TranscriptViewerPage() {
               'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
-              timestampedTranscript: updatedTimestampedTranscript,
-              transcript: updatedPlainTranscript
+              timestampedTranscript: draftTimestampedTranscript,
+              transcript: draftPlainTranscript
             })
           });
 
@@ -558,8 +567,8 @@ export default function TranscriptViewerPage() {
         } else {
           console.log('[Save] Saving to Firestore...');
           await updateTranscriptionStatus(transcription.id!, 'complete', {
-            timestampedTranscript: updatedTimestampedTranscript,
-            transcript: updatedPlainTranscript
+            timestampedTranscript: draftTimestampedTranscript,
+            transcript: draftPlainTranscript
           });
           console.log('[Save] Successfully saved to Firestore');
         }
@@ -567,22 +576,22 @@ export default function TranscriptViewerPage() {
         // Update local state
         setTranscription(prev => prev ? {
           ...prev,
-          timestampedTranscript: updatedTimestampedTranscript,
-          transcript: updatedPlainTranscript
+          timestampedTranscript: draftTimestampedTranscript,
+          transcript: draftPlainTranscript
         } : null);
         setEditedSegments({});
 
         // Reload from server to verify persistence
         console.log('[Save] Reloading transcript to verify save...');
         await loadTranscription();
-      } else if (editedTranscript.trim()) {
+      } else if (!draftTimestampedTranscript && draftPlainTranscript.trim()) {
         console.log('[Save] Saving legacy plain text...');
         // Legacy plain text editing (fallback)
         await updateTranscriptionStatus(transcription.id!, 'complete', {
-          transcript: editedTranscript.trim()
+          transcript: draftPlainTranscript.trim()
         });
 
-        setTranscription(prev => prev ? { ...prev, transcript: editedTranscript.trim() } : null);
+        setTranscription(prev => prev ? { ...prev, transcript: draftPlainTranscript.trim() } : null);
 
         // Reload from server to verify persistence
         await loadTranscription();
@@ -645,9 +654,10 @@ export default function TranscriptViewerPage() {
   };
 
   const saveAndDownload = async () => {
+    const draftForExport = getDraftTranscriptForExport();
     const saved = await saveEdits();
     if (saved) {
-      exportTranscript(selectedFormat);
+      exportTranscript(selectedFormat, draftForExport);
     }
   };
 
@@ -682,8 +692,8 @@ export default function TranscriptViewerPage() {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
   };
 
-  const exportSubtitles = (format: 'srt' | 'vtt') => {
-    if (!transcription?.timestampedTranscript || transcription.timestampedTranscript.length === 0) {
+  const exportSubtitles = (format: 'srt' | 'vtt', draftForExport = getDraftTranscriptForExport()) => {
+    if (!draftForExport.timestampedTranscript || draftForExport.timestampedTranscript.length === 0) {
       toast({
         title: 'No subtitle data',
         description: 'This transcription does not have timestamped segments needed for subtitles.',
@@ -692,7 +702,7 @@ export default function TranscriptViewerPage() {
       return;
     }
 
-    const segments = transcription.timestampedTranscript;
+    const segments = draftForExport.timestampedTranscript;
     let content = '';
 
     if (format === 'vtt') {
@@ -732,11 +742,11 @@ export default function TranscriptViewerPage() {
     });
   };
 
-  const exportTranscript = async (format: 'pdf' | 'docx' | 'srt' | 'vtt') => {
+  const exportTranscript = async (format: 'pdf' | 'docx' | 'srt' | 'vtt', draftForExport = getDraftTranscriptForExport()) => {
     if (!transcription) return;
 
     if (format === 'srt' || format === 'vtt') {
-      exportSubtitles(format);
+      exportSubtitles(format, draftForExport);
       return;
     }
 
@@ -744,7 +754,8 @@ export default function TranscriptViewerPage() {
       // Generate template data with current transcript content
       const templateData = generateTemplateData({
         ...transcription,
-        transcript: getDraftTranscriptText()
+        transcript: draftForExport.plainTranscript,
+        timestampedTranscript: draftForExport.timestampedTranscript
       }, userData);
 
       if (format === 'pdf') {
@@ -1123,18 +1134,18 @@ export default function TranscriptViewerPage() {
   const buildLightGrammarPreview = (): LightGrammarPreview | null => {
     if (!transcription) return null;
 
-    if (transcription.timestampedTranscript && transcription.timestampedTranscript.length > 0) {
+    const draftTimestampedTranscript = getDraftTimestampedTranscript();
+
+    if (draftTimestampedTranscript && draftTimestampedTranscript.length > 0) {
       let changeCount = 0;
       let segmentCount = 0;
       const examples: LightGrammarPreview['examples'] = [];
       const changes: LightGrammarChange[] = [];
 
-      transcription.timestampedTranscript.forEach((segment, index) => {
-        const currentText = editedSegments[index] !== undefined ? editedSegments[index] : segment.text;
+      draftTimestampedTranscript.forEach((segment, index) => {
+        const currentText = segment.text;
         const previousText = index > 0
-          ? editedSegments[index - 1] !== undefined
-            ? editedSegments[index - 1]
-            : transcription.timestampedTranscript?.[index - 1]?.text || ''
+          ? draftTimestampedTranscript[index - 1]?.text || ''
           : '';
         const boundaryAwareText = previousText && shouldCapitalizeNextSegmentStart(previousText)
           ? capitalizeFirstRealWord(currentText)
@@ -1167,7 +1178,7 @@ export default function TranscriptViewerPage() {
       return { changeCount, segmentCount, examples, changes };
     }
 
-    const currentTranscript = editedTranscript || transcription.transcript || '';
+    const currentTranscript = getDraftPlainTranscript();
     const formatted = formatTranscriptMechanically(currentTranscript);
     const hasChange = formatted !== currentTranscript;
 
@@ -1386,14 +1397,16 @@ export default function TranscriptViewerPage() {
   const buildCleanupPreview = (): FillerCleanupPreview | null => {
     if (!transcription) return null;
 
-    if (transcription.timestampedTranscript && transcription.timestampedTranscript.length > 0) {
+    const draftTimestampedTranscript = getDraftTimestampedTranscript();
+
+    if (draftTimestampedTranscript && draftTimestampedTranscript.length > 0) {
       let changeCount = 0;
       let segmentCount = 0;
       const examples: FillerCleanupPreview['examples'] = [];
       const changes: CleanupChange[] = [];
 
-      transcription.timestampedTranscript.forEach((segment, index) => {
-        const currentText = editedSegments[index] !== undefined ? editedSegments[index] : segment.text;
+      draftTimestampedTranscript.forEach((segment, index) => {
+        const currentText = segment.text;
         const cleaned = applySelectedCleanupToText(currentText);
 
         if (cleaned.text !== currentText) {
@@ -1422,7 +1435,7 @@ export default function TranscriptViewerPage() {
       return { changeCount, segmentCount, examples, changes };
     }
 
-    const currentTranscript = editedTranscript || transcription.transcript || '';
+    const currentTranscript = getDraftPlainTranscript();
     const cleaned = applySelectedCleanupToText(currentTranscript);
     const hasChange = cleaned.text !== currentTranscript;
 
@@ -1596,14 +1609,16 @@ export default function TranscriptViewerPage() {
   const buildFormattingPreview = (): FormattingPreview | null => {
     if (!transcription) return null;
 
-    if (transcription.timestampedTranscript && transcription.timestampedTranscript.length > 0) {
+    const draftTimestampedTranscript = getDraftTimestampedTranscript();
+
+    if (draftTimestampedTranscript && draftTimestampedTranscript.length > 0) {
       let changeCount = 0;
       let segmentCount = 0;
       const examples: FormattingPreview['examples'] = [];
       const changes: CleanupChange[] = [];
 
-      transcription.timestampedTranscript.forEach((segment, index) => {
-        const currentText = editedSegments[index] !== undefined ? editedSegments[index] : segment.text;
+      draftTimestampedTranscript.forEach((segment, index) => {
+        const currentText = segment.text;
         const formatted = applySelectedFormattingToText(currentText);
 
         if (formatted.text !== currentText) {
@@ -1632,7 +1647,7 @@ export default function TranscriptViewerPage() {
       return { changeCount, segmentCount, examples, changes };
     }
 
-    const currentTranscript = editedTranscript || transcription.transcript || '';
+    const currentTranscript = getDraftPlainTranscript();
     const formatted = applySelectedFormattingToText(currentTranscript);
     const hasChange = formatted.text !== currentTranscript;
 
@@ -3063,7 +3078,7 @@ export default function TranscriptViewerPage() {
   const skippedFormattingCount = formattingPreview?.changes.filter(change => change.status === 'skipped').length || 0;
   const pendingFormattingCount = formattingPreview?.changes.filter(change => change.status === 'pending').length || 0;
   const hasUnsavedTranscriptDraft = hasUnsavedTranscriptChanges();
-  const transcriptWordCount = getWordCount(transcription.transcript);
+  const transcriptWordCount = getWordCount(getDraftPlainTranscript());
   const speakerCount = orderedSpeakers.length;
   const speakerSegmentCounts = (transcription.timestampedTranscript || []).reduce<Record<string, number>>((counts, segment) => {
     if (segment.speaker && segment.speaker !== 'UU') {
@@ -3506,7 +3521,7 @@ export default function TranscriptViewerPage() {
               </div>
               <div className="flex items-center gap-1">
                 <FileText className="h-4 w-4" />
-                {getWordCount(transcription.transcript)} words
+                {transcriptWordCount} words
               </div>
               <CreditDisplay amount={transcription.creditsUsed} size="sm" />
               <span>Completed: {formatDate(transcription.completedAt || transcription.updatedAt)}</span>
@@ -4530,7 +4545,7 @@ export default function TranscriptViewerPage() {
                       </div>
                       {transcription.transcript && !isEditing && (
                         <div className="mt-4 pt-4 border-t text-sm text-gray-500 flex justify-between items-center">
-                          <span>Word count: {getWordCount(transcription.transcript)}</span>
+                          <span>Word count: {transcriptWordCount}</span>
                           {transcription.timestampedTranscript && transcription.timestampedTranscript.length > 0 && (
                             <span className="text-[#003366]">
                               📍 {transcription.timestampedTranscript.length} timestamped segments
