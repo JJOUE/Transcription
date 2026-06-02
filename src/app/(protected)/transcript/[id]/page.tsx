@@ -3532,34 +3532,6 @@ export default function TranscriptViewerPage() {
         {/* Sticky Action Toolbar - top-16 to sit below the h-16 sticky header */}
         <div className="sticky top-16 z-40 -mx-4 px-4 py-3 bg-gray-50/95 backdrop-blur-sm border-b border-gray-200/80 mb-6">
           <div className="flex flex-wrap items-center gap-2">
-            {/* Only show edit button for completed transcriptions */}
-            {transcription.status === 'complete' && (
-              <Button
-                variant="outline"
-                onClick={isEditing ? saveEdits : () => setIsEditing(true)}
-                disabled={saving}
-                className="border-[#003366] text-[#003366] hover:bg-[#003366] hover:text-white"
-                size="sm"
-              >
-                {saving ? (
-                  <>
-                    <LoadingSpinner size="sm" className="mr-2" />
-                    Saving...
-                  </>
-                ) : isEditing ? (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Changes
-                  </>
-                ) : (
-                  <>
-                    <Edit3 className="h-4 w-4 mr-2" />
-                    Edit
-                  </>
-                )}
-              </Button>
-            )}
-
             {transcription.isShared ? (
               <>
                 <Button
