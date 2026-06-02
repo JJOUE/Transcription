@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 // Set maxDuration to 5 minutes (300s) for Vercel deployment
 export const maxDuration = 300;
-import { speechmaticsService } from '@/lib/speechmatics/service';
+import { buildProjectDictionaryVocabulary, speechmaticsService, type SpeechmaticsConfig } from '@/lib/speechmatics/service';
 import { getTranscriptionByIdAdmin, updateTranscriptionStatusAdmin, TranscriptionMode } from '@/lib/firebase/transcriptions-admin';
 import { ProcessTranscriptionJobSchema, validateData } from '@/lib/validation/schemas';
 
@@ -219,14 +219,21 @@ export async function POST(request: NextRequest) {
     console.log(`[API] File duration: ${transcriptionJob.duration || 'unknown'}s`);
     console.log(`[API] Processing strategy: ${useFetchData ? 'FETCH_DATA (URL-based)' : useWebhook ? 'WEBHOOK (buffer upload)' : 'SYNCHRONOUS'}`);
 
-    const speechmaticsConfig = {
+    const additionalVocab = buildProjectDictionaryVocabulary(transcriptionJob.projectDictionaryTerms);
+
+    if (additionalVocab.length > 0) {
+      console.log(`[API] Using project dictionary vocabulary for job ${jobId}: ${additionalVocab.length} terms`);
+    }
+
+    const speechmaticsConfig: SpeechmaticsConfig = {
       language,
       operatingPoint,
       enableDiarization: true,
       enablePunctuation: true,
       speakerSensitivity: 0.6,
       domain: transcriptionJob.domain || 'general',
-      removeDisfluencies: false
+      removeDisfluencies: false,
+      additionalVocab: additionalVocab.length > 0 ? additionalVocab : undefined
     };
 
     let result;
@@ -419,7 +426,7 @@ async function processTranscriptionSynchronous(
   jobId: string,
   audioBuffer: Buffer,
   filename: string,
-  speechmaticsConfig: Record<string, unknown>
+  speechmaticsConfig: SpeechmaticsConfig
 ): Promise<{ success: boolean; speechmaticsJobId?: string; error?: string }> {
   try {
     console.log(`[API] Starting synchronous processing for job ${jobId}`);
@@ -451,7 +458,7 @@ async function processTranscriptionWithWebhook(
   jobId: string,
   audioBuffer: Buffer,
   filename: string,
-  speechmaticsConfig: Record<string, unknown>,
+  speechmaticsConfig: SpeechmaticsConfig,
   request?: NextRequest
 ): Promise<{ success: boolean; speechmaticsJobId?: string; error?: string }> {
   try {
@@ -553,7 +560,7 @@ async function processTranscriptionWithFetchData(
   jobId: string,
   audioUrl: string,
   filename: string,
-  speechmaticsConfig: Record<string, unknown>,
+  speechmaticsConfig: SpeechmaticsConfig,
   request?: NextRequest
 ): Promise<{ success: boolean; speechmaticsJobId?: string; error?: string }> {
   try {

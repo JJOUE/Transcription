@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { cookies } from 'next/headers';
-import { speechmaticsService } from '@/lib/speechmatics/service';
+import { buildProjectDictionaryVocabulary, speechmaticsService } from '@/lib/speechmatics/service';
 import { updateTranscriptionStatusAdmin, getTranscriptionByIdAdmin } from '@/lib/firebase/transcriptions-admin';
 
 export const runtime = 'nodejs';
@@ -203,6 +203,11 @@ export async function POST(request: NextRequest) {
 
     console.log(`[Admin Resubmit] Webhook callback URL: ${callbackUrl}`);
 
+    const additionalVocab = buildProjectDictionaryVocabulary(job.projectDictionaryTerms);
+    if (additionalVocab.length > 0) {
+      console.log(`[Admin Resubmit] Using project dictionary vocabulary for job ${jobId}: ${additionalVocab.length} terms`);
+    }
+
     // Submit to Speechmatics using fetch_data (URL-based, no file download)
     const result = await speechmaticsService.submitJobWithFetchData(
       job.downloadURL,
@@ -213,6 +218,7 @@ export async function POST(request: NextRequest) {
         enableDiarization: true,
         enablePunctuation: true,
         domain: job.domain || 'general',
+        additionalVocab: additionalVocab.length > 0 ? additionalVocab : undefined,
       },
       callbackUrl
     );

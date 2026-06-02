@@ -5,6 +5,20 @@ import { rateLimiters } from '@/lib/middleware/rate-limit';
 import { CreateTranscriptionJobSchema, validateData } from '@/lib/validation/schemas';
 import { sendSimpleNotification } from '@/lib/email/simple-email';
 
+function redactProjectDictionaryTerms(value: unknown): unknown {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return value;
+  }
+
+  const data = { ...(value as Record<string, unknown>) };
+
+  if (Array.isArray(data.projectDictionaryTerms)) {
+    data.projectDictionaryTerms = `[${data.projectDictionaryTerms.length} terms redacted]`;
+  }
+
+  return data;
+}
+
 export async function POST(request: NextRequest) {
   // Apply rate limiting first
   const rateLimitResponse = await rateLimiters.general(request);
@@ -31,7 +45,7 @@ export async function POST(request: NextRequest) {
     let body: unknown;
     try {
       body = await request.json();
-      console.log('[API] Received transcription job data:', JSON.stringify(body, null, 2));
+      console.log('[API] Received transcription job data:', JSON.stringify(redactProjectDictionaryTerms(body), null, 2));
     } catch {
       return NextResponse.json(
         { error: 'Invalid JSON in request body' },
@@ -43,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     if (!validation.success) {
       console.error('[API] Validation failed for transcription job creation');
-      console.error('[API] Request body:', JSON.stringify(body, null, 2));
+      console.error('[API] Request body:', JSON.stringify(redactProjectDictionaryTerms(body), null, 2));
       console.error('[API] Validation errors:', JSON.stringify(validation.errors, null, 2));
       return NextResponse.json(
         {

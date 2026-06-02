@@ -2,6 +2,11 @@ import axios from 'axios';
 import FormData from 'form-data';
 import { TranscriptionJob, TranscriptionStatus, updateTranscriptionStatusAdmin, getTranscriptionByIdAdmin, TranscriptSegment } from '../firebase/transcriptions-admin';
 
+export interface SpeechmaticsAdditionalVocabEntry {
+  content: string;
+  sounds_like?: string[];
+}
+
 export interface SpeechmaticsConfig {
   language?: string;
   operatingPoint?: 'standard' | 'enhanced';
@@ -11,6 +16,7 @@ export interface SpeechmaticsConfig {
   speakerSensitivity?: number; // Speaker sensitivity (0-1, default 0.5) - available for batch API
   domain?: 'general' | 'medical' | 'legal'; // Domain-specific vocabulary
   removeDisfluencies?: boolean; // Remove filler words (um, uh, etc.) - English only
+  additionalVocab?: SpeechmaticsAdditionalVocabEntry[];
 }
 
 export interface SpeechmaticsResult {
@@ -259,6 +265,117 @@ const LEGAL_VOCABULARY = [
   { content: "holding" }
 ];
 
+const MAX_ADDITIONAL_VOCAB_ENTRIES = 1000;
+const MAX_ADDITIONAL_VOCAB_WORDS = 6;
+
+export function buildProjectDictionaryVocabulary(terms?: string[]): SpeechmaticsAdditionalVocabEntry[] {
+  if (!terms?.length) {
+    return [];
+  }
+
+  const seen = new Set<string>();
+  const entries: SpeechmaticsAdditionalVocabEntry[] = [];
+
+  for (const term of terms) {
+    const content = term.trim().replace(/\s+/g, ' ');
+    const normalizedKey = content.toLocaleLowerCase();
+    const wordCount = content.split(/\s+/).filter(Boolean).length;
+
+    if (!content || seen.has(normalizedKey) || wordCount > MAX_ADDITIONAL_VOCAB_WORDS) {
+      continue;
+    }
+
+    seen.add(normalizedKey);
+    entries.push({ content });
+
+    if (entries.length >= MAX_ADDITIONAL_VOCAB_ENTRIES) {
+      break;
+    }
+  }
+
+  return entries;
+}
+
+function getDomainVocabulary(domain?: SpeechmaticsConfig['domain']): SpeechmaticsAdditionalVocabEntry[] {
+  if (domain === 'medical') {
+    return MEDICAL_VOCABULARY;
+  }
+
+  if (domain === 'legal') {
+    return LEGAL_VOCABULARY;
+  }
+
+  return [];
+}
+
+function buildAdditionalVocabulary(config: SpeechmaticsConfig): SpeechmaticsAdditionalVocabEntry[] {
+  const seen = new Set<string>();
+  const mergedVocabulary: SpeechmaticsAdditionalVocabEntry[] = [];
+  const addEntries = (entries: SpeechmaticsAdditionalVocabEntry[]) => {
+    for (const entry of entries) {
+      const content = entry.content.trim().replace(/\s+/g, ' ');
+      const key = content.toLocaleLowerCase();
+
+      if (!content || seen.has(key) || mergedVocabulary.length >= MAX_ADDITIONAL_VOCAB_ENTRIES) {
+        continue;
+      }
+
+      seen.add(key);
+      mergedVocabulary.push({
+        content,
+        ...(entry.sounds_like?.length ? { sounds_like: entry.sounds_like } : {})
+      });
+    }
+  };
+
+  addEntries(config.additionalVocab || []);
+  addEntries(getDomainVocabulary(config.domain));
+
+  return mergedVocabulary;
+}
+
+function summarizeVocabularyUse(config: SpeechmaticsConfig, additionalVocabulary: SpeechmaticsAdditionalVocabEntry[]) {
+  const projectTermCount = config.additionalVocab?.length || 0;
+  const domainTermCount = getDomainVocabulary(config.domain).length;
+
+  if (projectTermCount > 0) {
+    console.log(`[Speechmatics] Using project dictionary vocabulary: ${projectTermCount} terms`);
+  }
+
+  if (domainTermCount > 0) {
+    console.log(`[Speechmatics] Using ${config.domain} vocabulary: ${domainTermCount} terms`);
+  } else {
+    console.log(`[Speechmatics] Using general vocabulary`);
+  }
+
+  if (additionalVocabulary.length > 0) {
+    console.log(`[Speechmatics] Total additional_vocab entries: ${additionalVocabulary.length}`);
+  }
+}
+
+function redactVocabularyForLog(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(redactVocabularyForLog);
+  }
+
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+
+  const record = value as Record<string, unknown>;
+  const redacted: Record<string, unknown> = {};
+
+  for (const [key, entryValue] of Object.entries(record)) {
+    if (key === 'additional_vocab' && Array.isArray(entryValue)) {
+      redacted[key] = `[${entryValue.length} entries redacted]`;
+    } else {
+      redacted[key] = redactVocabularyForLog(entryValue);
+    }
+  }
+
+  return redacted;
+}
+
 export class SpeechmaticsService {
   private apiKey: string;
   private apiUrl: string;
@@ -330,14 +447,11 @@ export class SpeechmaticsService {
         }
       }
 
-      // Add domain-specific vocabulary
-      if (config.domain === 'medical') {
-        transcriptionConfig.additional_vocab = MEDICAL_VOCABULARY;
-        console.log(`[Speechmatics] Using medical vocabulary (${MEDICAL_VOCABULARY.length} terms)`);
-      } else if (config.domain === 'legal') {
-        transcriptionConfig.additional_vocab = LEGAL_VOCABULARY;
-        console.log(`[Speechmatics] Using legal vocabulary (${LEGAL_VOCABULARY.length} terms)`);
+      const additionalVocabulary = buildAdditionalVocabulary(config);
+      if (additionalVocabulary.length > 0) {
+        transcriptionConfig.additional_vocab = additionalVocabulary;
       }
+      summarizeVocabularyUse(config, additionalVocabulary);
 
       // Add disfluency filtering
       if (config.removeDisfluencies !== undefined) {
@@ -363,7 +477,7 @@ export class SpeechmaticsService {
         }]
       };
 
-      console.log(`[Speechmatics] Job config:`, JSON.stringify(jobConfig, null, 2));
+      console.log(`[Speechmatics] Job config:`, JSON.stringify(redactVocabularyForLog(jobConfig), null, 2));
 
       // Speechmatics requires multipart/form-data even for fetch_data
       const boundary = `----speechmatics${Date.now()}`;
@@ -500,24 +614,11 @@ export class SpeechmaticsService {
         }
       }
 
-      // Add domain-specific vocabulary based on the selected domain
-      if (config.domain === 'medical' || config.domain === 'legal') {
-        let domainVocabulary = [];
-        if (config.domain === 'medical') {
-          domainVocabulary = MEDICAL_VOCABULARY;
-          console.log(`[Speechmatics] Using medical vocabulary (${MEDICAL_VOCABULARY.length} terms)`);
-        } else if (config.domain === 'legal') {
-          domainVocabulary = LEGAL_VOCABULARY;
-          console.log(`[Speechmatics] Using legal vocabulary (${LEGAL_VOCABULARY.length} terms)`);
-        }
-
-        // Only add additional_vocab if we have vocabulary to add
-        if (domainVocabulary.length > 0) {
-          transcriptionConfig.additional_vocab = domainVocabulary;
-        }
-      } else {
-        console.log(`[Speechmatics] Using general vocabulary (no additional_vocab)`);
+      const additionalVocabulary = buildAdditionalVocabulary(config);
+      if (additionalVocabulary.length > 0) {
+        transcriptionConfig.additional_vocab = additionalVocabulary;
       }
+      summarizeVocabularyUse(config, additionalVocabulary);
 
       // Add transcript filtering configuration for disfluencies (filler words)
       if (config.removeDisfluencies !== undefined) {
@@ -541,8 +642,8 @@ export class SpeechmaticsService {
         }]
       };
 
-      console.log(`[Speechmatics] Job config:`, JSON.stringify(jobConfig, null, 2));
-      console.log(`[Speechmatics] transcriptionConfig object:`, JSON.stringify(transcriptionConfig, null, 2));
+      console.log(`[Speechmatics] Job config:`, JSON.stringify(redactVocabularyForLog(jobConfig), null, 2));
+      console.log(`[Speechmatics] transcriptionConfig object:`, JSON.stringify(redactVocabularyForLog(transcriptionConfig), null, 2));
 
       // Create multipart form data manually for Node.js compatibility
       const boundary = `----speechmatics${Date.now()}`;
@@ -607,7 +708,7 @@ export class SpeechmaticsService {
           const fallbackFormHeader = Buffer.from(fallbackFormParts.join('\r\n') + '\r\n', 'utf8');
           const fallbackFormData = Buffer.concat([fallbackFormHeader, audioBuffer, formFooter]);
 
-          console.log('[Speechmatics] Retrying with standard model config:', JSON.stringify(fallbackConfig, null, 2));
+          console.log('[Speechmatics] Retrying with standard model config:', JSON.stringify(redactVocabularyForLog(fallbackConfig), null, 2));
 
           const fallbackResponse = await fetch(`${this.apiUrl}/jobs`, {
             method: 'POST',
@@ -683,7 +784,8 @@ export class SpeechmaticsService {
         enableDiarization = true,
         enablePunctuation = true,
         removeDisfluencies,
-        domain
+        domain,
+        additionalVocab
       } = config;
 
       console.log(`[Speechmatics] Starting transcription for ${filename}`);
@@ -709,14 +811,11 @@ export class SpeechmaticsService {
         transcriptionConfig.diarization = 'speaker';
       }
 
-      // Add domain-specific vocabulary
-      if (domain === 'medical') {
-        transcriptionConfig.additional_vocab = MEDICAL_VOCABULARY;
-        console.log(`[Speechmatics] Using medical vocabulary (${MEDICAL_VOCABULARY.length} terms)`);
-      } else if (domain === 'legal') {
-        transcriptionConfig.additional_vocab = LEGAL_VOCABULARY;
-        console.log(`[Speechmatics] Using legal vocabulary (${LEGAL_VOCABULARY.length} terms)`);
+      const additionalVocabulary = buildAdditionalVocabulary({ domain, additionalVocab });
+      if (additionalVocabulary.length > 0) {
+        transcriptionConfig.additional_vocab = additionalVocabulary;
       }
+      summarizeVocabularyUse({ domain, additionalVocab }, additionalVocabulary);
 
       // Add disfluency filtering if specified
       if (removeDisfluencies !== undefined) {
@@ -734,7 +833,7 @@ export class SpeechmaticsService {
 
       formData.append('config', JSON.stringify(jobConfig));
 
-      console.log(`[Speechmatics] Job config:`, JSON.stringify(jobConfig, null, 2));
+      console.log(`[Speechmatics] Job config:`, JSON.stringify(redactVocabularyForLog(jobConfig), null, 2));
 
       // Submit job with file and config in one request
       const createJobResponse = await axios.post(
@@ -788,13 +887,30 @@ export class SpeechmaticsService {
           console.log('[Speechmatics] Enhanced model quota exceeded, retrying with standard model...');
 
           try {
+            const fallbackTranscriptionConfig: any = {
+              language: config.language || 'en',
+              operating_point: 'standard',
+              output_locale: 'en-GB' // Use British English spelling for Canadian conventions
+            };
+
+            if (config.enableDiarization !== false) {
+              fallbackTranscriptionConfig.diarization = 'speaker';
+            }
+
+            const fallbackAdditionalVocabulary = buildAdditionalVocabulary(config);
+            if (fallbackAdditionalVocabulary.length > 0) {
+              fallbackTranscriptionConfig.additional_vocab = fallbackAdditionalVocabulary;
+            }
+
+            if (config.removeDisfluencies !== undefined) {
+              fallbackTranscriptionConfig.transcript_filtering_config = {
+                remove_disfluencies: config.removeDisfluencies
+              };
+            }
+
             const fallbackConfig = {
               type: 'transcription',
-              transcription_config: {
-                language,
-                operating_point: 'standard',
-                output_locale: 'en-GB' // Use British English spelling for Canadian conventions
-              }
+              transcription_config: fallbackTranscriptionConfig
             };
 
             // Create new FormData with standard model
@@ -805,7 +921,7 @@ export class SpeechmaticsService {
             } as any);
             fallbackFormData.append('config', JSON.stringify(fallbackConfig));
 
-            console.log(`[Speechmatics] Retrying with standard model config:`, JSON.stringify(fallbackConfig, null, 2));
+            console.log(`[Speechmatics] Retrying with standard model config:`, JSON.stringify(redactVocabularyForLog(fallbackConfig), null, 2));
 
             const fallbackResponse = await axios.post(
               `${this.apiUrl}/jobs`,
