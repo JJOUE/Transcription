@@ -2036,6 +2036,126 @@ export default function TranscriptViewerPage() {
     cancelInlineSpeakerNameEdit();
   };
 
+  const getSpeakerBlockRange = (startIndex: number) => {
+    if (!transcription?.timestampedTranscript?.[startIndex]) return null;
+
+    const segments = transcription.timestampedTranscript;
+    const speaker = segments[startIndex].speaker;
+    let blockStartIndex = startIndex;
+    let blockEndIndex = startIndex;
+
+    while (blockStartIndex > 0 && segments[blockStartIndex - 1].speaker === speaker) {
+      blockStartIndex--;
+    }
+
+    while (blockEndIndex < segments.length - 1 && segments[blockEndIndex + 1].speaker === speaker) {
+      blockEndIndex++;
+    }
+
+    return {
+      startIndex: blockStartIndex,
+      endIndex: blockEndIndex,
+      speaker
+    };
+  };
+
+  const updateSpeakerBlockSegments = (
+    updates: Array<{ startIndex: number; endIndex: number; speaker: string | undefined }>
+  ) => {
+    if (!transcription?.timestampedTranscript) return false;
+
+    const updatedTranscript = transcription.timestampedTranscript.map((segment, index) => {
+      const matchingUpdate = updates.find(update => index >= update.startIndex && index <= update.endIndex);
+
+      if (!matchingUpdate) return segment;
+
+      return {
+        ...segment,
+        speaker: matchingUpdate.speaker
+      };
+    });
+
+    setTranscription({
+      ...transcription,
+      timestampedTranscript: updatedTranscript
+    });
+    setSelectedSegments(new Set());
+    window.getSelection()?.removeAllRanges();
+
+    return true;
+  };
+
+  const mergeSpeakerBlockWithPrevious = (startIndex: number) => {
+    const block = getSpeakerBlockRange(startIndex);
+    if (!block || block.startIndex === 0 || !transcription?.timestampedTranscript) return;
+
+    const previousSpeaker = transcription.timestampedTranscript[block.startIndex - 1].speaker;
+    if (previousSpeaker === block.speaker) return;
+
+    if (updateSpeakerBlockSegments([{ startIndex: block.startIndex, endIndex: block.endIndex, speaker: previousSpeaker }])) {
+      toast({
+        title: 'Speaker block merged',
+        description: `Current block assigned to ${getSpeakerDisplayName(previousSpeaker)}. Use Save Speaker Changes to persist.`
+      });
+    }
+  };
+
+  const mergeSpeakerBlockWithNext = (startIndex: number) => {
+    const block = getSpeakerBlockRange(startIndex);
+    if (!block || !transcription?.timestampedTranscript || block.endIndex >= transcription.timestampedTranscript.length - 1) return;
+
+    const nextBlock = getSpeakerBlockRange(block.endIndex + 1);
+    if (!nextBlock || nextBlock.speaker === block.speaker) return;
+
+    if (updateSpeakerBlockSegments([{ startIndex: nextBlock.startIndex, endIndex: nextBlock.endIndex, speaker: block.speaker }])) {
+      toast({
+        title: 'Speaker block merged',
+        description: `Next block assigned to ${getSpeakerDisplayName(block.speaker)}. Use Save Speaker Changes to persist.`
+      });
+    }
+  };
+
+  const moveSpeakerBoundaryUp = (startIndex: number) => {
+    const block = getSpeakerBlockRange(startIndex);
+    if (!block || block.startIndex === 0 || !transcription?.timestampedTranscript) return;
+
+    const previousBlock = getSpeakerBlockRange(block.startIndex - 1);
+    if (!previousBlock) return;
+
+    if (updateSpeakerBlockSegments([{ startIndex: previousBlock.endIndex, endIndex: previousBlock.endIndex, speaker: block.speaker }])) {
+      toast({
+        title: 'Speaker boundary moved',
+        description: 'Boundary moved up one segment. Use Save Speaker Changes to persist.'
+      });
+    }
+  };
+
+  const moveSpeakerBoundaryDown = (startIndex: number) => {
+    const block = getSpeakerBlockRange(startIndex);
+    if (!block || block.startIndex === 0 || block.startIndex === block.endIndex || !transcription?.timestampedTranscript) return;
+
+    const previousSpeaker = transcription.timestampedTranscript[block.startIndex - 1].speaker;
+
+    if (updateSpeakerBlockSegments([{ startIndex: block.startIndex, endIndex: block.startIndex, speaker: previousSpeaker }])) {
+      toast({
+        title: 'Speaker boundary moved',
+        description: 'Boundary moved down one segment. Use Save Speaker Changes to persist.'
+      });
+    }
+  };
+
+  const changeSpeakerBlock = (startIndex: number, newSpeaker: string) => {
+    const block = getSpeakerBlockRange(startIndex);
+    if (!block || !newSpeaker || newSpeaker === block.speaker) return;
+
+    if (updateSpeakerBlockSegments([{ startIndex: block.startIndex, endIndex: block.endIndex, speaker: newSpeaker }])) {
+      toast({
+        title: 'Speaker block changed',
+        description: `Current block assigned to ${getSpeakerDisplayName(newSpeaker)}. Use Save Speaker Changes to persist.`
+      });
+    }
+  };
+
   // Drag and drop handlers
   const handleDragStart = (e: React.DragEvent, speaker: string) => {
     setDraggedSpeaker(speaker);
@@ -2587,8 +2707,12 @@ export default function TranscriptViewerPage() {
               >
                 {transcription.timestampedTranscript.map((segment, index) => {
                   // Check if this is the start of a new speaker block
-                  const isNewSpeaker = index === 0 || transcription.timestampedTranscript[index - 1].speaker !== segment.speaker;
+                  const isNewSpeaker = index === 0 || transcription.timestampedTranscript?.[index - 1]?.speaker !== segment.speaker;
                   const isSelected = selectedSegments.has(index);
+                  const blockRange = isNewSpeaker ? getSpeakerBlockRange(index) : null;
+                  const hasPreviousBlock = Boolean(blockRange && blockRange.startIndex > 0);
+                  const hasNextBlock = Boolean(blockRange && blockRange.endIndex < (transcription.timestampedTranscript?.length || 0) - 1);
+                  const canMoveBoundaryDown = Boolean(blockRange && hasPreviousBlock && blockRange.startIndex < blockRange.endIndex);
 
                   return (
                     <div
@@ -2603,83 +2727,162 @@ export default function TranscriptViewerPage() {
                       <div className="p-3">
                         {/* Show speaker label on new speaker blocks */}
                         {isNewSpeaker && showSpeakerLabels && (
-                          <div className="flex items-center gap-2 mb-2">
-                            {inlineEditingSpeaker === segment.speaker ? (
-                              <div
-                                className="flex flex-wrap items-center gap-2"
-                                onMouseDown={(e) => e.stopPropagation()}
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <input
-                                  type="text"
-                                  value={inlineSpeakerNameDraft}
-                                  onChange={(e) => setInlineSpeakerNameDraft(e.target.value)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && segment.speaker) {
+                          <div
+                            className="mb-2 flex flex-wrap items-center gap-2"
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="flex flex-wrap items-center gap-2">
+                              {inlineEditingSpeaker === segment.speaker ? (
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <input
+                                    type="text"
+                                    value={inlineSpeakerNameDraft}
+                                    onChange={(e) => setInlineSpeakerNameDraft(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' && segment.speaker) {
+                                        e.preventDefault();
+                                        saveInlineSpeakerNameEdit(segment.speaker);
+                                      } else if (e.key === 'Escape') {
+                                        e.preventDefault();
+                                        cancelInlineSpeakerNameEdit();
+                                      }
+                                    }}
+                                    onBlur={cancelInlineSpeakerNameEdit}
+                                    className="min-w-40 rounded-md border border-blue-300 bg-white px-2 py-1 text-xs font-medium outline-none focus:ring-2 focus:ring-blue-200"
+                                    autoFocus
+                                  />
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs bg-green-600 text-white hover:bg-green-700"
+                                    onMouseDown={(e) => {
                                       e.preventDefault();
-                                      saveInlineSpeakerNameEdit(segment.speaker);
-                                    } else if (e.key === 'Escape') {
+                                      e.stopPropagation();
+                                    }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (segment.speaker) {
+                                        saveInlineSpeakerNameEdit(segment.speaker);
+                                      }
+                                    }}
+                                    disabled={saving || !inlineSpeakerNameDraft.trim()}
+                                  >
+                                    Save
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs"
+                                    onMouseDown={(e) => {
                                       e.preventDefault();
+                                      e.stopPropagation();
+                                    }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
                                       cancelInlineSpeakerNameEdit();
-                                    }
-                                  }}
-                                  onBlur={cancelInlineSpeakerNameEdit}
-                                  className="min-w-40 rounded-md border border-blue-300 bg-white px-2 py-1 text-xs font-medium outline-none focus:ring-2 focus:ring-blue-200"
-                                  autoFocus
-                                />
-                                <Button
+                                    }}
+                                    disabled={saving}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              ) : (
+                                <button
                                   type="button"
-                                  size="sm"
-                                  className="h-7 px-2 text-xs bg-green-600 text-white hover:bg-green-700"
-                                  onMouseDown={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                  }}
+                                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-300 ${getSpeakerColor(segment.speaker)}`}
+                                  onMouseDown={(e) => e.stopPropagation()}
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    if (segment.speaker) {
-                                      saveInlineSpeakerNameEdit(segment.speaker);
+                                    startInlineSpeakerNameEdit(segment.speaker);
+                                  }}
+                                  title="Click to rename this speaker"
+                                >
+                                  {getSpeakerDisplayName(segment.speaker)}
+                                </button>
+                              )}
+                              <span className="text-xs text-gray-500 font-mono">
+                                {formatTimestamp(segment.start)}
+                              </span>
+                            </div>
+
+                            {blockRange && (
+                              <div className="flex flex-wrap items-center gap-1 rounded-md border border-gray-200 bg-white px-2 py-1">
+                                <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                                  Speaker block actions
+                                </span>
+                                {hasPreviousBlock && (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs"
+                                    onClick={() => mergeSpeakerBlockWithPrevious(index)}
+                                    disabled={saving}
+                                  >
+                                    Merge previous
+                                  </Button>
+                                )}
+                                {hasNextBlock && (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs"
+                                    onClick={() => mergeSpeakerBlockWithNext(index)}
+                                    disabled={saving}
+                                  >
+                                    Merge next
+                                  </Button>
+                                )}
+                                {hasPreviousBlock && (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs"
+                                    onClick={() => moveSpeakerBoundaryUp(index)}
+                                    disabled={saving}
+                                  >
+                                    Boundary up
+                                  </Button>
+                                )}
+                                {canMoveBoundaryDown && (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs"
+                                    onClick={() => moveSpeakerBoundaryDown(index)}
+                                    disabled={saving}
+                                  >
+                                    Boundary down
+                                  </Button>
+                                )}
+                                <select
+                                  aria-label="Change this speaker block"
+                                  defaultValue=""
+                                  className="h-7 rounded-md border border-gray-300 bg-white px-2 text-xs"
+                                  onChange={(e) => {
+                                    if (e.target.value) {
+                                      changeSpeakerBlock(index, e.target.value);
+                                      e.target.value = '';
                                     }
                                   }}
-                                  disabled={saving || !inlineSpeakerNameDraft.trim()}
+                                  disabled={saving || orderedSpeakers.length < 2}
                                 >
-                                  Save
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-7 px-2 text-xs"
-                                  onMouseDown={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                  }}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    cancelInlineSpeakerNameEdit();
-                                  }}
-                                  disabled={saving}
-                                >
-                                  Cancel
-                                </Button>
+                                  <option value="">Change block to...</option>
+                                  {orderedSpeakers
+                                    .filter((speaker) => speaker !== segment.speaker)
+                                    .map((speaker) => (
+                                      <option key={`block-${index}-speaker-${speaker}`} value={speaker}>
+                                        {getSpeakerDisplayName(speaker)}
+                                      </option>
+                                    ))}
+                                </select>
                               </div>
-                            ) : (
-                              <button
-                                type="button"
-                                className={`px-3 py-1 rounded-full text-xs font-semibold transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-300 ${getSpeakerColor(segment.speaker)}`}
-                                onMouseDown={(e) => e.stopPropagation()}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  startInlineSpeakerNameEdit(segment.speaker);
-                                }}
-                                title="Click to rename this speaker"
-                              >
-                                {getSpeakerDisplayName(segment.speaker)}
-                              </button>
                             )}
-                            <span className="text-xs text-gray-500 font-mono">
-                              {formatTimestamp(segment.start)}
-                            </span>
                           </div>
                         )}
 
