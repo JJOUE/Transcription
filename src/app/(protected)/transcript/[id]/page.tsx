@@ -202,8 +202,7 @@ export default function TranscriptViewerPage() {
   const [selectedFormat, setSelectedFormat] = useState<'pdf' | 'docx' | 'srt' | 'vtt'>('pdf');
   const [timestampFrequency, setTimestampFrequency] = useState<30 | 60 | 300 | 'none'>(60); // 30s, 60s, 5min (300s), or no display timestamps
   const [speakerNames, setSpeakerNames] = useState<Record<string, string>>({});
-  const [editingSpeaker, setEditingSpeaker] = useState<string | null>(null);
-  const [speakerRenameSource, setSpeakerRenameSource] = useState<'toolbar' | 'sidebar' | null>(null);
+  const [sidebarSpeakerNameDrafts, setSidebarSpeakerNameDrafts] = useState<Record<string, string>>({});
   const [speakerOrder, setSpeakerOrder] = useState<string[]>([]);
   const [showSpeakerLabels, setShowSpeakerLabels] = useState(true);
   const [mergeSourceSpeaker, setMergeSourceSpeaker] = useState<string>('');
@@ -1923,8 +1922,10 @@ export default function TranscriptViewerPage() {
     };
 
     setSpeakerNames(updatedNames);
-    setEditingSpeaker(null);
-    setSpeakerRenameSource(null);
+    setSidebarSpeakerNameDrafts(prev => ({
+      ...prev,
+      [speaker]: newName
+    }));
 
     // Save to database
     if (!transcription || !user) return;
@@ -1952,23 +1953,38 @@ export default function TranscriptViewerPage() {
     }
   };
 
-  const startSpeakerRename = (speaker: string, source: 'toolbar' | 'sidebar') => {
-    setEditingSpeaker(speaker);
-    setSpeakerRenameSource(source);
+  const getSidebarSpeakerNameDraft = (speaker: string) =>
+    sidebarSpeakerNameDrafts[speaker] ?? speakerNames[speaker] ?? getSpeakerDisplayName(speaker);
+
+  const setSidebarSpeakerNameDraft = (speaker: string, name: string) => {
+    setSidebarSpeakerNameDrafts(prev => ({
+      ...prev,
+      [speaker]: name
+    }));
   };
 
-  const cancelSpeakerRename = () => {
-    setEditingSpeaker(null);
-    setSpeakerRenameSource(null);
-  };
-
-  const commitSpeakerRename = (speaker: string, newName: string) => {
-    const trimmedName = newName.trim();
-    if (trimmedName) {
-      updateSpeakerName(speaker, trimmedName);
-    } else {
-      cancelSpeakerRename();
+  const applySidebarSpeakerName = (speaker: string) => {
+    if (!isEditingSpeakerSegments) {
+      toast({
+        title: 'Edit Speakers required',
+        description: 'Click Edit Speakers before changing speaker names.',
+        variant: 'destructive'
+      });
+      return;
     }
+
+    const trimmedName = getSidebarSpeakerNameDraft(speaker).trim();
+
+    if (!trimmedName) {
+      toast({
+        title: 'Speaker name required',
+        description: 'Enter a speaker name before applying it.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    updateSpeakerName(speaker, trimmedName);
   };
 
   // Drag and drop handlers
@@ -3063,21 +3079,13 @@ export default function TranscriptViewerPage() {
     ? '60 seconds'
     : '5 minutes';
   const speakerLabelPresets = [
-    'MEMBER',
-    'CLAIMANT',
-    'COUNSEL',
-    'WITNESS',
-    'OFFICER',
-    'ADJUDICATOR',
-    'REPRESENTATIVE',
     'Interviewer',
-    'Participant',
-    'Host',
-    'Guest',
-    'Doctor',
-    'Patient',
-    'Nurse',
-    'Specialist',
+    'Interviewee',
+    'Respondent',
+    'Counsel',
+    'Claimant',
+    'Defendant',
+    'Member',
   ];
   const futureWorkspaceTools = [
     'Export Tools',
@@ -4152,7 +4160,12 @@ export default function TranscriptViewerPage() {
                         </p>
                       )}
                       <div className="space-y-2">
-                        {orderedSpeakers.map((speaker) => (
+                        {orderedSpeakers.map((speaker) => {
+                          const draftName = getSidebarSpeakerNameDraft(speaker);
+                          const savedDisplayName = getSpeakerDisplayName(speaker);
+                          const canApplySpeakerName = isEditingSpeakerSegments && draftName.trim().length > 0 && draftName.trim() !== savedDisplayName;
+
+                          return (
                           <div key={`workspace-speaker-${speaker}`} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
                             <div className="flex items-start justify-between gap-2">
                               <div className="min-w-0">
@@ -4164,60 +4177,75 @@ export default function TranscriptViewerPage() {
                                   {speakerSegmentCounts[speaker] || 0} segment{speakerSegmentCounts[speaker] === 1 ? '' : 's'}
                                 </p>
                               </div>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 px-2 text-xs"
-                                onClick={() => startSpeakerRename(speaker, 'sidebar')}
-                                disabled={saving || !isEditingSpeakerSegments}
-                              >
-                                Rename
-                              </Button>
                             </div>
 
-                            {editingSpeaker === speaker && speakerRenameSource === 'sidebar' && (
-                              <div className="mt-3 space-y-2">
+                            <div className="mt-3 space-y-3">
+                              <div className="space-y-1.5">
+                                <label
+                                  htmlFor={`sidebar-speaker-name-${speaker}`}
+                                  className="text-xs font-medium text-gray-600"
+                                >
+                                  Custom display name
+                                </label>
                                 <input
+                                  id={`sidebar-speaker-name-${speaker}`}
                                   type="text"
-                                  autoFocus
-                                  defaultValue={getSpeakerDisplayName(speaker)}
-                                  onBlur={(e) => {
-                                    commitSpeakerRename(speaker, e.target.value);
-                                  }}
+                                  value={draftName}
+                                  onChange={(e) => setSidebarSpeakerNameDraft(speaker, e.target.value)}
                                   onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
-                                      commitSpeakerRename(speaker, e.currentTarget.value);
+                                      applySidebarSpeakerName(speaker);
                                     } else if (e.key === 'Escape') {
-                                      cancelSpeakerRename();
+                                      setSidebarSpeakerNameDraft(speaker, savedDisplayName);
                                     }
                                   }}
+                                  disabled={saving || !isEditingSpeakerSegments}
                                   className="w-full rounded-md border border-blue-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
-                                  placeholder="Speaker name"
+                                  placeholder="Type any speaker name"
                                 />
+                                {!isEditingSpeakerSegments && (
+                                  <p className="text-xs text-gray-500">
+                                    Enter speaker edit mode to type or apply a custom name.
+                                  </p>
+                                )}
                               </div>
-                            )}
 
-                            <select
-                              value=""
-                              onChange={(e) => {
-                                const preset = e.currentTarget.value;
-                                if (preset) {
-                                  updateSpeakerName(speaker, preset);
-                                }
-                              }}
-                              className="mt-3 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
-                              disabled={saving || !isEditingSpeakerSegments}
-                            >
-                              <option value="">Preset label</option>
-                              {speakerLabelPresets.map((preset) => (
-                                <option key={`workspace-preset-${speaker}-${preset}`} value={preset}>
-                                  {preset}
-                                </option>
-                              ))}
-                            </select>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="w-full justify-center"
+                                onClick={() => applySidebarSpeakerName(speaker)}
+                                disabled={saving || !canApplySpeakerName}
+                              >
+                                Apply Name
+                              </Button>
+
+                              <div className="space-y-2">
+                                <p className="text-xs font-medium text-gray-600">Preset shortcuts</p>
+                                <div className="grid grid-cols-2 gap-2">
+                                  {speakerLabelPresets.map((preset) => (
+                                    <Button
+                                      key={`workspace-preset-${speaker}-${preset}`}
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-auto min-h-8 justify-center whitespace-normal px-2 py-1 text-xs"
+                                      disabled={saving || !isEditingSpeakerSegments}
+                                      onClick={() => {
+                                        setSidebarSpeakerNameDraft(speaker, preset);
+                                        updateSpeakerName(speaker, preset);
+                                      }}
+                                    >
+                                      {preset}
+                                    </Button>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
 
                       <div className="space-y-2 rounded-lg border border-gray-200 p-3">
