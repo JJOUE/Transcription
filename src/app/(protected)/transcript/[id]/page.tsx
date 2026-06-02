@@ -320,19 +320,37 @@ export default function TranscriptViewerPage() {
 
           if (response.ok) {
             const { transcript, timestampedTranscript } = await response.json();
+            const validTimestampedTranscript = Array.isArray(timestampedTranscript) && timestampedTranscript.length > 0;
             console.log('[Load] Loaded from Storage:', {
               transcriptLength: transcript?.length,
               segmentsCount: timestampedTranscript?.length,
               firstSegmentSample: timestampedTranscript?.[0]?.text?.substring(0, 50)
             });
-            transcriptionData.transcript = transcript;
-            transcriptionData.timestampedTranscript = timestampedTranscript;
+            if (typeof transcript === 'string') {
+              transcriptionData.transcript = transcript;
+            }
+            if (validTimestampedTranscript) {
+              transcriptionData.timestampedTranscript = timestampedTranscript;
+            } else if (!transcriptionData.timestampedTranscript?.length && transcription?.timestampedTranscript?.length) {
+              console.warn('[Load] Storage response did not include timestamped segments; preserving current editor segments.');
+              transcriptionData.timestampedTranscript = transcription.timestampedTranscript;
+            }
           } else {
             const errorText = await response.text();
             console.error('[Load] Failed to fetch from Storage:', response.status, errorText);
+            if (!transcriptionData.timestampedTranscript?.length && transcription?.timestampedTranscript?.length) {
+              console.warn('[Load] Storage fetch failed; preserving current editor segments.');
+              transcriptionData.timestampedTranscript = transcription.timestampedTranscript;
+              transcriptionData.transcript = transcription.transcript;
+            }
           }
         } catch (fetchError) {
           console.error('[Load] Error fetching transcript from Storage:', fetchError);
+          if (!transcriptionData.timestampedTranscript?.length && transcription?.timestampedTranscript?.length) {
+            console.warn('[Load] Storage fetch errored; preserving current editor segments.');
+            transcriptionData.timestampedTranscript = transcription.timestampedTranscript;
+            transcriptionData.transcript = transcription.transcript;
+          }
         }
       }
 
@@ -613,9 +631,6 @@ export default function TranscriptViewerPage() {
         setParagraphSpeakerNameDrafts({});
         setActiveParagraphSpeakerMenu(null);
 
-        // Reload from server to verify persistence
-        console.log('[Save] Reloading transcript to verify save...');
-        await loadTranscription();
       } else if (!draftTimestampedTranscript && draftPlainTranscript.trim()) {
         console.log('[Save] Saving legacy plain text...');
         // Legacy plain text editing (fallback)
@@ -625,8 +640,6 @@ export default function TranscriptViewerPage() {
 
         setTranscription(prev => prev ? { ...prev, transcript: draftPlainTranscript.trim() } : null);
 
-        // Reload from server to verify persistence
-        await loadTranscription();
       } else {
         console.warn('[Save] No changes to save!');
       }
