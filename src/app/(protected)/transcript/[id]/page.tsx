@@ -203,6 +203,8 @@ export default function TranscriptViewerPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedTranscript, setEditedTranscript] = useState('');
   const [editedSegments, setEditedSegments] = useState<{[key: number]: string}>({});
+  const [deletedSegmentIndexes, setDeletedSegmentIndexes] = useState<Set<number>>(new Set());
+  const [speakerSegmentsDirty, setSpeakerSegmentsDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState<'pdf' | 'docx' | 'srt' | 'vtt'>('pdf');
   const [timestampFrequency, setTimestampFrequency] = useState<30 | 60 | 300 | 'none'>(60); // 30s, 60s, 5min (300s), or no display timestamps
@@ -339,6 +341,9 @@ export default function TranscriptViewerPage() {
 
       setTranscription(transcriptionData);
       setEditedTranscript(transcriptionData.transcript || '');
+      setEditedSegments({});
+      setDeletedSegmentIndexes(new Set());
+      setSpeakerSegmentsDirty(false);
 
       // Load saved speaker names
       if (transcriptionData.speakerNames) {
@@ -456,6 +461,7 @@ export default function TranscriptViewerPage() {
     setSpeakerOrder(updatedOrder);
     setMergeSourceSpeaker('');
     setMergeTargetSpeaker('');
+    setSpeakerSegmentsDirty(true);
 
     toast({
       title: 'Speakers merged',
@@ -481,6 +487,10 @@ export default function TranscriptViewerPage() {
       return true;
     }
 
+    if (deletedSegmentIndexes.size > 0 || speakerSegmentsDirty) {
+      return true;
+    }
+
     if (!transcription.timestampedTranscript || transcription.timestampedTranscript.length === 0) {
       return editedTranscript.trim() !== (transcription.transcript || '').trim();
     }
@@ -493,10 +503,12 @@ export default function TranscriptViewerPage() {
       return undefined;
     }
 
-    return transcription.timestampedTranscript.map((segment, index) => ({
-      ...segment,
-      text: editedSegments[index] !== undefined ? editedSegments[index] : segment.text
-    }));
+    return transcription.timestampedTranscript
+      .map((segment, index) => ({
+        ...segment,
+        text: editedSegments[index] !== undefined ? editedSegments[index] : segment.text
+      }))
+      .filter((_segment, index) => !deletedSegmentIndexes.has(index));
   };
 
   const getDraftPlainTranscript = () => {
@@ -518,11 +530,15 @@ export default function TranscriptViewerPage() {
 
   const discardTranscriptChanges = () => {
     setIsEditing(false);
+    setIsEditingSpeakerSegments(false);
     setEditedSegments({});
+    setDeletedSegmentIndexes(new Set());
+    setSpeakerSegmentsDirty(false);
     setEditedTranscript(transcription?.transcript || '');
     clearLightGrammarPreview();
     clearCleanupPreview();
     clearFormattingPreview();
+    loadTranscription();
   };
 
   const saveEdits = async () => {
@@ -538,8 +554,8 @@ export default function TranscriptViewerPage() {
       const draftTimestampedTranscript = getDraftTimestampedTranscript();
       const draftPlainTranscript = getDraftPlainTranscript();
 
-      // Check if we have edited segments (inline editing)
-      if (Object.keys(editedSegments).length > 0 && draftTimestampedTranscript) {
+      // Save timestamped transcript drafts, including text edits, speaker changes, and deleted empty segments.
+      if (draftTimestampedTranscript) {
         console.log('[Save] Saving edited segments...');
 
         console.log('[Save] Updated segments count:', Object.keys(editedSegments).length);
@@ -582,6 +598,8 @@ export default function TranscriptViewerPage() {
           transcript: draftPlainTranscript
         } : null);
         setEditedSegments({});
+        setDeletedSegmentIndexes(new Set());
+        setSpeakerSegmentsDirty(false);
 
         // Reload from server to verify persistence
         console.log('[Save] Reloading transcript to verify save...');
@@ -602,6 +620,7 @@ export default function TranscriptViewerPage() {
       }
 
       setIsEditing(false);
+      setIsEditingSpeakerSegments(false);
 
       toast({
         title: 'Changes saved',
@@ -717,7 +736,7 @@ export default function TranscriptViewerPage() {
       const speakerPrefix = segment.speaker && segment.speaker !== 'UU'
         ? `${getSpeakerDisplayName(segment.speaker)}: `
         : '';
-      const text = editedSegments[index] !== undefined ? editedSegments[index] : segment.text;
+      const text = segment.text;
 
       if (format === 'srt') {
         content += `${index + 1}\n${start} --> ${end}\n${speakerPrefix}${text}\n\n`;
@@ -730,7 +749,7 @@ export default function TranscriptViewerPage() {
     const blob = new Blob([content], { type: format === 'vtt' ? 'text/vtt' : 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    const baseName = transcription.originalFilename?.replace(/\.[^.]+$/, '') || 'transcript';
+    const baseName = transcription?.originalFilename?.replace(/\.[^.]+$/, '') || 'transcript';
     a.href = url;
     a.download = `${baseName}.${format}`;
     document.body.appendChild(a);
@@ -1981,10 +2000,10 @@ export default function TranscriptViewerPage() {
   };
 
   const applySidebarSpeakerName = (speaker: string) => {
-    if (!isEditingSpeakerSegments) {
+    if (!isEditing) {
       toast({
-        title: 'Edit Speakers required',
-        description: 'Click Edit Speakers before changing speaker names.',
+        title: 'Edit Transcript required',
+        description: 'Click Edit Transcript before changing speaker names.',
         variant: 'destructive'
       });
       return;
@@ -2019,7 +2038,7 @@ export default function TranscriptViewerPage() {
   };
 
   const saveInlineSpeakerNameEdit = async (speaker: string) => {
-    if (!isEditingSpeakerSegments) return;
+    if (!isEditing) return;
 
     const trimmedName = inlineSpeakerNameDraft.trim();
 
@@ -2079,6 +2098,7 @@ export default function TranscriptViewerPage() {
       ...transcription,
       timestampedTranscript: updatedTranscript
     });
+    setSpeakerSegmentsDirty(true);
     setSelectedSegments(new Set());
     window.getSelection()?.removeAllRanges();
 
@@ -2380,6 +2400,7 @@ export default function TranscriptViewerPage() {
       ...transcription,
       timestampedTranscript: updatedTranscript
     });
+    setSpeakerSegmentsDirty(true);
 
     // Get speaker display name for toast
     const speakerDisplayName = speakerNames[newSpeaker] || `Speaker ${newSpeaker.replace('S', '')}`;
@@ -2408,6 +2429,7 @@ export default function TranscriptViewerPage() {
       ...transcription,
       timestampedTranscript: updatedTranscript
     });
+    setSpeakerSegmentsDirty(true);
   };
 
   // Save speaker segment changes to database
@@ -2455,6 +2477,7 @@ export default function TranscriptViewerPage() {
       }
 
       setIsEditingSpeakerSegments(false);
+      setSpeakerSegmentsDirty(false);
 
       toast({
         title: 'Changes saved',
@@ -2500,7 +2523,7 @@ export default function TranscriptViewerPage() {
   };
 
   // Get unique speakers from the transcript - calculate at component level
-  const getOrderedSpeakers = () => {
+  const getOrderedSpeakers = (): string[] => {
     if (!transcription?.timestampedTranscript || transcription.timestampedTranscript.length === 0) {
       return [];
     }
@@ -2508,7 +2531,7 @@ export default function TranscriptViewerPage() {
     const allSpeakers = [...new Set(
       transcription.timestampedTranscript
         .map(segment => segment.speaker)
-        .filter(speaker => speaker)
+        .filter((speaker): speaker is string => Boolean(speaker))
     )];
 
     const identifiedSpeakers = allSpeakers.filter(speaker => speaker !== 'UU').sort();
@@ -3040,151 +3063,105 @@ export default function TranscriptViewerPage() {
                 </div>
               )}
 
-              {/* Group segments by speaker for editing - Word-like interface */}
-              {(() => {
-                const speakerGroups: Array<{speaker: string, segments: Array<{text: string, index: number, start: number}>}> = [];
-                let currentGroup: {speaker: string, segments: Array<{text: string, index: number, start: number}>} | null = null;
+              {transcription.timestampedTranscript.map((segment, index) => {
+                if (deletedSegmentIndexes.has(index)) return null;
 
-                transcription.timestampedTranscript.forEach((segment, index) => {
-                  if (!currentGroup || currentGroup.speaker !== segment.speaker) {
-                    // Start a new group
-                    currentGroup = {
-                      speaker: segment.speaker,
-                      segments: []
-                    };
-                    speakerGroups.push(currentGroup);
-                  }
-                  currentGroup.segments.push({
-                    text: segment.text,
-                    index: index,
-                    start: segment.start
-                  });
-                });
+                const currentSegmentText = editedSegments[index] !== undefined ? editedSegments[index] : segment.text;
+                const isNewSpeaker = index === 0 || transcription.timestampedTranscript?.[index - 1]?.speaker !== segment.speaker;
+                const isEmptyDraft = currentSegmentText.trim().length === 0;
+                const hasSearchHighlight = searchMatches.some(match => match.segmentIndex === index);
 
-                return speakerGroups.map((group, groupIndex) => {
-                  const firstSegmentIndex = group.segments[0].index;
-                  const segmentIndices = group.segments.map(seg => seg.index);
-                  const editorKey = `editor-${groupIndex}`;
-
-                  // Combine all segments in this group into one continuous text
-                  const groupText = joinTranscriptSegmentTexts(
-                    group.segments.map(seg =>
-                      editedSegments[seg.index] !== undefined ? editedSegments[seg.index] : seg.text
-                    )
-                  );
-
-                  return (
-                    <div
-                      key={groupIndex}
-                      id={`segment-${firstSegmentIndex}`}
-                      className="my-6 rounded-lg border-2 border-gray-300 bg-white shadow-sm hover:shadow-md transition-shadow"
-                    >
-                      {/* Word-like header with draggable speaker tag */}
+                return (
+                  <div
+                    key={`edit-segment-${index}`}
+                    id={`segment-${index}`}
+                    data-segment-index={index}
+                    className={`my-3 rounded-lg border-2 bg-white shadow-sm transition-shadow ${
+                      isEmptyDraft ? 'border-amber-300 bg-amber-50' : 'border-gray-300 hover:shadow-md'
+                    }`}
+                  >
+                    {isNewSpeaker && showSpeakerLabels && (
                       <div className="flex items-center gap-3 bg-gray-50 px-4 py-3 border-b border-gray-200 rounded-t-md">
-                        {/* Draggable Speaker Tag */}
                         <div
-                          draggable
-                          onDragStart={(e) => {
-                            setDraggedSpeaker(group.speaker);
-                            e.dataTransfer.effectAllowed = 'move';
-                          }}
-                          onDragEnd={() => setDraggedSpeaker(null)}
-                          className={`px-3 py-1 rounded-full text-xs font-semibold cursor-move transition-all ${
-                            draggedSpeaker === group.speaker ? 'opacity-50 scale-95' : 'hover:shadow-md'
-                          } ${getSpeakerColor(group.speaker)}`}
-                          title="Drag to reorder speakers or click to edit"
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${getSpeakerColor(segment.speaker)}`}
+                          onMouseDown={(e) => e.preventDefault()}
+                          title="Speaker label. Rename speakers in the Transcript Workspace sidebar."
                         >
-                          {getSpeakerDisplayName(group.speaker)}
+                          {getSpeakerDisplayName(segment.speaker)}
                         </div>
-
-                        {/* Timestamp */}
                         <span className="text-xs text-gray-500 font-mono ml-auto">
-                          {formatTimestamp(group.segments[0].start)}
+                          {formatTimestamp(segment.start)}
                         </span>
                       </div>
+                    )}
 
-                      {/* Word-like editable paragraph area */}
-                      <div className="p-4 min-h-[120px]">
-                        {searchMatches.length > 0 && searchMatches.some(m => segmentIndices.includes(m.segmentIndex)) ? (
-                          // Read-only with highlights
-                          <div className="text-gray-800 leading-relaxed text-base">
-                            {renderTextWithHighlights(groupText, segmentIndices, group.segments)}
-                          </div>
-                        ) : (
-                          // Editable area - properly initialized
-                          <div
-                            key={editorKey}
-                            ref={(el) => {
-                              if (el) {
-                                contentEditableRefs.current[groupIndex] = el;
-                                const isFocused = document.activeElement === el;
-                                // Only sync DOM -> React when the element is not focused
-                                if (!isFocused && el.textContent !== groupText) {
-                                  el.textContent = groupText;
-                                }
-                              } else {
-                                delete contentEditableRefs.current[groupIndex];
+                    <div className="p-4">
+                      {hasSearchHighlight ? (
+                        <div className="text-gray-800 leading-relaxed text-base">
+                          {renderTextWithHighlights(currentSegmentText, [index], [{
+                            text: currentSegmentText,
+                            index
+                          }])}
+                        </div>
+                      ) : (
+                        <div
+                          ref={(el) => {
+                            if (el) {
+                              contentEditableRefs.current[index] = el;
+                              const isFocused = document.activeElement === el;
+                              if (!isFocused && el.textContent !== currentSegmentText) {
+                                el.textContent = currentSegmentText;
                               }
-                            }}
-                            contentEditable
-                            suppressContentEditableWarning
-                            onPaste={(e) => {
-                              e.preventDefault();
-                              const pasteText = e.clipboardData.getData('text/plain');
-                              document.execCommand('insertText', false, pasteText);
-                            }}
-                            onInput={(e) => {
-                              const newText = e.currentTarget.textContent || '';
+                            } else {
+                              delete contentEditableRefs.current[index];
+                            }
+                          }}
+                          contentEditable
+                          suppressContentEditableWarning
+                          onPaste={(e) => {
+                            e.preventDefault();
+                            const pasteText = e.clipboardData.getData('text/plain');
+                            document.execCommand('insertText', false, pasteText);
+                          }}
+                          onInput={(e) => {
+                            const newText = e.currentTarget.textContent || '';
+                            setEditedSegments(prev => ({
+                              ...prev,
+                              [index]: newText
+                            }));
+                          }}
+                          className="text-gray-800 leading-relaxed text-base outline-none focus:ring-2 focus:ring-blue-400 rounded px-2 py-2 whitespace-pre-wrap break-words"
+                          style={{ minHeight: '56px' }}
+                        />
+                      )}
 
-                              // Batch updates: collect all segment edits
-                              const newEditedSegments: Record<number, string> = {};
-                              const words = newText.trim().split(/\s+/);
-                              let wordIndex = 0;
-                              let hasChanges = false;
-
-                              group.segments.forEach((segment) => {
-                                const originalWords = segment.text.trim().split(/\s+/);
-                                const segmentWordCount = originalWords.length;
-                                const segmentWords = words.slice(wordIndex, wordIndex + segmentWordCount);
-                                const segmentText = segmentWords.join(' ') || '';
-
-                                if (segmentText !== segment.text) {
-                                  newEditedSegments[segment.index] = segmentText;
-                                  hasChanges = true;
-                                }
-
-                                wordIndex += segmentWordCount;
+                      {isEmptyDraft && (
+                        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-amber-200 bg-white p-3">
+                          <p className="text-xs text-amber-800">
+                            This paragraph is empty. Delete it to close the gap before saving.
+                          </p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 border-amber-300 text-amber-800 hover:bg-amber-50"
+                            onClick={() => {
+                              setDeletedSegmentIndexes(prev => new Set(prev).add(index));
+                              setEditedSegments(prev => {
+                                const next = { ...prev };
+                                delete next[index];
+                                return next;
                               });
-
-                              // Handle remaining words
-                              if (wordIndex < words.length) {
-                                const remainingText = words.slice(wordIndex).join(' ');
-                                const lastSegment = group.segments[group.segments.length - 1];
-                                newEditedSegments[lastSegment.index] = (editedSegments[lastSegment.index] || lastSegment.text) + ' ' + remainingText;
-                                hasChanges = true;
-                              }
-
-                              if (hasChanges) {
-                                setEditedSegments(prev => ({
-                                  ...prev,
-                                  ...newEditedSegments
-                                }));
-                              }
                             }}
-                            onBlur={(e) => {
-                              // Preserve content on blur
-                              e.currentTarget.textContent = e.currentTarget.textContent;
-                            }}
-                            className="text-gray-800 leading-relaxed text-base outline-none focus:ring-2 focus:ring-blue-400 rounded px-2 py-2 whitespace-pre-wrap break-words"
-                            style={{ minHeight: '120px' }}
                           >
-                          </div>
-                        )}
-                      </div>
+                            Delete empty paragraph
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                  );
-                });
-              })()}
+                  </div>
+                );
+              })}
             </div>
           ) : (
             // View mode: Normal grouped display
@@ -4449,16 +4426,16 @@ export default function TranscriptViewerPage() {
 
                   {speakerCount > 0 ? (
                     <div className="space-y-3">
-                      {!isEditingSpeakerSegments && (
+                      {!isEditing && (
                         <p className="rounded-md border border-blue-200 bg-blue-50 p-2 text-xs text-blue-900">
-                          Use Edit Speakers before renaming, applying presets, merging, or reassigning speakers.
+                          Click Edit Transcript before changing speaker names or merging speakers.
                         </p>
                       )}
                       <div className="space-y-2">
                         {orderedSpeakers.map((speaker) => {
                           const draftName = getSidebarSpeakerNameDraft(speaker);
                           const savedDisplayName = getSpeakerDisplayName(speaker);
-                          const canApplySpeakerName = isEditingSpeakerSegments && draftName.trim().length > 0 && draftName.trim() !== savedDisplayName;
+                          const canApplySpeakerName = isEditing && draftName.trim().length > 0 && draftName.trim() !== savedDisplayName;
 
                           return (
                           <div key={`workspace-speaker-${speaker}`} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
@@ -4494,13 +4471,13 @@ export default function TranscriptViewerPage() {
                                       setSidebarSpeakerNameDraft(speaker, savedDisplayName);
                                     }
                                   }}
-                                  disabled={saving || !isEditingSpeakerSegments}
+                                  disabled={saving || !isEditing}
                                   className="w-full rounded-md border border-blue-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
                                   placeholder="Type any speaker name"
                                 />
-                                {!isEditingSpeakerSegments && (
+                                {!isEditing && (
                                   <p className="text-xs text-gray-500">
-                                    Enter speaker edit mode to type or apply a custom name.
+                                    Click Edit Transcript to type or apply a custom name.
                                   </p>
                                 )}
                               </div>
@@ -4526,7 +4503,7 @@ export default function TranscriptViewerPage() {
                                       variant="outline"
                                       size="sm"
                                       className="h-auto min-h-8 justify-center whitespace-normal px-2 py-1 text-xs"
-                                      disabled={saving || !isEditingSpeakerSegments}
+                                      disabled={saving || !isEditing}
                                       onClick={() => {
                                         setSidebarSpeakerNameDraft(speaker, preset);
                                         updateSpeakerName(speaker, preset);
@@ -4567,7 +4544,7 @@ export default function TranscriptViewerPage() {
                             value={mergeSourceSpeaker}
                             onChange={(e) => setMergeSourceSpeaker(e.target.value)}
                             className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
-                            disabled={!isEditingSpeakerSegments || saving || speakerCount < 2}
+                            disabled={!isEditing || saving || speakerCount < 2}
                           >
                             <option value="">Merge from</option>
                             {orderedSpeakers.map((speaker) => (
@@ -4580,7 +4557,7 @@ export default function TranscriptViewerPage() {
                             value={mergeTargetSpeaker}
                             onChange={(e) => setMergeTargetSpeaker(e.target.value)}
                             className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
-                            disabled={!isEditingSpeakerSegments || saving || !mergeSourceSpeaker}
+                            disabled={!isEditing || saving || !mergeSourceSpeaker}
                           >
                             <option value="">Merge into</option>
                             {orderedSpeakers
@@ -4596,15 +4573,15 @@ export default function TranscriptViewerPage() {
                             variant="outline"
                             size="sm"
                             className="w-full justify-center"
-                            disabled={!isEditingSpeakerSegments || saving || !mergeSourceSpeaker || !mergeTargetSpeaker || mergeSourceSpeaker === mergeTargetSpeaker}
+                            disabled={!isEditing || saving || !mergeSourceSpeaker || !mergeTargetSpeaker || mergeSourceSpeaker === mergeTargetSpeaker}
                             onClick={() => mergeSpeakers(mergeSourceSpeaker, mergeTargetSpeaker)}
                           >
                             Merge Speakers
                           </Button>
                         </div>
-                        {!isEditingSpeakerSegments && (
+                        {!isEditing && (
                           <p className="text-xs text-gray-500">
-                            Enter speaker edit mode to merge speakers.
+                            Click Edit Transcript to merge speakers.
                           </p>
                         )}
                       </div>
@@ -4617,27 +4594,13 @@ export default function TranscriptViewerPage() {
                             size="sm"
                             className="w-full justify-start"
                             onClick={() => setIsEditingSpeakerSegments(true)}
-                            disabled={saving || !transcription.timestampedTranscript || transcription.timestampedTranscript.length === 0}
+                            disabled={saving || !isEditing || !transcription.timestampedTranscript || transcription.timestampedTranscript.length === 0}
                           >
                             <Edit3 className="h-4 w-4 mr-2" />
-                            Edit Speakers
+                            Reassign Selected Text
                           </Button>
                         ) : (
                           <>
-                            <Button
-                              type="button"
-                              size="sm"
-                              className="w-full justify-start bg-green-600 text-white hover:bg-green-700"
-                              onClick={saveSpeakerSegmentChanges}
-                              disabled={saving}
-                            >
-                              {saving ? (
-                                <LoadingSpinner size="sm" className="mr-2" />
-                              ) : (
-                                <Save className="h-4 w-4 mr-2" />
-                              )}
-                              Save Speaker Changes
-                            </Button>
                             <Button
                               type="button"
                               variant="outline"
@@ -4645,12 +4608,12 @@ export default function TranscriptViewerPage() {
                               className="w-full justify-start"
                               onClick={() => {
                                 setIsEditingSpeakerSegments(false);
-                                loadTranscription();
+                                clearSelection();
                               }}
                               disabled={saving}
                             >
                               <X className="h-4 w-4 mr-2" />
-                              Cancel Speaker Edit
+                              Exit Speaker Assignment Mode
                             </Button>
                           </>
                         )}
