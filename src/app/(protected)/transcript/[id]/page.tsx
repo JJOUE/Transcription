@@ -223,6 +223,11 @@ export default function TranscriptViewerPage() {
   const [paragraphSpeakerSelections, setParagraphSpeakerSelections] = useState<Record<number, string>>({});
   const [paragraphSpeakerNameDrafts, setParagraphSpeakerNameDrafts] = useState<Record<number, string>>({});
   const [activeParagraphSpeakerMenu, setActiveParagraphSpeakerMenu] = useState<number | null>(null);
+  const [paragraphDeleteCandidate, setParagraphDeleteCandidate] = useState<{
+    segmentIndices: number[];
+    speaker?: string;
+    start: number;
+  } | null>(null);
   const [inlineEditingSpeaker, setInlineEditingSpeaker] = useState<string | null>(null);
   const [inlineSpeakerNameDraft, setInlineSpeakerNameDraft] = useState('');
   const [speakerOrder, setSpeakerOrder] = useState<string[]>([]);
@@ -378,6 +383,7 @@ export default function TranscriptViewerPage() {
       setParagraphSpeakerSelections({});
       setParagraphSpeakerNameDrafts({});
       setActiveParagraphSpeakerMenu(null);
+      setParagraphDeleteCandidate(null);
 
       // Load saved speaker names
       if (transcriptionData.speakerNames) {
@@ -738,6 +744,51 @@ export default function TranscriptViewerPage() {
     focusEditableSegment(segmentIndex);
   };
 
+  const requestDeleteParagraphBlock = (block: EditableParagraphBlock) => {
+    setParagraphDeleteCandidate({
+      segmentIndices: [...block.segmentIndices],
+      speaker: block.speaker,
+      start: block.start
+    });
+  };
+
+  const cancelDeleteParagraphBlock = () => {
+    setParagraphDeleteCandidate(null);
+  };
+
+  const confirmDeleteParagraphBlock = () => {
+    if (!paragraphDeleteCandidate) return;
+
+    const segmentIndices = paragraphDeleteCandidate.segmentIndices;
+    setDeletedSegmentIndexes(prev => {
+      const next = new Set(prev);
+      segmentIndices.forEach(segmentIndex => next.add(segmentIndex));
+      return next;
+    });
+    setEditedSegments(prev => {
+      const next = { ...prev };
+      segmentIndices.forEach(segmentIndex => delete next[segmentIndex]);
+      return next;
+    });
+    setParagraphSpeakerSelections(prev => {
+      const next = { ...prev };
+      segmentIndices.forEach(segmentIndex => delete next[segmentIndex]);
+      return next;
+    });
+    setParagraphSpeakerNameDrafts(prev => {
+      const next = { ...prev };
+      segmentIndices.forEach(segmentIndex => delete next[segmentIndex]);
+      return next;
+    });
+    setActiveParagraphSpeakerMenu(null);
+    setParagraphDeleteCandidate(null);
+
+    toast({
+      title: 'Paragraph removed',
+      description: 'Use Save Transcript to make this deletion permanent.'
+    });
+  };
+
   const discardTranscriptChanges = () => {
     setIsEditing(false);
     setIsEditingSpeakerSegments(false);
@@ -747,6 +798,7 @@ export default function TranscriptViewerPage() {
     setParagraphSpeakerSelections({});
     setParagraphSpeakerNameDrafts({});
     setActiveParagraphSpeakerMenu(null);
+    setParagraphDeleteCandidate(null);
     setEditedTranscript(transcription?.transcript || '');
     clearLightGrammarPreview();
     clearCleanupPreview();
@@ -816,6 +868,7 @@ export default function TranscriptViewerPage() {
         setParagraphSpeakerSelections({});
         setParagraphSpeakerNameDrafts({});
         setActiveParagraphSpeakerMenu(null);
+        setParagraphDeleteCandidate(null);
 
       } else if (!draftTimestampedTranscript && draftPlainTranscript.trim()) {
         console.log('[Save] Saving legacy plain text...');
@@ -3445,9 +3498,39 @@ export default function TranscriptViewerPage() {
                         >
                           {currentSpeaker ? getSpeakerDisplayName(currentSpeaker) : 'Add speaker label'}
                         </button>
+                        {currentSpeaker && (
+                          <button
+                            type="button"
+                            className="rounded-full border border-red-200 bg-white px-2 py-1 text-xs font-medium text-red-700 transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-200"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeSpeakerFromParagraph(block.segmentIndices);
+                            }}
+                            title="Remove this paragraph's speaker label without deleting transcript text"
+                            aria-label={`Remove speaker label ${getSpeakerDisplayName(currentSpeaker)} from this paragraph`}
+                            disabled={saving}
+                          >
+                            Remove label
+                          </button>
+                        )}
                         <span className="text-xs text-gray-400">
                           {formatTimestamp(block.start)}
                         </span>
+                        <button
+                          type="button"
+                          className="rounded-md border border-red-200 bg-white px-2 py-1 text-xs font-medium text-red-700 transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-200"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            requestDeleteParagraphBlock(block);
+                          }}
+                          title="Delete this paragraph from the transcript"
+                          aria-label="Delete this paragraph from the transcript"
+                          disabled={saving}
+                        >
+                          Delete paragraph
+                        </button>
                       </div>
 
                       {activeParagraphSpeakerMenu === controlIndex && (
@@ -3932,6 +4015,44 @@ export default function TranscriptViewerPage() {
                   disabled={saving}
                 >
                   Cancel / Stay
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {paragraphDeleteCandidate && (
+          <div className="fixed inset-0 z-[65] bg-black/40 px-4 py-6">
+            <div className="mx-auto mt-24 max-w-lg rounded-lg bg-white p-5 shadow-xl">
+              <h2 className="text-lg font-semibold text-red-700">Delete this paragraph?</h2>
+              <p className="mt-2 text-sm text-gray-700">
+                Delete this paragraph from the transcript? This will remove all text in this paragraph.
+                Save Transcript is still required to make this permanent.
+              </p>
+              <p className="mt-2 text-xs text-gray-500">
+                {paragraphDeleteCandidate.speaker && paragraphDeleteCandidate.speaker !== 'UU'
+                  ? `${getSpeakerDisplayName(paragraphDeleteCandidate.speaker)} · `
+                  : ''}
+                Starts at {formatTimestamp(paragraphDeleteCandidate.start)} · {paragraphDeleteCandidate.segmentIndices.length} segment{paragraphDeleteCandidate.segmentIndices.length === 1 ? '' : 's'}
+              </p>
+              <div className="mt-5 flex flex-wrap justify-end gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={cancelDeleteParagraphBlock}
+                  disabled={saving}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="bg-red-600 text-white hover:bg-red-700"
+                  onClick={confirmDeleteParagraphBlock}
+                  disabled={saving}
+                >
+                  Delete paragraph
                 </Button>
               </div>
             </div>
