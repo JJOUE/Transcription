@@ -461,7 +461,7 @@ export default function TranscriptViewerPage() {
       transcription.timestampedTranscript
         .map(segment => segment.speaker)
         .filter((speaker): speaker is string => Boolean(speaker) && speaker !== 'UU')
-    )).sort();
+    ));
 
     if (speakerOrder.length === 0 && speakers.length > 0) {
       setSpeakerOrder(speakers);
@@ -653,6 +653,89 @@ export default function TranscriptViewerPage() {
     });
 
     return blocks;
+  };
+
+  const focusEditableSegment = (segmentIndex: number) => {
+    const editableElement = contentEditableRefs.current[segmentIndex];
+    if (!editableElement) return;
+
+    editableElement.focus({ preventScroll: true });
+
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(editableElement);
+    range.collapse(false);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+  };
+
+  const getSegmentDraftText = (segmentIndex: number) => {
+    if (!transcription?.timestampedTranscript?.[segmentIndex]) return '';
+
+    return editedSegments[segmentIndex] !== undefined
+      ? editedSegments[segmentIndex]
+      : transcription.timestampedTranscript[segmentIndex].text;
+  };
+
+  const getParagraphFocusSegmentIndex = (
+    block: EditableParagraphBlock,
+    event: React.MouseEvent<HTMLElement>
+  ) => {
+    const target = event.target as HTMLElement;
+    if (target.closest('[contenteditable="true"], button, input, select, textarea, a')) {
+      return null;
+    }
+
+    const editableCandidates = block.segmentIndices
+      .map(segmentIndex => ({
+        segmentIndex,
+        element: contentEditableRefs.current[segmentIndex]
+      }))
+      .filter((candidate): candidate is { segmentIndex: number; element: HTMLElement } =>
+        Boolean(candidate.element)
+      );
+
+    if (editableCandidates.length === 0) {
+      return block.segmentIndices.find(segmentIndex => getSegmentDraftText(segmentIndex).trim().length === 0)
+        ?? block.segmentIndices[block.segmentIndices.length - 1]
+        ?? null;
+    }
+
+    let nearestSegmentIndex = editableCandidates[editableCandidates.length - 1].segmentIndex;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+
+    editableCandidates.forEach(({ segmentIndex, element }) => {
+      const rect = element.getBoundingClientRect();
+      const verticalDistance = event.clientY < rect.top
+        ? rect.top - event.clientY
+        : event.clientY > rect.bottom
+        ? event.clientY - rect.bottom
+        : 0;
+      const horizontalDistance = event.clientX < rect.left
+        ? rect.left - event.clientX
+        : event.clientX > rect.right
+        ? event.clientX - rect.right
+        : 0;
+      const distance = verticalDistance * 1000 + horizontalDistance;
+
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestSegmentIndex = segmentIndex;
+      }
+    });
+
+    return nearestSegmentIndex;
+  };
+
+  const focusParagraphBlockFromClick = (
+    block: EditableParagraphBlock,
+    event: React.MouseEvent<HTMLElement>
+  ) => {
+    const segmentIndex = getParagraphFocusSegmentIndex(block, event);
+    if (segmentIndex === null) return;
+
+    event.preventDefault();
+    focusEditableSegment(segmentIndex);
   };
 
   const discardTranscriptChanges = () => {
@@ -2778,16 +2861,17 @@ export default function TranscriptViewerPage() {
       return [];
     }
 
-    const allSpeakers = [...new Set(
+    const chronologicalSpeakers = [...new Set(
       transcription.timestampedTranscript
         .map(segment => segment.speaker)
         .filter((speaker): speaker is string => Boolean(speaker))
-    )];
+    )].filter(speaker => speaker !== 'UU');
 
-    const identifiedSpeakers = allSpeakers.filter(speaker => speaker !== 'UU').sort();
+    const speakersAddedOutsideTranscript = speakerOrder.filter(
+      speaker => speaker && speaker !== 'UU' && !chronologicalSpeakers.includes(speaker)
+    );
 
-    // Use speakerOrder for display, fallback to identifiedSpeakers if order not set
-    return speakerOrder.length > 0 ? speakerOrder : identifiedSpeakers;
+    return [...chronologicalSpeakers, ...speakersAddedOutsideTranscript];
   };
 
   const orderedSpeakers = getOrderedSpeakers();
@@ -3313,6 +3397,10 @@ export default function TranscriptViewerPage() {
                 </div>
               )}
 
+              <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900">
+                Editing mode is on. Click inside a paragraph to edit.
+              </div>
+
               {editableParagraphBlocks.map((block) => {
                 const controlIndex = block.segmentIndices[0];
                 const currentSpeaker = block.speaker && block.speaker !== 'UU' ? block.speaker : '';
@@ -3329,7 +3417,7 @@ export default function TranscriptViewerPage() {
                 return (
                   <div
                     key={block.id}
-                    className={`my-4 rounded-lg border-2 bg-white shadow-sm transition-shadow ${
+                    className={`my-4 rounded-lg border-2 bg-white shadow-sm transition-all focus-within:border-blue-400 focus-within:bg-blue-50/20 focus-within:shadow-md ${
                       isEmptyDraft ? 'border-amber-300 bg-amber-50' : 'border-gray-300 hover:shadow-md'
                     }`}
                   >
@@ -3480,8 +3568,11 @@ export default function TranscriptViewerPage() {
                       )}
                     </div>
 
-                    <div className="p-4">
-                      <div className="text-gray-800 leading-relaxed text-base whitespace-pre-wrap break-words">
+                    <div
+                      className="min-h-24 cursor-text p-4"
+                      onMouseDown={(e) => focusParagraphBlockFromClick(block, e)}
+                    >
+                      <div className="min-h-16 cursor-text text-gray-800 leading-relaxed text-base whitespace-pre-wrap break-words">
                         {block.segmentIndices.map((segmentIndex, segmentPosition) => {
                           const segment = transcription.timestampedTranscript![segmentIndex];
                           const currentSegmentText = editedSegments[segmentIndex] !== undefined
