@@ -3530,7 +3530,7 @@ export default function TranscriptViewerPage() {
                                         [segmentIndex]: newText
                                       }));
                                     }}
-                                    className="inline rounded px-0.5 outline-none focus:bg-blue-50 focus:ring-2 focus:ring-blue-300"
+                                    className="inline min-w-[1ch] border-0 bg-transparent p-0 m-0 outline-none focus:bg-transparent focus:shadow-[inset_0_-2px_0_rgba(37,99,235,0.35)]"
                                   />
                                 )}
                               </span>
