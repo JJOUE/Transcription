@@ -12,6 +12,9 @@ export interface SpeechmaticsConfig {
   operatingPoint?: 'standard' | 'enhanced';
   enableDiarization?: boolean;
   enablePunctuation?: boolean;
+  punctuationSensitivity?: number; // Speechmatics punctuation sensitivity (0-1, default 0.5)
+  enableEntities?: boolean; // Include entity metadata for numbers, dates, currency, etc.
+  outputLocale?: string; // Output spelling/format locale, e.g. en-GB for Canadian conventions
   maxSpeakers?: number; // Only available for real-time API (not batch API)
   speakerSensitivity?: number; // Speaker sensitivity (0-1, default 0.5) - available for batch API
   domain?: 'general' | 'medical' | 'legal'; // Domain-specific vocabulary
@@ -360,6 +363,30 @@ function summarizeVocabularyUse(config: SpeechmaticsConfig, additionalVocabulary
   }
 }
 
+function clampSpeechmaticsSensitivity(value: number) {
+  return Math.min(Math.max(value, 0), 1);
+}
+
+function createBaseTranscriptionConfig(config: SpeechmaticsConfig, operatingPointOverride?: SpeechmaticsConfig['operatingPoint']) {
+  const transcriptionConfig: any = {
+    language: config.language || 'en',
+    operating_point: operatingPointOverride || config.operatingPoint || 'standard',
+    output_locale: config.outputLocale || 'en-GB'
+  };
+
+  if (config.enableEntities) {
+    transcriptionConfig.enable_entities = true;
+  }
+
+  if (config.enablePunctuation !== false && config.punctuationSensitivity !== undefined) {
+    transcriptionConfig.punctuation_overrides = {
+      sensitivity: clampSpeechmaticsSensitivity(config.punctuationSensitivity)
+    };
+  }
+
+  return transcriptionConfig;
+}
+
 function redactVocabularyForLog(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map(redactVocabularyForLog);
@@ -437,11 +464,7 @@ export class SpeechmaticsService {
       }
 
       // Create job configuration with webhook and diarization
-      const transcriptionConfig: any = {
-        language: config.language || 'en',
-        operating_point: config.operatingPoint || 'standard',
-        output_locale: 'en-GB'
-      };
+      const transcriptionConfig = createBaseTranscriptionConfig(config);
 
       // Add speaker diarization if enabled
       if (config.enableDiarization) {
@@ -603,11 +626,7 @@ export class SpeechmaticsService {
       console.log(`[Speechmatics] Timestamp: ${new Date().toISOString()}`);
 
       // Create job configuration with webhook and diarization
-      const transcriptionConfig: any = {
-        language: config.language || 'en',
-        operating_point: config.operatingPoint || 'standard',
-        output_locale: 'en-GB' // Use British English spelling for Canadian conventions
-      };
+      const transcriptionConfig = createBaseTranscriptionConfig(config);
 
       // Add speaker diarization if enabled
       if (config.enableDiarization) {
@@ -786,10 +805,7 @@ export class SpeechmaticsService {
       }
 
       const {
-        language = 'en',
-        operatingPoint = 'standard',
         enableDiarization = true,
-        enablePunctuation = true,
         removeDisfluencies,
         domain,
         additionalVocab
@@ -807,11 +823,7 @@ export class SpeechmaticsService {
       } as any);
 
       // Build transcription config
-      const transcriptionConfig: any = {
-        language,
-        operating_point: operatingPoint,
-        output_locale: 'en-GB' // Use British English spelling for Canadian conventions
-      };
+      const transcriptionConfig = createBaseTranscriptionConfig(config);
 
       // Add diarization if enabled
       if (enableDiarization) {
@@ -894,11 +906,7 @@ export class SpeechmaticsService {
           console.log('[Speechmatics] Enhanced model quota exceeded, retrying with standard model...');
 
           try {
-            const fallbackTranscriptionConfig: any = {
-              language: config.language || 'en',
-              operating_point: 'standard',
-              output_locale: 'en-GB' // Use British English spelling for Canadian conventions
-            };
+            const fallbackTranscriptionConfig = createBaseTranscriptionConfig(config, 'standard');
 
             if (config.enableDiarization !== false) {
               fallbackTranscriptionConfig.diarization = 'speaker';
