@@ -58,6 +58,7 @@ interface SpeechmaticsTranscript {
 
 type TranscriptData = string | SpeechmaticsTranscript | unknown;
 type TimestampFrequency = 30 | 60 | 300 | 'none';
+type ExportFormat = 'pdf' | 'docx' | 'docx-speaker-tab' | 'docx-speaker-space' | 'srt' | 'vtt';
 
 type CleanupOptionKey =
   | 'removeUm'
@@ -224,7 +225,7 @@ export default function TranscriptViewerPage() {
   const [deletedSegmentIndexes, setDeletedSegmentIndexes] = useState<Set<number>>(new Set());
   const [speakerSegmentsDirty, setSpeakerSegmentsDirty] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [selectedFormat, setSelectedFormat] = useState<'pdf' | 'docx' | 'srt' | 'vtt'>('pdf');
+  const [selectedFormat, setSelectedFormat] = useState<ExportFormat>('pdf');
   const [timestampFrequency, setTimestampFrequency] = useState<TimestampFrequency>(60); // 30s, 60s, 5min (300s), or no display timestamps
   const [speakerNames, setSpeakerNames] = useState<Record<string, string>>({});
   const [sidebarSpeakerNameDrafts, setSidebarSpeakerNameDrafts] = useState<Record<string, string>>({});
@@ -1066,7 +1067,18 @@ export default function TranscriptViewerPage() {
     });
   };
 
-  const exportTranscript = async (format: 'pdf' | 'docx' | 'srt' | 'vtt', draftForExport = getDraftTranscriptForExport()) => {
+  const getExportFormatLabel = (format: ExportFormat) => {
+    switch (format) {
+      case 'docx-speaker-tab':
+        return 'DOCX - Speaker + Tab / Hanging Indent';
+      case 'docx-speaker-space':
+        return 'DOCX - Speaker + Space';
+      default:
+        return format.toUpperCase();
+    }
+  };
+
+  const exportTranscript = async (format: ExportFormat, draftForExport = getDraftTranscriptForExport()) => {
     if (!transcription) return;
 
     if (format === 'srt' || format === 'vtt') {
@@ -1089,17 +1101,22 @@ export default function TranscriptViewerPage() {
           getSpeakerColor,
           getSpeakerDisplayName
         });
-      } else if (format === 'docx') {
+      } else if (format === 'docx' || format === 'docx-speaker-tab' || format === 'docx-speaker-space') {
         await exportTranscriptDOCX(templateData, {
           timestampFrequency,
           speakerNames,
-          getSpeakerDisplayName
+          getSpeakerDisplayName,
+          speakerLabelLayout: format === 'docx-speaker-tab'
+            ? 'tab-hanging'
+            : format === 'docx-speaker-space'
+            ? 'space-inline'
+            : 'separate-line'
         });
       }
 
       toast({
         title: 'Download started',
-        description: `Transcript downloaded as ${format.toUpperCase()} using professional template`
+        description: `Transcript downloaded as ${getExportFormatLabel(format)} using professional template`
       });
 
     } catch (error) {
@@ -4550,15 +4567,17 @@ export default function TranscriptViewerPage() {
                   size="sm"
                 >
                   <Download className="h-4 w-4 mr-2" />
-                  Export {selectedFormat.toUpperCase()}
+                  Export {getExportFormatLabel(selectedFormat)}
                 </Button>
                 <select
                   value={selectedFormat}
-                  onChange={(e) => setSelectedFormat(e.target.value as 'pdf' | 'docx' | 'srt' | 'vtt')}
+                  onChange={(e) => setSelectedFormat(e.target.value as ExportFormat)}
                   className="border border-gray-300 rounded-l-none rounded-r-md px-2 py-1.5 text-sm bg-white hover:bg-gray-50"
                 >
                   <option value="pdf">PDF</option>
                   <option value="docx">DOCX</option>
+                  <option value="docx-speaker-tab">DOCX - Speaker + Tab / Hanging Indent</option>
+                  <option value="docx-speaker-space">DOCX - Speaker + Space</option>
                   <option value="srt">SRT</option>
                   <option value="vtt">VTT</option>
                 </select>

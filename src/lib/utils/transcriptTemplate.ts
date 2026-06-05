@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import { Document, Packer, Paragraph, TextRun, AlignmentType, Header, Footer, Table, TableRow, TableCell, WidthType, TextDirection, PageBreak, ImageRun } from 'docx';
+import { Document, Packer, Paragraph, TextRun, AlignmentType, Header, Footer, Table, TableRow, TableCell, WidthType, TextDirection, PageBreak, ImageRun, TabStopType } from 'docx';
 import { TranscriptionJob, TranscriptSegment } from '@/lib/firebase/transcriptions';
 import { Timestamp } from 'firebase/firestore';
 
@@ -100,6 +100,7 @@ export interface ExportOptions {
   speakerNames?: Record<string, string>;
   getSpeakerColor?: (speaker: string | undefined) => string;
   getSpeakerDisplayName?: (speaker: string | undefined) => string;
+  speakerLabelLayout?: 'separate-line' | 'tab-hanging' | 'space-inline';
 }
 
 export async function exportTranscriptPDF(templateData: TranscriptTemplateData, options?: ExportOptions): Promise<void> {
@@ -114,6 +115,8 @@ export async function exportTranscriptPDF(templateData: TranscriptTemplateData, 
 
   // Helper function to get speaker display name
   const getSpeakerDisplayName = (speaker: string | undefined): string => {
+    const providedDisplayName = options?.getSpeakerDisplayName?.(speaker);
+    if (providedDisplayName) return providedDisplayName;
     if (!speaker || speaker === 'UU') return 'Speaker';
     if (speakerNames[speaker]) {
       return speakerNames[speaker];
@@ -455,8 +458,12 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
   const timestampFrequency = options?.timestampFrequency || 60;
   const activeTimestampFrequency = timestampFrequency === 'none' ? null : timestampFrequency;
   const speakerNames = options?.speakerNames || {};
+  const speakerLabelLayout = options?.speakerLabelLayout || 'separate-line';
+  const usesInlineSpeakerLabels = speakerLabelLayout === 'tab-hanging' || speakerLabelLayout === 'space-inline';
 
   const getSpeakerDisplayName = (speaker: string | undefined): string => {
+    const providedDisplayName = options?.getSpeakerDisplayName?.(speaker);
+    if (providedDisplayName) return providedDisplayName;
     if (!speaker || speaker === 'UU') return 'Speaker';
     if (speakerNames[speaker]) {
       return speakerNames[speaker];
@@ -471,9 +478,25 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
   let nextTimestampTarget = 0;
   let pendingTimestamp: string | null = null;
 
-  const addCurrentSegment = () => {
+  const addCurrentSegment = (speaker: string | undefined) => {
     if (accumulatedText.trim()) {
       const children: TextRun[] = [];
+      const speakerDisplayName = getSpeakerDisplayName(speaker);
+
+      if (usesInlineSpeakerLabels) {
+        children.push(new TextRun({
+          text: `${speakerDisplayName}:`,
+          bold: true,
+          color: "003366",
+          size: 24
+        }));
+
+        children.push(new TextRun({
+          text: speakerLabelLayout === 'tab-hanging' ? '\t' : ' ',
+          size: 22,
+          color: "000000"
+        }));
+      }
 
       // Add text
       children.push(new TextRun({
@@ -494,6 +517,12 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
 
       paragraphs.push(new Paragraph({
         children,
+        indent: speakerLabelLayout === 'tab-hanging'
+          ? { left: 720, hanging: 720 }
+          : undefined,
+        tabStops: speakerLabelLayout === 'tab-hanging'
+          ? [{ type: TabStopType.LEFT, position: 720 }]
+          : undefined,
         spacing: {
           line: 300,
           after: 200
@@ -511,42 +540,46 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
 
     // If speaker changed, finalize current segment and add speaker label
     if (speakerChanged) {
-      addCurrentSegment();
+      addCurrentSegment(currentSpeaker);
 
       // Add speaker label paragraph
-      paragraphs.push(new Paragraph({
-        children: [
-          new TextRun({
-            text: getSpeakerDisplayName(segment.speaker),
-            bold: true,
-            color: "003366", // Brand color
-            size: 24
-          })
-        ],
-        spacing: {
-          before: 400,
-          after: 200
-        }
-      }));
+      if (!usesInlineSpeakerLabels) {
+        paragraphs.push(new Paragraph({
+          children: [
+            new TextRun({
+              text: getSpeakerDisplayName(segment.speaker),
+              bold: true,
+              color: "003366", // Brand color
+              size: 24
+            })
+          ],
+          spacing: {
+            before: 400,
+            after: 200
+          }
+        }));
+      }
 
       currentSpeaker = segment.speaker;
       // Don't reset timestamp target when speaker changes - keep continuous timeline
     } else if (currentSpeaker === undefined) {
       // First segment - add speaker label
-      paragraphs.push(new Paragraph({
-        children: [
-          new TextRun({
-            text: getSpeakerDisplayName(segment.speaker),
-            bold: true,
-            color: "003366",
-            size: 24
-          })
-        ],
-        spacing: {
-          before: 200,
-          after: 200
-        }
-      }));
+      if (!usesInlineSpeakerLabels) {
+        paragraphs.push(new Paragraph({
+          children: [
+            new TextRun({
+              text: getSpeakerDisplayName(segment.speaker),
+              bold: true,
+              color: "003366",
+              size: 24
+            })
+          ],
+          spacing: {
+            before: 200,
+            after: 200
+          }
+        }));
+      }
 
       currentSpeaker = segment.speaker;
       // Set the first timestamp target based on the frequency
@@ -557,7 +590,7 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
     while (activeTimestampFrequency !== null && segment.start >= nextTimestampTarget) {
       // If we already have a pending timestamp, we need to insert it first
       if (pendingTimestamp && accumulatedText.trim()) {
-        addCurrentSegment();
+        addCurrentSegment(currentSpeaker);
       }
       pendingTimestamp = formatTimestamp(nextTimestampTarget);
       nextTimestampTarget += activeTimestampFrequency;
@@ -568,14 +601,14 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
 
     if (pendingTimestamp && endsWithSentence) {
       accumulatedText += segment.text;
-      addCurrentSegment();
+      addCurrentSegment(currentSpeaker);
     } else {
       accumulatedText += segment.text + ' ';
     }
   }
 
   // Add any remaining text
-  addCurrentSegment();
+  addCurrentSegment(currentSpeaker);
 
   return paragraphs;
 }
