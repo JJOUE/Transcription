@@ -33,6 +33,7 @@ export interface TranscriptionJob {
   projectDictionaryTerms?: string[]; // Project-only names/terms supplied at upload time
   transcript?: string;
   timestampedTranscript?: TranscriptSegment[]; // New field for timestamped data
+  timestampFrequency?: 30 | 60 | 300 | 'none'; // Transcript display/export timestamp preference
   transcriptStoragePath?: string; // Path to transcript in Storage (for large files)
   speechmaticsJobId?: string; // Speechmatics job ID for tracking
   segmentCount?: number; // Number of timestamped segments (for large files stored in Storage)

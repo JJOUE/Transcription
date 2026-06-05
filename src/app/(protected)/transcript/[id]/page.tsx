@@ -57,6 +57,7 @@ interface SpeechmaticsTranscript {
 }
 
 type TranscriptData = string | SpeechmaticsTranscript | unknown;
+type TimestampFrequency = 30 | 60 | 300 | 'none';
 
 type CleanupOptionKey =
   | 'removeUm'
@@ -124,6 +125,10 @@ interface DraftTranscriptForExport {
   timestampedTranscript?: TranscriptSegment[];
 }
 
+interface DraftTimestampedSegmentEntry extends TranscriptSegment {
+  originalIndex: number;
+}
+
 interface EditableParagraphBlock {
   id: string;
   speaker?: string;
@@ -188,6 +193,9 @@ const endsWithUrlOrFileName = (text: string) =>
   /(?:https?:\/\/|www\.)\S+[.!?]?$/i.test(text.trim()) ||
   /\b\S+\.(?:com|ca|org|net|gov|edu|pdf|docx?|xlsx?|pptx?|txt|csv|mp3|mp4|wav)$/i.test(text.trim());
 
+const normalizeTimestampFrequency = (value: unknown): TimestampFrequency =>
+  value === 'none' || value === 30 || value === 60 || value === 300 ? value : 60;
+
 const shouldCapitalizeNextSegmentStart = (previousText: string) => {
   const trimmed = previousText.trim();
   return /[.!?]$/.test(trimmed) &&
@@ -217,7 +225,7 @@ export default function TranscriptViewerPage() {
   const [speakerSegmentsDirty, setSpeakerSegmentsDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState<'pdf' | 'docx' | 'srt' | 'vtt'>('pdf');
-  const [timestampFrequency, setTimestampFrequency] = useState<30 | 60 | 300 | 'none'>(60); // 30s, 60s, 5min (300s), or no display timestamps
+  const [timestampFrequency, setTimestampFrequency] = useState<TimestampFrequency>(60); // 30s, 60s, 5min (300s), or no display timestamps
   const [speakerNames, setSpeakerNames] = useState<Record<string, string>>({});
   const [sidebarSpeakerNameDrafts, setSidebarSpeakerNameDrafts] = useState<Record<string, string>>({});
   const [paragraphSpeakerSelections, setParagraphSpeakerSelections] = useState<Record<number, string>>({});
@@ -266,7 +274,7 @@ export default function TranscriptViewerPage() {
   const pendingLeaveActionRef = useRef<(() => void) | null>(null);
 
   const handleTimestampFrequencyChange = (value: string) => {
-    setTimestampFrequency(value === 'none' ? 'none' : Number(value) as 30 | 60 | 300);
+    setTimestampFrequency(normalizeTimestampFrequency(value === 'none' ? 'none' : Number(value)));
   };
 
   const audioPlayerRef = useRef<AudioPlayerRef>(null);
@@ -384,6 +392,7 @@ export default function TranscriptViewerPage() {
       setParagraphSpeakerNameDrafts({});
       setActiveParagraphSpeakerMenu(null);
       setParagraphDeleteCandidate(null);
+      setTimestampFrequency(normalizeTimestampFrequency(transcriptionData.timestampFrequency));
 
       // Load saved speaker names
       if (transcriptionData.speakerNames) {
@@ -523,6 +532,10 @@ export default function TranscriptViewerPage() {
   const hasUnsavedTranscriptChanges = () => {
     if (!transcription) return false;
 
+    if (timestampFrequency !== normalizeTimestampFrequency(transcription.timestampFrequency)) {
+      return true;
+    }
+
     if (Object.keys(editedSegments).length > 0) {
       return true;
     }
@@ -538,25 +551,36 @@ export default function TranscriptViewerPage() {
     return false;
   };
 
+  const getDraftTimestampedSegmentEntries = (): DraftTimestampedSegmentEntry[] => {
+    if (!transcription?.timestampedTranscript || transcription.timestampedTranscript.length === 0) {
+      return [];
+    }
+
+    return transcription.timestampedTranscript
+      .map((segment, originalIndex) => ({
+        ...segment,
+        originalIndex,
+        text: editedSegments[originalIndex] !== undefined
+          ? editedSegments[originalIndex]
+          : segment.text
+      }))
+      .filter(segment => !deletedSegmentIndexes.has(segment.originalIndex));
+  };
+
   const getDraftTimestampedTranscript = (): TranscriptSegment[] | undefined => {
     if (!transcription?.timestampedTranscript || transcription.timestampedTranscript.length === 0) {
       return undefined;
     }
 
-    return transcription.timestampedTranscript
-      .map((segment, index) => ({
-        ...segment,
-        text: editedSegments[index] !== undefined ? editedSegments[index] : segment.text
-      }))
-      .filter((_segment, index) => !deletedSegmentIndexes.has(index));
+    return getDraftTimestampedSegmentEntries().map(({ originalIndex: _originalIndex, ...segment }) => segment);
   };
 
   const getDraftPlainTranscript = () => {
     if (!transcription) return '';
 
-    const draftTimestampedTranscript = getDraftTimestampedTranscript();
+    const draftTimestampedTranscript = getDraftTimestampedSegmentEntries();
 
-    if (draftTimestampedTranscript && draftTimestampedTranscript.length > 0) {
+    if (transcription.timestampedTranscript && transcription.timestampedTranscript.length > 0) {
       return joinTranscriptSegmentTexts(draftTimestampedTranscript.map(segment => segment.text));
     }
 
@@ -847,11 +871,16 @@ export default function TranscriptViewerPage() {
             throw new Error('Failed to save transcript to Storage');
           }
           console.log('[Save] Successfully saved to Storage');
+
+          await updateTranscriptionStatus(transcription.id!, transcription.status, {
+            timestampFrequency
+          });
         } else {
           console.log('[Save] Saving to Firestore...');
           await updateTranscriptionStatus(transcription.id!, 'complete', {
             timestampedTranscript: draftTimestampedTranscript,
-            transcript: draftPlainTranscript
+            transcript: draftPlainTranscript,
+            timestampFrequency
           });
           console.log('[Save] Successfully saved to Firestore');
         }
@@ -860,7 +889,8 @@ export default function TranscriptViewerPage() {
         setTranscription(prev => prev ? {
           ...prev,
           timestampedTranscript: draftTimestampedTranscript,
-          transcript: draftPlainTranscript
+          transcript: draftPlainTranscript,
+          timestampFrequency
         } : null);
         setEditedSegments({});
         setDeletedSegmentIndexes(new Set());
@@ -874,13 +904,22 @@ export default function TranscriptViewerPage() {
         console.log('[Save] Saving legacy plain text...');
         // Legacy plain text editing (fallback)
         await updateTranscriptionStatus(transcription.id!, 'complete', {
-          transcript: draftPlainTranscript.trim()
+          transcript: draftPlainTranscript.trim(),
+          timestampFrequency
         });
 
-        setTranscription(prev => prev ? { ...prev, transcript: draftPlainTranscript.trim() } : null);
+        setTranscription(prev => prev ? {
+          ...prev,
+          transcript: draftPlainTranscript.trim(),
+          timestampFrequency
+        } : null);
 
       } else {
-        console.warn('[Save] No changes to save!');
+        console.log('[Save] Saving transcript metadata...');
+        await updateTranscriptionStatus(transcription.id!, transcription.status, {
+          timestampFrequency
+        });
+        setTranscription(prev => prev ? { ...prev, timestampFrequency } : null);
       }
 
       setIsEditing(false);
@@ -1419,7 +1458,7 @@ export default function TranscriptViewerPage() {
   const buildLightGrammarPreview = (): LightGrammarPreview | null => {
     if (!transcription) return null;
 
-    const draftTimestampedTranscript = getDraftTimestampedTranscript();
+    const draftTimestampedTranscript = getDraftTimestampedSegmentEntries();
 
     if (draftTimestampedTranscript && draftTimestampedTranscript.length > 0) {
       let changeCount = 0;
@@ -1443,16 +1482,16 @@ export default function TranscriptViewerPage() {
 
           if (examples.length < 3) {
             examples.push({
-              label: `Segment ${index + 1}`,
+              label: `Segment ${segment.originalIndex + 1}`,
               before: currentText,
               after: formatted,
             });
           }
 
           changes.push({
-            id: `segment-${index}`,
-            label: `Segment ${index + 1}`,
-            segmentIndex: index,
+            id: `segment-${segment.originalIndex}`,
+            label: `Segment ${segment.originalIndex + 1}`,
+            segmentIndex: segment.originalIndex,
             before: currentText,
             after: formatted,
             status: 'pending',
@@ -1610,6 +1649,7 @@ export default function TranscriptViewerPage() {
   const applySelectedCleanupToText = (text: string) => {
     let nextText = text;
     let changeCount = 0;
+    let removedLeadingFiller = false;
 
     const replaceAndCount = (pattern: RegExp, replacement: string | ((match: string, ...args: any[]) => string)) => {
       nextText = nextText.replace(pattern, (...args) => {
@@ -1618,16 +1658,30 @@ export default function TranscriptViewerPage() {
       });
     };
 
+    const removeSimpleFillerWord = (word: 'um' | 'uh' | 'ah') => {
+      replaceAndCount(
+        new RegExp(`(^|\\s*,\\s*|\\s+)${word}\\b[,.]?[ \\t]*`, 'gi'),
+        (_match, prefix: string, ...args: any[]) => {
+          const offset = args[args.length - 2] as number;
+          if (offset === 0 || text.slice(0, offset).trim().length === 0) {
+            removedLeadingFiller = true;
+          }
+
+          return prefix.includes(',') ? ' ' : prefix;
+        }
+      );
+    };
+
     if (cleanupOptions.removeUm) {
-      replaceAndCount(/\bum\b[,]?\s*/gi, '');
+      removeSimpleFillerWord('um');
     }
 
     if (cleanupOptions.removeUh) {
-      replaceAndCount(/\buh\b[,]?\s*/gi, '');
+      removeSimpleFillerWord('uh');
     }
 
     if (cleanupOptions.removeAh) {
-      replaceAndCount(/\bah\b[,]?\s*/gi, '');
+      removeSimpleFillerWord('ah');
     }
 
     if (cleanupOptions.removeYouKnow) {
@@ -1671,6 +1725,9 @@ export default function TranscriptViewerPage() {
         .replace(/\s+([,.!?;:])/g, '$1')
         .replace(/[ \t]{2,}/g, ' ')
         .trim();
+      if (removedLeadingFiller) {
+        nextText = capitalizeFirstRealWord(nextText);
+      }
     }
 
     return {
@@ -1682,7 +1739,7 @@ export default function TranscriptViewerPage() {
   const buildCleanupPreview = (): FillerCleanupPreview | null => {
     if (!transcription) return null;
 
-    const draftTimestampedTranscript = getDraftTimestampedTranscript();
+    const draftTimestampedTranscript = getDraftTimestampedSegmentEntries();
 
     if (draftTimestampedTranscript && draftTimestampedTranscript.length > 0) {
       let changeCount = 0;
@@ -1690,7 +1747,7 @@ export default function TranscriptViewerPage() {
       const examples: FillerCleanupPreview['examples'] = [];
       const changes: CleanupChange[] = [];
 
-      draftTimestampedTranscript.forEach((segment, index) => {
+      draftTimestampedTranscript.forEach((segment) => {
         const currentText = segment.text;
         const cleaned = applySelectedCleanupToText(currentText);
 
@@ -1700,16 +1757,16 @@ export default function TranscriptViewerPage() {
 
           if (examples.length < 3) {
             examples.push({
-              label: `Segment ${index + 1}`,
+              label: `Segment ${segment.originalIndex + 1}`,
               before: currentText,
               after: cleaned.text,
             });
           }
 
           changes.push({
-            id: `segment-${index}`,
-            label: `Segment ${index + 1}`,
-            segmentIndex: index,
+            id: `segment-${segment.originalIndex}`,
+            label: `Segment ${segment.originalIndex + 1}`,
+            segmentIndex: segment.originalIndex,
             before: currentText,
             after: cleaned.text,
             status: 'pending',
@@ -1878,7 +1935,8 @@ export default function TranscriptViewerPage() {
       return { text, changeCount: 0 };
     }
 
-    const matches = text.match(/\.\.\./g);
+    const ellipsisPattern = /(?:\.{3}|…)\s*/g;
+    const matches = text.match(ellipsisPattern);
     const changeCount = matches?.length || 0;
 
     if (changeCount === 0) {
@@ -1886,7 +1944,7 @@ export default function TranscriptViewerPage() {
     }
 
     return {
-      text: text.replace(/\.\.\./g, '—'),
+      text: text.replace(ellipsisPattern, '—'),
       changeCount,
     };
   };
@@ -1894,7 +1952,7 @@ export default function TranscriptViewerPage() {
   const buildFormattingPreview = (): FormattingPreview | null => {
     if (!transcription) return null;
 
-    const draftTimestampedTranscript = getDraftTimestampedTranscript();
+    const draftTimestampedTranscript = getDraftTimestampedSegmentEntries();
 
     if (draftTimestampedTranscript && draftTimestampedTranscript.length > 0) {
       let changeCount = 0;
@@ -1902,7 +1960,7 @@ export default function TranscriptViewerPage() {
       const examples: FormattingPreview['examples'] = [];
       const changes: CleanupChange[] = [];
 
-      draftTimestampedTranscript.forEach((segment, index) => {
+      draftTimestampedTranscript.forEach((segment) => {
         const currentText = segment.text;
         const formatted = applySelectedFormattingToText(currentText);
 
@@ -1912,16 +1970,16 @@ export default function TranscriptViewerPage() {
 
           if (examples.length < 3) {
             examples.push({
-              label: `Segment ${index + 1}`,
+              label: `Segment ${segment.originalIndex + 1}`,
               before: currentText,
               after: formatted.text,
             });
           }
 
           changes.push({
-            id: `segment-${index}`,
-            label: `Segment ${index + 1}`,
-            segmentIndex: index,
+            id: `segment-${segment.originalIndex}`,
+            label: `Segment ${segment.originalIndex + 1}`,
+            segmentIndex: segment.originalIndex,
             before: currentText,
             after: formatted.text,
             status: 'pending',
@@ -2140,7 +2198,7 @@ export default function TranscriptViewerPage() {
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [editedSegments, editedTranscript, transcription]);
+  }, [editedSegments, editedTranscript, deletedSegmentIndexes, speakerSegmentsDirty, timestampFrequency, transcription]);
 
   useEffect(() => {
     const handleDocumentClick = (event: MouseEvent) => {
@@ -2162,7 +2220,7 @@ export default function TranscriptViewerPage() {
 
     document.addEventListener('click', handleDocumentClick, true);
     return () => document.removeEventListener('click', handleDocumentClick, true);
-  }, [editedSegments, editedTranscript, transcription]);
+  }, [editedSegments, editedTranscript, deletedSegmentIndexes, speakerSegmentsDirty, timestampFrequency, transcription]);
 
   const formatTimestamp = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
