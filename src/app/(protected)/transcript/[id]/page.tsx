@@ -59,6 +59,7 @@ interface SpeechmaticsTranscript {
 type TranscriptData = string | SpeechmaticsTranscript | unknown;
 type TimestampFrequency = 30 | 60 | 300 | 'none';
 type ExportFormat = 'pdf' | 'docx' | 'docx-speaker-tab' | 'docx-speaker-space' | 'srt' | 'vtt';
+type SplitSpeakerApplyScope = 'single-segment' | 'forward-in-block';
 
 type CleanupOptionKey =
   | 'removeUm'
@@ -232,6 +233,10 @@ export default function TranscriptViewerPage() {
   const [paragraphSpeakerSelections, setParagraphSpeakerSelections] = useState<Record<number, string>>({});
   const [paragraphSpeakerNameDrafts, setParagraphSpeakerNameDrafts] = useState<Record<number, string>>({});
   const [activeParagraphSpeakerMenu, setActiveParagraphSpeakerMenu] = useState<number | null>(null);
+  const [activeSplitSpeakerMenu, setActiveSplitSpeakerMenu] = useState<number | null>(null);
+  const [splitSpeakerSelections, setSplitSpeakerSelections] = useState<Record<number, string>>({});
+  const [splitSpeakerNameDrafts, setSplitSpeakerNameDrafts] = useState<Record<number, string>>({});
+  const [splitSpeakerApplyScopes, setSplitSpeakerApplyScopes] = useState<Record<number, SplitSpeakerApplyScope>>({});
   const [paragraphDeleteCandidate, setParagraphDeleteCandidate] = useState<{
     segmentIndices: number[];
     speaker?: string;
@@ -392,6 +397,10 @@ export default function TranscriptViewerPage() {
       setParagraphSpeakerSelections({});
       setParagraphSpeakerNameDrafts({});
       setActiveParagraphSpeakerMenu(null);
+      setActiveSplitSpeakerMenu(null);
+      setSplitSpeakerSelections({});
+      setSplitSpeakerNameDrafts({});
+      setSplitSpeakerApplyScopes({});
       setParagraphDeleteCandidate(null);
       setTimestampFrequency(normalizeTimestampFrequency(transcriptionData.timestampFrequency));
 
@@ -805,7 +814,23 @@ export default function TranscriptViewerPage() {
       segmentIndices.forEach(segmentIndex => delete next[segmentIndex]);
       return next;
     });
+    setSplitSpeakerSelections(prev => {
+      const next = { ...prev };
+      segmentIndices.forEach(segmentIndex => delete next[segmentIndex]);
+      return next;
+    });
+    setSplitSpeakerNameDrafts(prev => {
+      const next = { ...prev };
+      segmentIndices.forEach(segmentIndex => delete next[segmentIndex]);
+      return next;
+    });
+    setSplitSpeakerApplyScopes(prev => {
+      const next = { ...prev };
+      segmentIndices.forEach(segmentIndex => delete next[segmentIndex]);
+      return next;
+    });
     setActiveParagraphSpeakerMenu(null);
+    setActiveSplitSpeakerMenu(null);
     setParagraphDeleteCandidate(null);
 
     toast({
@@ -823,6 +848,10 @@ export default function TranscriptViewerPage() {
     setParagraphSpeakerSelections({});
     setParagraphSpeakerNameDrafts({});
     setActiveParagraphSpeakerMenu(null);
+    setActiveSplitSpeakerMenu(null);
+    setSplitSpeakerSelections({});
+    setSplitSpeakerNameDrafts({});
+    setSplitSpeakerApplyScopes({});
     setParagraphDeleteCandidate(null);
     setEditedTranscript(transcription?.transcript || '');
     clearLightGrammarPreview();
@@ -899,6 +928,10 @@ export default function TranscriptViewerPage() {
         setParagraphSpeakerSelections({});
         setParagraphSpeakerNameDrafts({});
         setActiveParagraphSpeakerMenu(null);
+        setActiveSplitSpeakerMenu(null);
+        setSplitSpeakerSelections({});
+        setSplitSpeakerNameDrafts({});
+        setSplitSpeakerApplyScopes({});
         setParagraphDeleteCandidate(null);
 
       } else if (!draftTimestampedTranscript && draftPlainTranscript.trim()) {
@@ -2435,6 +2468,107 @@ export default function TranscriptViewerPage() {
     });
   };
 
+  const getSplitSpeakerTargetIndices = (
+    blockSegmentIndices: number[],
+    startSegmentIndex: number,
+    scope: SplitSpeakerApplyScope
+  ) => {
+    if (scope === 'single-segment') {
+      return [startSegmentIndex];
+    }
+
+    const startPosition = blockSegmentIndices.indexOf(startSegmentIndex);
+    return startPosition >= 0
+      ? blockSegmentIndices.slice(startPosition)
+      : [startSegmentIndex];
+  };
+
+  const clearSplitSpeakerControl = (segmentIndex: number) => {
+    setSplitSpeakerSelections(prev => {
+      const next = { ...prev };
+      delete next[segmentIndex];
+      return next;
+    });
+    setSplitSpeakerNameDrafts(prev => {
+      const next = { ...prev };
+      delete next[segmentIndex];
+      return next;
+    });
+    setSplitSpeakerApplyScopes(prev => {
+      const next = { ...prev };
+      delete next[segmentIndex];
+      return next;
+    });
+    setActiveSplitSpeakerMenu(null);
+  };
+
+  const applyExistingSpeakerSplit = (
+    blockSegmentIndices: number[],
+    startSegmentIndex: number
+  ) => {
+    const selectedSpeaker = splitSpeakerSelections[startSegmentIndex];
+
+    if (!selectedSpeaker) {
+      toast({
+        title: 'Choose a speaker',
+        description: 'Select an existing speaker before creating the speaker split.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const scope = splitSpeakerApplyScopes[startSegmentIndex] || 'forward-in-block';
+    const targetSegmentIndices = getSplitSpeakerTargetIndices(blockSegmentIndices, startSegmentIndex, scope);
+
+    changeSpeakerForSegments(targetSegmentIndices, selectedSpeaker);
+    clearSplitSpeakerControl(startSegmentIndex);
+
+    toast({
+      title: 'Speaker split added',
+      description: `${targetSegmentIndices.length} segment${targetSegmentIndices.length === 1 ? '' : 's'} assigned to ${getSpeakerDisplayName(selectedSpeaker)}. Use Save Transcript to persist.`
+    });
+  };
+
+  const applyCustomSpeakerSplit = async (
+    blockSegmentIndices: number[],
+    startSegmentIndex: number
+  ) => {
+    const customName = (splitSpeakerNameDrafts[startSegmentIndex] || '').trim();
+
+    if (!customName) {
+      toast({
+        title: 'Enter a speaker name',
+        description: 'Type a speaker name before creating the speaker split.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const existingSpeaker = orderedSpeakers.find(
+      speaker => getSpeakerDisplayName(speaker).trim().toLowerCase() === customName.toLowerCase()
+    );
+    const speakerKey = existingSpeaker || getNextSpeakerKey();
+
+    if (!existingSpeaker) {
+      await updateSpeakerName(speakerKey, customName);
+      setSpeakerOrder(prev => {
+        const currentOrder = prev.length > 0 ? prev : orderedSpeakers;
+        return currentOrder.includes(speakerKey) ? currentOrder : [...currentOrder, speakerKey];
+      });
+    }
+
+    const scope = splitSpeakerApplyScopes[startSegmentIndex] || 'forward-in-block';
+    const targetSegmentIndices = getSplitSpeakerTargetIndices(blockSegmentIndices, startSegmentIndex, scope);
+
+    changeSpeakerForSegments(targetSegmentIndices, speakerKey);
+    clearSplitSpeakerControl(startSegmentIndex);
+
+    toast({
+      title: 'Speaker split added',
+      description: `${targetSegmentIndices.length} segment${targetSegmentIndices.length === 1 ? '' : 's'} assigned to ${customName}. Use Save Transcript to persist.`
+    });
+  };
+
   const removeSpeakerFromParagraph = (segmentIndices: number[]) => {
     const controlIndex = segmentIndices[0];
     changeSpeakerForSegments(segmentIndices, undefined);
@@ -3737,9 +3871,158 @@ export default function TranscriptViewerPage() {
                             ? editedSegments[segmentIndex]
                             : segment.text;
                           const hasSearchHighlight = searchMatches.some(match => match.segmentIndex === segmentIndex);
+                          const splitSpeakerSelection = splitSpeakerSelections[segmentIndex] || '';
+                          const splitSpeakerNameDraft = splitSpeakerNameDrafts[segmentIndex] || '';
+                          const splitSpeakerApplyScope = splitSpeakerApplyScopes[segmentIndex] || 'forward-in-block';
+                          const showSplitSpeakerControl = segmentPosition > 0;
 
                           return (
                             <React.Fragment key={`edit-segment-${segmentIndex}`}>
+                              {showSplitSpeakerControl && (
+                                <span
+                                  className="relative inline-flex align-baseline"
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <button
+                                    type="button"
+                                    className="mx-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-800 transition hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSplitSpeakerSelections(prev => ({
+                                        ...prev,
+                                        [segmentIndex]: splitSpeakerSelection
+                                      }));
+                                      setSplitSpeakerApplyScopes(prev => ({
+                                        ...prev,
+                                        [segmentIndex]: splitSpeakerApplyScope
+                                      }));
+                                      setActiveSplitSpeakerMenu(prev => prev === segmentIndex ? null : segmentIndex);
+                                    }}
+                                    disabled={saving}
+                                    title="Create a new speaker block starting here"
+                                  >
+                                    New speaker here
+                                  </button>
+
+                                  {activeSplitSpeakerMenu === segmentIndex && (
+                                    <span
+                                      className="absolute left-0 top-7 z-30 w-80 rounded-lg border border-blue-200 bg-white p-3 text-left text-xs shadow-xl"
+                                      onMouseDown={(e) => e.stopPropagation()}
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <span className="mb-2 block font-semibold text-[#003366]">
+                                        Start new speaker here
+                                      </span>
+                                      <label className="mb-2 block space-y-1">
+                                        <span className="font-medium text-gray-600">Apply to</span>
+                                        <select
+                                          value={splitSpeakerApplyScope}
+                                          onChange={(e) => setSplitSpeakerApplyScopes(prev => ({
+                                            ...prev,
+                                            [segmentIndex]: e.target.value as SplitSpeakerApplyScope
+                                          }))}
+                                          className="w-full rounded-md border border-blue-200 bg-white px-2 py-1.5 text-xs text-gray-800"
+                                          disabled={saving}
+                                        >
+                                          <option value="forward-in-block">This point forward in this paragraph</option>
+                                          <option value="single-segment">This sentence/segment only</option>
+                                        </select>
+                                      </label>
+
+                                      <div className="mb-2 flex gap-2">
+                                        <select
+                                          value={splitSpeakerSelection}
+                                          onChange={(e) => setSplitSpeakerSelections(prev => ({
+                                            ...prev,
+                                            [segmentIndex]: e.target.value
+                                          }))}
+                                          className="min-w-0 flex-1 rounded-md border border-blue-200 bg-white px-2 py-1.5 text-xs text-gray-800"
+                                          disabled={saving}
+                                        >
+                                          <option value="">Choose existing speaker</option>
+                                          {orderedSpeakers.map((speaker) => (
+                                            <option key={`split-speaker-${segmentIndex}-${speaker}`} value={speaker}>
+                                              {getSpeakerDisplayName(speaker)}
+                                            </option>
+                                          ))}
+                                        </select>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          className="h-8 bg-white"
+                                          disabled={saving || !splitSpeakerSelection}
+                                          onClick={() => applyExistingSpeakerSplit(block.segmentIndices, segmentIndex)}
+                                        >
+                                          Apply
+                                        </Button>
+                                      </div>
+
+                                      <div className="mb-2 flex gap-2">
+                                        <input
+                                          type="text"
+                                          value={splitSpeakerNameDraft}
+                                          onChange={(e) => setSplitSpeakerNameDrafts(prev => ({
+                                            ...prev,
+                                            [segmentIndex]: e.target.value
+                                          }))}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                              e.preventDefault();
+                                              applyCustomSpeakerSplit(block.segmentIndices, segmentIndex);
+                                            } else if (e.key === 'Escape') {
+                                              clearSplitSpeakerControl(segmentIndex);
+                                            }
+                                          }}
+                                          className="min-w-0 flex-1 rounded-md border border-blue-200 bg-white px-2 py-1.5 text-xs text-gray-800 outline-none focus:ring-2 focus:ring-blue-200"
+                                          placeholder="Type custom speaker"
+                                          disabled={saving}
+                                        />
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          className="h-8 bg-white"
+                                          disabled={saving || splitSpeakerNameDraft.trim().length === 0}
+                                          onClick={() => applyCustomSpeakerSplit(block.segmentIndices, segmentIndex)}
+                                        >
+                                          Add
+                                        </Button>
+                                      </div>
+
+                                      <span className="mb-2 flex flex-wrap gap-1.5">
+                                        {speakerLabelPresets.map((preset) => (
+                                          <Button
+                                            key={`split-speaker-preset-${segmentIndex}-${preset}`}
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-7 bg-white px-2 text-[11px]"
+                                            disabled={saving}
+                                            onClick={() => setSplitSpeakerNameDrafts(prev => ({
+                                              ...prev,
+                                              [segmentIndex]: preset
+                                            }))}
+                                          >
+                                            {preset}
+                                          </Button>
+                                        ))}
+                                      </span>
+
+                                      <button
+                                        type="button"
+                                        className="text-xs font-medium text-gray-600 hover:text-gray-900"
+                                        onMouseDown={(e) => e.preventDefault()}
+                                        onClick={() => clearSplitSpeakerControl(segmentIndex)}
+                                      >
+                                        Close
+                                      </button>
+                                    </span>
+                                  )}
+                                </span>
+                              )}
                               <span
                                 id={`segment-${segmentIndex}`}
                                 data-segment-index={segmentIndex}
