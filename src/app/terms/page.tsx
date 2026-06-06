@@ -110,14 +110,26 @@ export default function TermsPage() {
             </ul>
 
             <h2 className="text-2xl font-semibold text-[#003366] mt-8 mb-4">
-              12. Governing Law & Dispute Resolution
+              12. File Retention and Client Downloads
+            </h2>
+            <ul className="list-disc pl-6 mb-6 text-gray-700 space-y-2">
+              <li>Files remain active in your dashboard for 30 days after completion. After 30 days, files may be archived.</li>
+              <li>Archived files remain available until the 90-day retention period ends.</li>
+              <li>After 90 days, audio files, transcript files, completed documents, and related downloads may be permanently deleted unless a retention hold has been applied.</li>
+              <li>You are responsible for downloading completed work before the deletion date shown in your dashboard.</li>
+              <li>Retention holds may be applied at Talk to Text Canada&apos;s discretion. Deletion may be permanent, and we cannot guarantee that files can be recovered after deletion.</li>
+              <li>Where available, dashboard notices may show upcoming archive and deletion dates. Email reminders may be added in the future.</li>
+            </ul>
+
+            <h2 className="text-2xl font-semibold text-[#003366] mt-8 mb-4">
+              13. Governing Law & Dispute Resolution
             </h2>
             <p className="text-gray-700 mb-6">
               This Agreement is governed by the laws of Ontario and Canada. The courts of Brampton, Ontario have exclusive jurisdiction over any disputes.
             </p>
 
             <h2 className="text-2xl font-semibold text-[#003366] mt-8 mb-4">
-              13. Modification of Terms
+              14. Modification of Terms
             </h2>
             <ul className="list-disc pl-6 mb-6 text-gray-700 space-y-2">
               <li>We may update these terms at any time. We&apos;ll post the revised version with a new effective date and notify registered users.</li>
@@ -125,7 +137,7 @@ export default function TermsPage() {
             </ul>
 
             <h2 className="text-2xl font-semibold text-[#003366] mt-8 mb-4">
-              14. Miscellaneous
+              15. Miscellaneous
             </h2>
             <ul className="list-disc pl-6 mb-6 text-gray-700 space-y-2">
               <li><strong>Entire Agreement:</strong> These terms constitute the entire agreement between you and Talk to Text Canada regarding the Services.</li>

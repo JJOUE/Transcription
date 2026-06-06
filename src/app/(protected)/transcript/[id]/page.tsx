@@ -5069,6 +5069,9 @@ export default function TranscriptViewerPage() {
                       </span>
                     </div>
                   )}
+                  <p className="rounded-md bg-blue-50 p-3 text-xs leading-relaxed text-blue-900">
+                    Download completed files before the deletion date. Archived files remain available until the 90-day retention period ends.
+                  </p>
                 </div>
 
               </CardContent>

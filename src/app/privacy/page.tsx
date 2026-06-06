@@ -89,11 +89,15 @@ export default function PrivacyPage() {
             </p>
 
             <h2 className="text-2xl font-semibold text-[#003366] mt-8 mb-4 border-l-[6px] border-[#b094c5] pl-4">
-              Retention and deletion
+              File Retention and Deletion
             </h2>
             <ul className="list-disc pl-6 mb-6 text-gray-700 space-y-2">
-              <li>Raw audio and intermediate files: retained only as long as needed to deliver the job or as you direct.</li>
-              <li>Transcripts and documents: stored per your account settings or contractual terms.</li>
+              <li>Completed files remain active in your dashboard for 30 days after completion.</li>
+              <li>After 30 days, files may be archived. Archived files remain available until the 90-day retention period ends.</li>
+              <li>After 90 days, audio files, transcript files, completed documents, and related downloads may be permanently deleted unless a retention hold has been applied.</li>
+              <li>Where available, dashboard notices may show archive and deletion dates. Email reminders may be added in the future.</li>
+              <li>Some metadata may be retained for business, billing, legal, security, or audit purposes.</li>
+              <li>Client dictionary terms are not automatically deleted by file retention unless separately requested or required.</li>
               <li>You can request deletion at any time; we will act within 30 days unless law requires a different period.</li>
             </ul>
 

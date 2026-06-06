@@ -1842,6 +1842,11 @@ export default function UploadPage() {
           </Card>
 
           {/* Submit Button */}
+          <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900">
+            Uploaded and completed files are retained under our 30-day archive / 90-day deletion policy.
+            Please download completed work before the deletion date shown in your dashboard.
+          </div>
+
           <div className="flex justify-end space-x-4 pt-4">
             <Button
               variant="outline"

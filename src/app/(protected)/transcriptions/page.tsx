@@ -281,23 +281,29 @@ export default function TranscriptionsPage() {
 
         {/* Results Summary */}
         {!loading && (
-          <div className="mb-6 text-sm text-gray-600">
-            Showing {startIndex + 1}-{Math.min(endIndex, filteredTranscriptions.length)} of {filteredTranscriptions.length} transcriptions
-            {(searchTerm || statusFilter !== 'all' || modeFilter !== 'all') && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSearchTerm('');
-                  setStatusFilter('all');
-                  setModeFilter('all');
-                }}
-                className="ml-4 text-[#b29dd9] hover:text-[#9d87c7]"
-              >
-                Clear filters
-              </Button>
-            )}
-          </div>
+          <>
+            <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900">
+              Files are active for 30 days, archived after 30 days, and may be deleted after 90 days unless a retention hold applies.
+              Dashboard notices may show archive and deletion dates.
+            </div>
+            <div className="mb-6 text-sm text-gray-600">
+              Showing {startIndex + 1}-{Math.min(endIndex, filteredTranscriptions.length)} of {filteredTranscriptions.length} transcriptions
+              {(searchTerm || statusFilter !== 'all' || modeFilter !== 'all') && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setStatusFilter('all');
+                    setModeFilter('all');
+                  }}
+                  className="ml-4 text-[#b29dd9] hover:text-[#9d87c7]"
+                >
+                  Clear filters
+                </Button>
+              )}
+            </div>
+          </>
         )}
 
         {/* Transcriptions List */}

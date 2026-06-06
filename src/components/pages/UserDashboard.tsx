@@ -470,6 +470,10 @@ export function UserDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
+                  <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900">
+                    Completed files are active for 30 days, archived after 30 days, and may be deleted after 90 days unless a retention hold applies.
+                  </div>
+
                   {jobsLoading && (
                     <div className="text-center py-8">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#003366] mx-auto mb-4"></div>
