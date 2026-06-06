@@ -227,6 +227,34 @@ export const archiveTranscriptionJob = async (
   await updateDoc(docRef, archiveData);
 };
 
+export const applyRetentionHold = async (
+  id: string,
+  heldBy: string,
+  holdReason = 'Admin retention hold'
+): Promise<void> => {
+  const docRef = doc(db, TRANSCRIPTIONS_COLLECTION, id);
+  await updateDoc(docRef, {
+    retentionHold: true,
+    retentionHoldReason: holdReason,
+    retentionHoldBy: heldBy,
+    retentionHoldAt: Timestamp.now(),
+    deletionStatus: 'held',
+    updatedAt: Timestamp.now()
+  });
+};
+
+export const releaseRetentionHold = async (id: string): Promise<void> => {
+  const docRef = doc(db, TRANSCRIPTIONS_COLLECTION, id);
+  await updateDoc(docRef, {
+    retentionHold: false,
+    retentionHoldReason: '',
+    retentionHoldBy: '',
+    retentionHoldAt: null,
+    deletionStatus: 'active',
+    updatedAt: Timestamp.now()
+  });
+};
+
 export const approveTranscriptionReview = async (id: string): Promise<void> => {
   await updateTranscriptionStatus(id, 'complete');
 };

@@ -16,10 +16,12 @@ import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCredits } from '@/contexts/CreditContext';
 import {
+  applyRetentionHold,
   getAllTranscriptionJobs,
   approveTranscriptionReview,
   archiveTranscriptionJob,
   rejectTranscriptionJob,
+  releaseRetentionHold,
   submitHumanTranscription,
   TranscriptionJob
 } from '@/lib/firebase/transcriptions';
@@ -266,6 +268,20 @@ export function TranscriptionQueue() {
           toast({
             title: "Job archived",
             description: "The job was removed from the active work list. No files were deleted.",
+          });
+          break;
+        case 'apply-retention-hold':
+          await applyRetentionHold(jobId, user?.uid || 'unknown-admin');
+          toast({
+            title: "Retention hold applied",
+            description: "This job is marked Keep File for future retention automation. No files were changed.",
+          });
+          break;
+        case 'release-retention-hold':
+          await releaseRetentionHold(jobId);
+          toast({
+            title: "Retention hold removed",
+            description: "This job returned to the normal retention lifecycle. No files were changed.",
           });
           break;
       }
@@ -586,6 +602,27 @@ export function TranscriptionQueue() {
                         <Archive className="h-4 w-4 mr-1" />
                         Archive job
                       </Button>
+                      {item.retentionHold || item.deletionStatus === 'held' ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-amber-700"
+                          onClick={() => item.id && handleAction(item.id, 'release-retention-hold')}
+                          disabled={isLoading}
+                        >
+                          Remove Hold
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-green-700"
+                          onClick={() => item.id && handleAction(item.id, 'apply-retention-hold')}
+                          disabled={isLoading || isRetentionDeleted(item)}
+                        >
+                          Keep File
+                        </Button>
+                      )}
                       {isRetentionDeleted(item) && (item.downloadURL || item.templateURL) && (
                         <span className="text-sm font-medium text-red-600">Files expired/deleted</span>
                       )}
@@ -751,6 +788,27 @@ export function TranscriptionQueue() {
                         <Archive className="h-4 w-4 mr-1" />
                         Archive job
                       </Button>
+                      {item.retentionHold || item.deletionStatus === 'held' ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-amber-700"
+                          onClick={() => item.id && handleAction(item.id, 'release-retention-hold')}
+                          disabled={isLoading}
+                        >
+                          Remove Hold
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-green-700"
+                          onClick={() => item.id && handleAction(item.id, 'apply-retention-hold')}
+                          disabled={isLoading || isRetentionDeleted(item)}
+                        >
+                          Keep File
+                        </Button>
+                      )}
                       {isRetentionDeleted(item) && (item.downloadURL || item.templateURL) && (
                         <span className="text-sm font-medium text-red-600">Files expired/deleted</span>
                       )}
@@ -919,6 +977,25 @@ export function TranscriptionQueue() {
                 >
                   Cancel
                 </Button>
+                {selectedJob.retentionHold || selectedJob.deletionStatus === 'held' ? (
+                  <Button
+                    variant="outline"
+                    onClick={() => selectedJob.id && handleAction(selectedJob.id, 'release-retention-hold')}
+                    disabled={isLoading}
+                    className="text-amber-700 border-amber-300 hover:bg-amber-50 w-full sm:w-auto"
+                  >
+                    Remove Hold
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={() => selectedJob.id && handleAction(selectedJob.id, 'apply-retention-hold')}
+                    disabled={isLoading || isRetentionDeleted(selectedJob)}
+                    className="text-green-700 border-green-300 hover:bg-green-50 w-full sm:w-auto"
+                  >
+                    Keep File
+                  </Button>
+                )}
                 {selectedJob.status === 'pending-review' && (
                   <Button
                     onClick={() => selectedJob.id && handleAction(selectedJob.id, 'approve-review')}

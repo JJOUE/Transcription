@@ -12,9 +12,11 @@ import { useToast } from '@/components/ui/use-toast';
 import { useCredits } from '@/contexts/CreditContext';
 import { useAuth } from '@/contexts/AuthContext';
 import {
+  applyRetentionHold,
   approveTranscriptionReview,
   archiveTranscriptionJob,
   rejectTranscriptionJob,
+  releaseRetentionHold,
   submitHumanTranscription,
   TranscriptionJob,
   updateOfficeStatus,
@@ -47,6 +49,7 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
   const { user } = useAuth();
   const retentionLabel = formatRetentionLabel(job);
   const retentionDeleted = isRetentionDeleted(job);
+  const retentionHeld = job.retentionHold || job.deletionStatus === 'held';
   
   // Office Studio management state
   const [assignedTypistInput, setAssignedTypistInput] = useState(job.assignedTypistName || '');
@@ -229,6 +232,50 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
       toast({
         title: "Error",
         description: "Failed to archive job. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleApplyRetentionHold = async () => {
+    if (!job.id) return;
+    setIsLoading(true);
+    try {
+      await applyRetentionHold(job.id, user?.uid || 'unknown-admin');
+      toast({
+        title: "Retention hold applied",
+        description: "This job is marked Keep File for future retention automation. No files were changed.",
+      });
+      onComplete();
+    } catch (error) {
+      console.error('Retention hold error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to apply retention hold. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleReleaseRetentionHold = async () => {
+    if (!job.id) return;
+    setIsLoading(true);
+    try {
+      await releaseRetentionHold(job.id);
+      toast({
+        title: "Retention hold removed",
+        description: "This job returned to the normal retention lifecycle. No files were changed.",
+      });
+      onComplete();
+    } catch (error) {
+      console.error('Release retention hold error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove retention hold. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -835,6 +882,27 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
             <Archive className="h-4 w-4 mr-1" />
             Archive job
           </Button>
+          {retentionHeld ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-amber-700 border-amber-300 hover:bg-amber-50"
+              onClick={handleReleaseRetentionHold}
+              disabled={isLoading}
+            >
+              Remove Hold
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-green-700 border-green-300 hover:bg-green-50"
+              onClick={handleApplyRetentionHold}
+              disabled={isLoading || retentionDeleted}
+            >
+              Keep File
+            </Button>
+          )}
         </div>
         
         {/* Office Studio Management Panel */}
@@ -990,6 +1058,30 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                     <strong>Retention:</strong> {retentionLabel}
                   </p>
                 )}
+
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {retentionHeld ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-amber-700 border-amber-300 hover:bg-amber-50"
+                      onClick={handleReleaseRetentionHold}
+                      disabled={isLoading}
+                    >
+                      Remove Hold
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-green-700 border-green-300 hover:bg-green-50"
+                      onClick={handleApplyRetentionHold}
+                      disabled={isLoading || retentionDeleted}
+                    >
+                      Keep File
+                    </Button>
+                  )}
+                </div>
 
                 {retentionDeleted && (job.downloadURL || job.templateURL) && (
                   <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm font-medium text-red-700">

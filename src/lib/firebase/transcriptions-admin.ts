@@ -141,6 +141,44 @@ export const updateTranscriptionStatusAdmin = async (
   }
 };
 
+export const applyRetentionHoldAdmin = async (
+  id: string,
+  heldBy: string,
+  holdReason = 'Admin retention hold'
+): Promise<void> => {
+  try {
+    const docRef = adminDb.collection(TRANSCRIPTIONS_COLLECTION).doc(id);
+    await docRef.update({
+      retentionHold: true,
+      retentionHoldReason: holdReason,
+      retentionHoldBy: heldBy,
+      retentionHoldAt: FieldValue.serverTimestamp(),
+      deletionStatus: 'held',
+      updatedAt: FieldValue.serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error applying retention hold:', error);
+    throw error;
+  }
+};
+
+export const releaseRetentionHoldAdmin = async (id: string): Promise<void> => {
+  try {
+    const docRef = adminDb.collection(TRANSCRIPTIONS_COLLECTION).doc(id);
+    await docRef.update({
+      retentionHold: false,
+      retentionHoldReason: '',
+      retentionHoldBy: '',
+      retentionHoldAt: null,
+      deletionStatus: 'active',
+      updatedAt: FieldValue.serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error releasing retention hold:', error);
+    throw error;
+  }
+};
+
 export const getAllTranscriptionJobsAdmin = async (): Promise<TranscriptionJob[]> => {
   try {
     const querySnapshot = await adminDb
