@@ -5,7 +5,7 @@ export type TranscriptionStatus = 'processing' | 'pending-review' | 'pending-tra
 export type TranscriptionMode = 'ai' | 'hybrid' | 'human';
 export type OfficeStatus = 'submitted' | 'assigned' | 'in_progress' | 'waiting_review' | 'completed' | 'delivered';
 export type OfficePriority = 'standard' | 'rush' | 'same_day';
-export type DeletionStatus = 'active' | 'pending' | 'deleted' | 'error' | 'held';
+export type DeletionStatus = 'active' | 'archived' | 'pending' | 'deleted' | 'error' | 'held';
 
 export interface TranscriptSegment {
   start: number; // Start time in seconds
@@ -42,7 +42,10 @@ export interface TranscriptionJob {
   createdAt: Timestamp;
   updatedAt: Timestamp;
   completedAt?: Timestamp;
+  retentionArchiveAt?: Timestamp;
   retentionExpiresAt?: Timestamp;
+  retentionWarningSentAt?: Timestamp;
+  retentionFinalWarningSentAt?: Timestamp;
   retentionHold?: boolean;
   retentionHoldReason?: string;
   retentionHoldBy?: string;
