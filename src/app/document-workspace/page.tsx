@@ -4,52 +4,52 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 
 export const metadata: Metadata = {
-  title: 'Document Workspace for Transcription, Dictation and Documents | Talk to Text Canada',
+  title: 'Document Workspace | Talk to Text Canada',
   description:
-    'Upload audio, edit transcripts, request human review, and turn dictation into polished professional documents with Canadian English, legal and medical terminology support, and secure project delivery.',
+    'Document preparation support for dictation, audio, notes, templates, and instructions, with completed document download through Talk to Text Canada.',
   metadataBase: new URL('https://www.talktotext.ca'),
   openGraph: {
-    title: 'Document Workspace for Transcription, Dictation and Documents | Talk to Text Canada',
+    title: 'Document Workspace | Talk to Text Canada',
     description:
-      'Upload audio, edit transcripts, request human review, and turn dictation into polished professional documents with Canadian English, legal and medical terminology support, and secure project delivery.',
+      'Document preparation support for dictation, audio, notes, templates, and instructions, with completed document download through Talk to Text Canada.',
     url: 'https://www.talktotext.ca/document-workspace',
     type: 'website',
   },
 };
 
-const services = [
+const features = [
   {
-    title: 'Document Workspace',
-    text: 'Upload dictation or voice notes and receive polished documents prepared for professional office use.',
+    title: 'Dictation and Audio Upload',
+    text: 'Signed-in clients can upload dictation or audio notes for document preparation through the secure workspace.',
   },
   {
-    title: 'Letters & Correspondence',
-    text: 'Turn instructions, recordings, or rough notes into clear letters, correspondence, and client-ready documents.',
+    title: 'Template Upload',
+    text: 'Provide your own template, letterhead, sample document, or formatting reference when it is available.',
   },
   {
-    title: 'Case Notes & Summaries',
-    text: 'Convert spoken notes and file instructions into organized case notes, summaries, and internal documents.',
+    title: 'Notes and Instructions',
+    text: 'Add document type, formatting notes, project details, special instructions, and supporting context.',
   },
   {
-    title: 'Templates & Letterhead',
-    text: 'Use your own templates, letterhead, formatting instructions, or document samples to guide the finished work.',
+    title: 'Human-Prepared Workflow',
+    text: 'Document Workspace is built around human preparation and review, not automatic legal form generation.',
   },
   {
-    title: 'Reports & Office Documents',
-    text: 'Prepare reports, memos, meeting notes, and professional documents from audio, notes, or written instructions.',
+    title: 'Dashboard Status',
+    text: 'Project status can be managed through the dashboard workflow while the work is being prepared.',
   },
   {
-    title: 'Completed Document Delivery',
-    text: 'Finished documents can be returned through your secure client workspace for review and download.',
+    title: 'Completed Document Download',
+    text: 'When the completed document is uploaded, clients can download it from their dashboard.',
   },
 ];
 
 const workflow = [
-  'Upload dictation, audio notes, written instructions, or a template.',
-  'Add formatting notes, document type, deadline, and any special instructions.',
-  'The document is prepared using professional transcription and office-document experience.',
-  'You review the completed document in your client workspace.',
-  'Download your finished document when it is ready.',
+  'Sign in or contact us to start a document project.',
+  'Upload dictation/audio, notes, instructions, or a template.',
+  'Human preparation and formatting are handled through the Document Workspace workflow.',
+  'Review project status in your dashboard.',
+  'Download the completed document when it is ready.',
 ];
 
 const safeguards = [
@@ -57,8 +57,8 @@ const safeguards = [
   'Professional formatting',
   'Human document preparation',
   'Secure dashboard delivery',
-  'Client templates supported',
-  'Completed document downloads',
+  'Client template uploads',
+  'Completed document download',
 ];
 
 export default function DocumentWorkspacePage() {
@@ -74,22 +74,22 @@ export default function DocumentWorkspacePage() {
             </p>
 
             <h1 className="text-4xl md:text-5xl font-bold text-[#003366] mb-6">
-              Document Workspace for Transcription, Dictation and Documents
+              Document Workspace
             </h1>
 
             <p className="text-lg md:text-xl text-gray-700 max-w-3xl mx-auto mb-6">
-              Upload audio, edit transcripts, request human review, and turn dictation into polished professional documents with Canadian English, legal and medical terminology support, and secure project delivery.
+              Turn dictation, notes, templates, and instructions into organized, editable documents.
             </p>
             <p className="text-sm text-gray-500 max-w-3xl mx-auto mb-8">
-              Built on 27 years of legal documentation and transcription experience.
+              Built on practical legal documentation and transcription experience for Canadian professional workflows.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/legal-intake"
+                href="/signin"
                 className="inline-flex items-center justify-center rounded-md bg-[#003366] px-6 py-3 text-white font-semibold hover:bg-[#00264d]"
               >
-                Start a Document Request
+                Start a Document Project
               </Link>
 
               <Link
@@ -98,34 +98,46 @@ export default function DocumentWorkspacePage() {
               >
                 View Pricing
               </Link>
+
+              <Link
+                href="/contact"
+                className="inline-flex items-center justify-center rounded-md border border-[#003366] px-6 py-3 text-[#003366] font-semibold hover:bg-[#003366] hover:text-white"
+              >
+                Contact Us
+              </Link>
             </div>
           </div>
         </section>
 
         <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="rounded-2xl bg-gradient-to-r from-[#003366] to-[#b29dd9] text-white p-8 mb-12">
+          <div className="rounded-2xl bg-[#003366] text-white p-8 mb-12">
             <h2 className="text-2xl font-bold mb-3">
-              Built for Professionals Who Need More Than a Transcript
+              See how Document Workspace works
             </h2>
-            <p className="text-white/90">
-              Document Workspace is for clients who need help turning spoken instructions, notes,
-              dictation, and templates into finished documents. It is designed for professional
-              workflows where clarity, formatting, confidentiality, and human judgment matter.
-            </p>
+            <div className="mt-6 rounded-xl border border-white/30 bg-white/10 p-8 text-center">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-white/40">
+                <span className="text-2xl font-bold">▶</span>
+              </div>
+              <p className="text-white/90 max-w-2xl mx-auto">
+                A short walkthrough video will appear here showing how clients start a document
+                project, upload instructions or templates, track status, and download a completed
+                document when ready.
+              </p>
+            </div>
           </div>
 
           <h2 className="text-3xl font-bold text-[#003366] text-center mb-8">
-            What Document Workspace Can Help With
+            Current Features
           </h2>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-            {services.map((service) => (
-              <div key={service.title} className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+            {features.map((feature) => (
+              <div key={feature.title} className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
                 <div className="h-10 w-10 rounded-full bg-[#b29dd9]/20 flex items-center justify-center mb-4">
                   <span className="text-[#003366] font-bold">✓</span>
                 </div>
-                <h3 className="font-semibold text-[#003366] mb-2">{service.title}</h3>
-                <p className="text-gray-700 text-sm">{service.text}</p>
+                <h3 className="font-semibold text-[#003366] mb-2">{feature.title}</h3>
+                <p className="text-gray-700 text-sm">{feature.text}</p>
               </div>
             ))}
           </div>
@@ -148,24 +160,22 @@ export default function DocumentWorkspacePage() {
           <div className="grid md:grid-cols-2 gap-8 mb-12">
             <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
               <h2 className="text-2xl font-bold text-[#003366] mb-4">
-                For Legal and Professional Office Workflows
+                Important Note
               </h2>
               <p className="text-gray-700">
-                Document Workspace supports legal dictation, office correspondence, file notes,
-                document instructions, and professional drafting support. It is not a legal advice
-                service and does not replace a lawyer, licensed representative, or certified court
-                reporter.
+                Document Workspace supports document preparation and formatting based on the
+                information provided. It does not provide legal advice, legal representation, or
+                certified court reporting.
               </p>
             </div>
 
             <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
               <h2 className="text-2xl font-bold text-[#003366] mb-4">
-                Human Judgment Where It Matters
+                What Clients Can Provide
               </h2>
               <p className="text-gray-700">
-                Unlike basic AI transcription, this service is designed for finished document
-                preparation. Templates, formatting notes, client instructions, and document purpose
-                can guide how the final document is prepared.
+                You can provide dictation or audio, written notes, project instructions, document
+                type, formatting preferences, and your own template file where applicable.
               </p>
             </div>
           </div>
@@ -184,9 +194,23 @@ export default function DocumentWorkspacePage() {
             </div>
 
             <p className="text-gray-700 mt-6">
-              Completed documents can be delivered through your client workspace so you can review,
-              download, and keep your own copies. Custom formatting, rush work, and complex document
-              requests may require a custom quote.
+              Completed documents can be delivered through your client workspace so you can
+              download and keep your own copies. Editable document delivery, including DOCX where
+              applicable, is intended for prepared document projects. Custom formatting, rush work,
+              and complex document requests may require a custom quote.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm mb-12">
+            <h2 className="text-2xl font-bold text-[#003366] mb-4">
+              File Retention
+            </h2>
+            <p className="text-gray-700">
+              Files remain active in your dashboard for 30 days after completion. After 30 days,
+              files may be archived. Archived files remain available until the 90-day retention
+              period ends. After 90 days, audio files, transcript files, completed documents, and
+              related downloads may be permanently deleted unless a retention hold has been
+              applied. Please download anything you need before the deletion date.
             </p>
           </div>
 
@@ -201,9 +225,8 @@ export default function DocumentWorkspacePage() {
                   Is Document Workspace the same as transcription?
                 </h3>
                 <p className="text-gray-700 text-sm">
-                  No. Transcription turns audio into text. Document Workspace goes further by helping
-                  turn dictation, instructions, notes, and templates into finished professional
-                  documents.
+                  No. Transcription turns audio into text. Document Workspace supports document
+                  preparation from dictation, instructions, notes, and templates.
                 </p>
               </div>
 
@@ -212,8 +235,8 @@ export default function DocumentWorkspacePage() {
                   Can I upload my own template or letterhead?
                 </h3>
                 <p className="text-gray-700 text-sm">
-                  Yes. You can provide templates, letterhead, samples, or formatting instructions to
-                  guide the finished document.
+                  Yes. Signed-in clients can upload a template file or formatting reference where it
+                  applies to the project.
                 </p>
               </div>
 
@@ -233,7 +256,7 @@ export default function DocumentWorkspacePage() {
                   What kinds of documents can be prepared?
                 </h3>
                 <p className="text-gray-700 text-sm">
-                  Examples include letters, correspondence, case notes, file summaries, reports,
+                  Examples may include letters, correspondence, case notes, file summaries, reports,
                   office documents, meeting notes, and documents based on client instructions.
                 </p>
               </div>
@@ -252,19 +275,19 @@ export default function DocumentWorkspacePage() {
 
           <div className="rounded-2xl bg-gradient-to-r from-[#003366] to-[#b29dd9] text-white p-8 text-center">
             <h2 className="text-3xl font-bold mb-3">
-              Need More Than a Transcript?
+              Ready to Start a Document Project?
             </h2>
             <p className="text-white/90 mb-6">
-              Use Document Workspace to turn dictation, instructions, and templates into professional
-              documents prepared for real office workflows.
+              Sign in to use the protected workspace, review pricing, or contact us about a
+              document preparation project.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/legal-intake"
+                href="/signin"
                 className="inline-flex items-center justify-center rounded-md bg-white px-6 py-3 text-[#003366] font-semibold hover:bg-gray-100"
               >
-                Start a Document Request
+                Sign In
               </Link>
 
               <Link

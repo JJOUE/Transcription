@@ -50,6 +50,12 @@ export function Header() {
               Transcript Workspace
             </Link>
             <Link
+              href="/document-workspace"
+              className="text-gray-600 hover:text-[#003366] transition-colors"
+            >
+              Document Workspace
+            </Link>
+            <Link
               href="/guide"
               className="text-gray-600 hover:text-[#003366] transition-colors"
             >
