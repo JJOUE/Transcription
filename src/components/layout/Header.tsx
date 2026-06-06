@@ -44,6 +44,12 @@ export function Header() {
 
           <nav className="hidden md:flex items-center space-x-8">
             <Link
+              href="/transcript-workspace"
+              className="text-gray-600 hover:text-[#003366] transition-colors"
+            >
+              Transcript Workspace
+            </Link>
+            <Link
               href="/guide"
               className="text-gray-600 hover:text-[#003366] transition-colors"
             >
