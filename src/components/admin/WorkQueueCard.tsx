@@ -24,6 +24,7 @@ import {
   OfficeStatus
 } from '@/lib/firebase/transcriptions';
 import { formatDuration } from '@/lib/utils';
+import { formatRetentionLabel, isRetentionDeleted } from '@/lib/utils/retention';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, updateDoc, getFirestore, Timestamp } from 'firebase/firestore';
 
@@ -44,6 +45,8 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
   const { toast } = useToast();
   const { refundCredits } = useCredits();
   const { user } = useAuth();
+  const retentionLabel = formatRetentionLabel(job);
+  const retentionDeleted = isRetentionDeleted(job);
   
   // Office Studio management state
   const [assignedTypistInput, setAssignedTypistInput] = useState(job.assignedTypistName || '');
@@ -641,6 +644,14 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                 </span>
 
                 <CreditDisplay amount={job.creditsUsed || 0} size="sm" />
+
+                {retentionLabel && (
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full ${
+                    retentionDeleted ? 'bg-red-100 text-red-800 font-medium' : 'bg-slate-100 text-slate-700'
+                  }`}>
+                    {retentionLabel}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -649,7 +660,13 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
         {/* Action Buttons Row */}
         <div className="flex flex-wrap gap-2">
           {/* Download Audio */}
-          {job.downloadURL && (
+          {retentionDeleted && (job.downloadURL || job.templateURL) && (
+            <span className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md">
+              Files expired/deleted
+            </span>
+          )}
+
+          {!retentionDeleted && job.downloadURL && (
             <Button
               size="sm"
               variant="outline"
@@ -662,7 +679,7 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
           )}
 
           {/* Download Template (if exists) */}
-          {job.templateURL && (
+          {!retentionDeleted && job.templateURL && (
             <Button
               size="sm"
               variant="outline"
@@ -968,14 +985,26 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                 )}
 
                 {/* Audio Player */}
-                {job.downloadURL && (
+                {retentionLabel && (
+                  <p className={`text-sm ${retentionDeleted ? 'font-medium text-red-600' : 'text-gray-600'}`}>
+                    <strong>Retention:</strong> {retentionLabel}
+                  </p>
+                )}
+
+                {retentionDeleted && (job.downloadURL || job.templateURL) && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm font-medium text-red-700">
+                    Files expired/deleted
+                  </div>
+                )}
+
+                {!retentionDeleted && job.downloadURL && (
                   <div className="mb-4 pt-2">
                     <AudioPlayer src={job.downloadURL} standalone={true} />
                   </div>
                 )}
 
                 {/* Template download */}
-                {job.templateURL && (
+                {!retentionDeleted && job.templateURL && (
                   <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
                     <div className="flex items-center justify-between">
                       <div>

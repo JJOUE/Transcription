@@ -18,6 +18,7 @@ import { getTranscriptionsByUser } from '@/lib/firebase/transcriptions';
 import { TranscriptionJob, updateTranscriptionStatus } from '@/lib/firebase/transcriptions';
 import { Timestamp } from 'firebase/firestore';
 import { formatDuration } from '@/lib/utils';
+import { formatRetentionLabel, isRetentionDeleted } from '@/lib/utils/retention';
 
 
 export default function TranscriptionsPage() {
@@ -329,7 +330,7 @@ export default function TranscriptionsPage() {
                       <StatusBadge status={transcription.status} className="flex-shrink-0" />
                     </div>
                     
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 text-sm">
                       <div>
                         <span className="text-gray-600 font-medium">Mode:</span>
                         <p className="text-[#003366]">
@@ -357,30 +358,42 @@ export default function TranscriptionsPage() {
                           }
                         </p>
                       </div>
+                      {formatRetentionLabel(transcription) && (
+                        <div>
+                          <span className="text-gray-600 font-medium">Retention:</span>
+                          <p className={isRetentionDeleted(transcription) ? 'text-red-600 font-medium' : 'text-[#003366]'}>
+                            {formatRetentionLabel(transcription)}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                   
                   <div className="flex items-center space-x-3 ml-6">
                     {transcription.status === 'complete' && (
                       <>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDownload(transcription, 'pdf')}
-                            className="border-[#b29dd9] text-[#b29dd9] hover:bg-[#b29dd9] hover:text-white"
-                          >
-                            PDF
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDownload(transcription, 'docx')}
-                            className="border-[#b29dd9] text-[#b29dd9] hover:bg-[#b29dd9] hover:text-white"
-                          >
-                            DOCX
-                          </Button>
-                        </div>
+                        {isRetentionDeleted(transcription) ? (
+                          <span className="text-sm font-medium text-red-600">Files expired/deleted</span>
+                        ) : (
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDownload(transcription, 'pdf')}
+                              className="border-[#b29dd9] text-[#b29dd9] hover:bg-[#b29dd9] hover:text-white"
+                            >
+                              PDF
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDownload(transcription, 'docx')}
+                              className="border-[#b29dd9] text-[#b29dd9] hover:bg-[#b29dd9] hover:text-white"
+                            >
+                              DOCX
+                            </Button>
+                          </div>
+                        )}
                         <Button
                           size="sm"
                           asChild

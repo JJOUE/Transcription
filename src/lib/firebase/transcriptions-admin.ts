@@ -5,6 +5,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 export type TranscriptionStatus = 'processing' | 'pending-review' | 'pending-transcription' | 'complete' | 'failed';
 export type TranscriptionMode = 'ai' | 'hybrid' | 'human';
 export type TranscriptionDomain = 'general' | 'medical' | 'legal';
+export type DeletionStatus = 'active' | 'pending' | 'deleted' | 'error' | 'held';
 
 export interface TranscriptSegment {
   start: number; // Start time in seconds
@@ -34,6 +35,13 @@ export interface TranscriptionJob {
   createdAt: FirebaseFirestore.Timestamp;
   updatedAt: FirebaseFirestore.Timestamp;
   completedAt?: FirebaseFirestore.Timestamp;
+  retentionExpiresAt?: FirebaseFirestore.Timestamp;
+  retentionHold?: boolean;
+  retentionHoldReason?: string;
+  retentionHoldBy?: string;
+  retentionHoldAt?: FirebaseFirestore.Timestamp;
+  filesDeletedAt?: FirebaseFirestore.Timestamp;
+  deletionStatus?: DeletionStatus;
   isArchived?: boolean; // Soft archive for hiding jobs from active admin work queues
   archivedAt?: FirebaseFirestore.Timestamp;
   archivedBy?: string;

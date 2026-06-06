@@ -5,6 +5,7 @@ export type TranscriptionStatus = 'processing' | 'pending-review' | 'pending-tra
 export type TranscriptionMode = 'ai' | 'hybrid' | 'human';
 export type OfficeStatus = 'submitted' | 'assigned' | 'in_progress' | 'waiting_review' | 'completed' | 'delivered';
 export type OfficePriority = 'standard' | 'rush' | 'same_day';
+export type DeletionStatus = 'active' | 'pending' | 'deleted' | 'error' | 'held';
 
 export interface TranscriptSegment {
   start: number; // Start time in seconds
@@ -41,6 +42,13 @@ export interface TranscriptionJob {
   createdAt: Timestamp;
   updatedAt: Timestamp;
   completedAt?: Timestamp;
+  retentionExpiresAt?: Timestamp;
+  retentionHold?: boolean;
+  retentionHoldReason?: string;
+  retentionHoldBy?: string;
+  retentionHoldAt?: Timestamp;
+  filesDeletedAt?: Timestamp;
+  deletionStatus?: DeletionStatus;
   isArchived?: boolean; // Soft archive for hiding jobs from active admin work queues
   archivedAt?: Timestamp;
   archivedBy?: string;

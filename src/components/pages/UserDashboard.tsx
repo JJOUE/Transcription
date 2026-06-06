@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCredits } from '@/contexts/CreditContext';
 import { useWallet } from '@/contexts/WalletContext';
 import { getTranscriptionsByUser, TranscriptionJob } from '@/lib/firebase/transcriptions';
+import { formatRetentionLabel, isRetentionDeleted } from '@/lib/utils/retention';
 import { Timestamp } from 'firebase/firestore';
 
 
@@ -570,6 +571,11 @@ export function UserDashboard() {
                                 <span className="text-[#003366] font-medium">
                                   CA${((job.creditsUsed || 0) / 100).toFixed(2)}
                                 </span>
+                                {formatRetentionLabel(job) && (
+                                  <span className={isRetentionDeleted(job) ? 'text-red-600 font-medium' : 'text-gray-500'}>
+                                    {formatRetentionLabel(job)}
+                                  </span>
+                                )}
                               </div>
                             </div>
                                 
@@ -622,6 +628,11 @@ export function UserDashboard() {
                               {new Date(job.createdAt).toLocaleDateString()}
                             </span>
                             <span className="text-[#003366] font-medium">CA${((job.creditsUsed || 0) / 100).toFixed(2)}</span>
+                            {formatRetentionLabel(job) && (
+                              <span className={isRetentionDeleted(job) ? 'text-red-600 font-medium' : 'text-gray-500'}>
+                                {formatRetentionLabel(job)}
+                              </span>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
@@ -636,7 +647,10 @@ export function UserDashboard() {
                               </Link>
                             </Button>
                           )}
-                          {job.officeCompletedDocumentURL && (
+                          {isRetentionDeleted(job) && job.officeCompletedDocumentURL && (
+                            <span className="text-sm font-medium text-red-600">Files expired/deleted</span>
+                          )}
+                          {!isRetentionDeleted(job) && job.officeCompletedDocumentURL && (
                             <Button
                               size="sm"
                               asChild

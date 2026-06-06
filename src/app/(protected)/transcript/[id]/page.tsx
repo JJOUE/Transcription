@@ -37,6 +37,7 @@ import { Timestamp } from 'firebase/firestore';
 import { formatTime, formatDuration } from '@/lib/utils';
 import { AudioPlayer, AudioPlayerRef } from '@/components/ui/AudioPlayer';
 import { formatTranscriptMechanically } from '@/lib/utils/transcript-processor';
+import { formatRetentionLabel, isRetentionDeleted } from '@/lib/utils/retention';
 
 // Types for Speechmatics transcript data
 interface SpeechmaticsAlternative {
@@ -1026,7 +1027,7 @@ export default function TranscriptViewerPage() {
 
   // Download admin-uploaded transcript directly
   const downloadAdminTranscript = () => {
-    if (!transcription?.adminTranscriptURL) return;
+    if (!transcription?.adminTranscriptURL || isRetentionDeleted(transcription)) return;
 
     // Open the download URL directly
     window.open(transcription.adminTranscriptURL, '_blank');
@@ -4858,6 +4859,11 @@ export default function TranscriptViewerPage() {
               </div>
               <CreditDisplay amount={transcription.creditsUsed} size="sm" />
               <span>Completed: {formatDate(transcription.completedAt || transcription.updatedAt)}</span>
+              {formatRetentionLabel(transcription) && (
+                <span className={isRetentionDeleted(transcription) ? 'font-medium text-red-600' : 'text-gray-600'}>
+                  {formatRetentionLabel(transcription)}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -4899,7 +4905,11 @@ export default function TranscriptViewerPage() {
             )}
 
             {/* Download options - show admin transcript if available */}
-            {transcription.adminTranscriptURL ? (
+            {isRetentionDeleted(transcription) ? (
+              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+                Files expired/deleted
+              </div>
+            ) : transcription.adminTranscriptURL ? (
               <Button
                 variant="default"
                 onClick={downloadAdminTranscript}
@@ -5004,7 +5014,14 @@ export default function TranscriptViewerPage() {
                   <CardTitle className="text-lg text-[#003366]">Audio Player</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                {transcription.downloadURL ? (
+                {isRetentionDeleted(transcription) ? (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                    <div className="text-sm font-medium text-red-700">Files expired/deleted</div>
+                    <div className="text-xs text-red-600 mt-1">
+                      Audio playback is unavailable for deleted files.
+                    </div>
+                  </div>
+                ) : transcription.downloadURL ? (
                   <AudioPlayer
                     ref={audioPlayerRef}
                     src={transcription.downloadURL}
@@ -5042,6 +5059,14 @@ export default function TranscriptViewerPage() {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Completed:</span>
                       <span>{formatDate(transcription.completedAt)}</span>
+                    </div>
+                  )}
+                  {formatRetentionLabel(transcription) && (
+                    <div className="flex justify-between gap-3">
+                      <span className="text-gray-600">Retention:</span>
+                      <span className={`text-right ${isRetentionDeleted(transcription) ? 'font-medium text-red-600' : ''}`}>
+                        {formatRetentionLabel(transcription)}
+                      </span>
                     </div>
                   )}
                 </div>

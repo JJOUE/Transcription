@@ -24,6 +24,7 @@ import {
   TranscriptionJob
 } from '@/lib/firebase/transcriptions';
 import { formatDuration } from '@/lib/utils';
+import { formatRetentionLabel, isRetentionDeleted } from '@/lib/utils/retention';
 import { doc, getDoc, getFirestore } from 'firebase/firestore';
 import { AudioPlayer } from '@/components/ui/AudioPlayer';
 
@@ -484,6 +485,11 @@ export function TranscriptionQueue() {
                         <span>{item.mode === 'ai' ? 'AI' : item.mode === 'human' ? 'Human' : item.mode === 'hybrid' ? 'Hybrid' : item.mode}</span>
                         <span>{formatDuration(item.duration || 0)}</span>
                         <CreditDisplay amount={item.creditsUsed || 0} size="sm" />
+                        {formatRetentionLabel(item) && (
+                          <span className={isRetentionDeleted(item) ? 'font-medium text-red-600' : 'text-gray-500'}>
+                            {formatRetentionLabel(item)}
+                          </span>
+                        )}
                       </div>
                     </div>
                     
@@ -580,7 +586,10 @@ export function TranscriptionQueue() {
                         <Archive className="h-4 w-4 mr-1" />
                         Archive job
                       </Button>
-                      {item.downloadURL && (
+                      {isRetentionDeleted(item) && (item.downloadURL || item.templateURL) && (
+                        <span className="text-sm font-medium text-red-600">Files expired/deleted</span>
+                      )}
+                      {!isRetentionDeleted(item) && item.downloadURL && (
                         <Button variant="ghost" size="sm" className="text-gray-600">
                           <a href={item.downloadURL} target="_blank" rel="noopener noreferrer" className="flex items-center">
                             <Download className="h-4 w-4 mr-1" />
@@ -588,7 +597,7 @@ export function TranscriptionQueue() {
                           </a>
                         </Button>
                       )}
-                      {item.templateURL && (
+                      {!isRetentionDeleted(item) && item.templateURL && (
                         <Button variant="ghost" size="sm" className="text-purple-600">
                           <a href={item.templateURL} target="_blank" rel="noopener noreferrer" className="flex items-center">
                             <Download className="h-4 w-4 mr-1" />
@@ -674,6 +683,11 @@ export function TranscriptionQueue() {
                         {item.domain && <span>📄 {item.domain.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>}
                         <span>{formatDuration(item.duration || 0)}</span>
                         <CreditDisplay amount={item.creditsUsed || 0} size="sm" />
+                        {formatRetentionLabel(item) && (
+                          <span className={isRetentionDeleted(item) ? 'font-medium text-red-600' : 'text-gray-500'}>
+                            {formatRetentionLabel(item)}
+                          </span>
+                        )}
                       </div>
                     </div>
                     
@@ -737,7 +751,10 @@ export function TranscriptionQueue() {
                         <Archive className="h-4 w-4 mr-1" />
                         Archive job
                       </Button>
-                      {item.downloadURL && (
+                      {isRetentionDeleted(item) && (item.downloadURL || item.templateURL) && (
+                        <span className="text-sm font-medium text-red-600">Files expired/deleted</span>
+                      )}
+                      {!isRetentionDeleted(item) && item.downloadURL && (
                         <Button variant="ghost" size="sm" className="text-gray-600">
                           <a href={item.downloadURL} target="_blank" rel="noopener noreferrer" className="flex items-center">
                             <Download className="h-4 w-4 mr-1" />
@@ -745,7 +762,7 @@ export function TranscriptionQueue() {
                           </a>
                         </Button>
                       )}
-                      {item.templateURL && (
+                      {!isRetentionDeleted(item) && item.templateURL && (
                         <Button variant="ghost" size="sm" className="text-purple-600">
                           <a href={item.templateURL} target="_blank" rel="noopener noreferrer" className="flex items-center">
                             <Download className="h-4 w-4 mr-1" />
@@ -818,8 +835,19 @@ export function TranscriptionQueue() {
                 <p className="text-sm text-gray-600">
                   <strong>Mode:</strong> {selectedJob.mode || 'Unknown'}
                 </p>
+                {formatRetentionLabel(selectedJob) && (
+                  <p className={`text-sm ${isRetentionDeleted(selectedJob) ? 'font-medium text-red-600' : 'text-gray-600'}`}>
+                    <strong>Retention:</strong> {formatRetentionLabel(selectedJob)}
+                  </p>
+                )}
 
-                {selectedJob.downloadURL && (
+                {isRetentionDeleted(selectedJob) && (selectedJob.downloadURL || selectedJob.templateURL) && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm font-medium text-red-700">
+                    Files expired/deleted
+                  </div>
+                )}
+
+                {!isRetentionDeleted(selectedJob) && selectedJob.downloadURL && (
                   <div className="mb-4 pt-2">
                     <AudioPlayer
                       src={selectedJob.downloadURL}
@@ -829,7 +857,7 @@ export function TranscriptionQueue() {
                 )}
 
                 {/* Template download for human transcription */}
-                {selectedJob.templateURL && (
+                {!isRetentionDeleted(selectedJob) && selectedJob.templateURL && (
                   <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
                     <div className="flex items-center justify-between">
                       <div>
