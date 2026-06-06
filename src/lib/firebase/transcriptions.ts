@@ -41,6 +41,11 @@ export interface TranscriptionJob {
   createdAt: Timestamp;
   updatedAt: Timestamp;
   completedAt?: Timestamp;
+  isArchived?: boolean; // Soft archive for hiding jobs from active admin work queues
+  archivedAt?: Timestamp;
+  archivedBy?: string;
+  archiveReason?: string;
+  archiveSource?: 'admin-work-list';
   // Template metadata fields
   clientName?: string;
   projectName?: string;
@@ -188,6 +193,27 @@ export const getTranscriptionJobsByStatus = async (status: TranscriptionStatus):
     id: doc.id,
     ...doc.data()
   } as TranscriptionJob));
+};
+
+export const archiveTranscriptionJob = async (
+  id: string,
+  archivedBy: string,
+  archiveReason?: string
+): Promise<void> => {
+  const docRef = doc(db, TRANSCRIPTIONS_COLLECTION, id);
+  const archiveData: Partial<TranscriptionJob> = {
+    isArchived: true,
+    archivedAt: Timestamp.now(),
+    archivedBy,
+    archiveSource: 'admin-work-list',
+    updatedAt: Timestamp.now()
+  };
+
+  if (archiveReason) {
+    archiveData.archiveReason = archiveReason;
+  }
+
+  await updateDoc(docRef, archiveData);
 };
 
 export const approveTranscriptionReview = async (id: string): Promise<void> => {

@@ -34,6 +34,11 @@ export interface TranscriptionJob {
   createdAt: FirebaseFirestore.Timestamp;
   updatedAt: FirebaseFirestore.Timestamp;
   completedAt?: FirebaseFirestore.Timestamp;
+  isArchived?: boolean; // Soft archive for hiding jobs from active admin work queues
+  archivedAt?: FirebaseFirestore.Timestamp;
+  archivedBy?: string;
+  archiveReason?: string;
+  archiveSource?: 'admin-work-list';
   expectedSpeakerCount?: 1 | 2 | 3 | 4 | 5; // Client's expected speaker count for review/cleanup metadata
   // Add-on options
   rushDelivery?: boolean; // Whether rush delivery (24-48hr) was requested

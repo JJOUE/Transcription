@@ -16,6 +16,21 @@ import Link from 'next/link';
 import { TranscriptionJob } from '@/lib/firebase/transcriptions';
 import { collection, getDocs, query, orderBy, getFirestore, where, doc, getDoc } from 'firebase/firestore';
 
+type AdminStatsJob = {
+  id?: string;
+  status?: string;
+  rushDelivery?: boolean;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+  completedAt: Date | null;
+  isArchived?: boolean;
+};
+
+type AdminPackageSummary = {
+  id?: string;
+  active?: boolean;
+};
+
 export default function AdminPage() {
   const { userData, loading: authLoading } = useAuth();
   const { getAllUsers, getAllTransactions } = useCredits();
@@ -104,6 +119,8 @@ export default function AdminPage() {
 
       // Filter for jobs needing admin action (matches queue page logic)
       const actionableJobs = allJobs.filter(job => {
+        if (job.isArchived) return false;
+
         const isStuckProcessing = job.status === 'processing' && !job.speechmaticsJobId;
         return (
           // Office Studio jobs (except completed/cancelled)
@@ -197,7 +214,7 @@ export default function AdminPage() {
           return new Date(timestamp as string | number);
         };
 
-        const jobs = snapshot.docs.map(docSnap => {
+        const jobs = snapshot.docs.map((docSnap): AdminStatsJob => {
           const data = docSnap.data();
           return {
             id: docSnap.id,
@@ -206,7 +223,7 @@ export default function AdminPage() {
             updatedAt: convertToDate(data.updatedAt),
             completedAt: convertToDate(data.completedAt)
           };
-        });
+        }).filter(job => !job.isArchived);
 
         // Calculate system statistics
         const queuedJobs = jobs.filter(j => j.status === 'queued').length;
@@ -235,11 +252,11 @@ export default function AdminPage() {
           return sum + wallet;
         }, 0);
 
-        const allPackages = packagesSnapshot.docs.map(docSnap => ({
+        const allPackages: AdminPackageSummary[] = packagesSnapshot.docs.map(docSnap => ({
           id: docSnap.id,
           ...docSnap.data()
         }));
-        const activePackagesCount = allPackages.filter((p: { active?: boolean }) => p.active).length;
+        const activePackagesCount = allPackages.filter(p => p.active).length;
         const totalPackagesSold = packagePurchases.length;
 
         // Calculate actual processing times from completed jobs
@@ -251,7 +268,7 @@ export default function AdminPage() {
             const startTime = job.createdAt;
             const endTime = job.completedAt;
             if (startTime && endTime) {
-              return sum + (endTime - startTime);
+              return sum + (endTime.getTime() - startTime.getTime());
             }
             return sum;
           }, 0);

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from 'react';
-import { Download, CheckCircle, XCircle, Edit, Eye, Music, Upload, RotateCcw, Zap } from 'lucide-react';
+import { Archive, Download, CheckCircle, XCircle, Edit, Eye, Music, Upload, RotateCcw, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -10,8 +10,10 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { AudioPlayer } from '@/components/ui/AudioPlayer';
 import { useToast } from '@/components/ui/use-toast';
 import { useCredits } from '@/contexts/CreditContext';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   approveTranscriptionReview,
+  archiveTranscriptionJob,
   rejectTranscriptionJob,
   submitHumanTranscription,
   TranscriptionJob,
@@ -41,11 +43,13 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { refundCredits } = useCredits();
+  const { user } = useAuth();
   
   // Office Studio management state
   const [assignedTypistInput, setAssignedTypistInput] = useState(job.assignedTypistName || '');
   const [dueDateInput, setDueDateInput] = useState('');
   const [uploadingCompletedDoc, setUploadingCompletedDoc] = useState(false);
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const completedDocInputRef = useRef<HTMLInputElement>(null);
 
   // Handle file upload - uploads directly to Storage (no parsing)
@@ -199,6 +203,29 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
       toast({
         title: "Error",
         description: "Failed to reject job. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleArchive = async () => {
+    if (!job.id) return;
+    setIsLoading(true);
+    try {
+      await archiveTranscriptionJob(job.id, user?.uid || 'unknown-admin');
+      toast({
+        title: "Job archived",
+        description: "The job was removed from the active work list. No files were deleted.",
+      });
+      setShowArchiveConfirm(false);
+      onComplete();
+    } catch (error) {
+      console.error('Archive error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to archive job. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -780,6 +807,17 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
               Reject
             </Button>
           )}
+
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-gray-700 border-gray-300 hover:bg-gray-100"
+            onClick={() => setShowArchiveConfirm(true)}
+            disabled={isLoading}
+          >
+            <Archive className="h-4 w-4 mr-1" />
+            Archive job
+          </Button>
         </div>
         
         {/* Office Studio Management Panel */}
@@ -1041,6 +1079,35 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                   </Button>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showArchiveConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-[#003366] mb-2">
+              Remove from work list?
+            </h3>
+            <p className="text-sm text-gray-600 mb-5">
+              Remove this job from the work list? This will hide it from the active admin queue but will not delete files.
+            </p>
+            <div className="flex flex-col sm:flex-row justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowArchiveConfirm(false)}
+                disabled={isLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-[#003366] hover:bg-[#004080] text-white"
+                onClick={handleArchive}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Removing...' : 'Remove from work list'}
+              </Button>
             </div>
           </div>
         </div>

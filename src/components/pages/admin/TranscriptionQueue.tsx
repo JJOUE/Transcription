@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Filter, Download, CheckCircle, XCircle, Eye, Edit, RefreshCw, Zap, RotateCcw } from 'lucide-react';
+import { Archive, Search, Filter, Download, CheckCircle, XCircle, Eye, Edit, RefreshCw, Zap, RotateCcw, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,6 +18,7 @@ import { useCredits } from '@/contexts/CreditContext';
 import {
   getAllTranscriptionJobs,
   approveTranscriptionReview,
+  archiveTranscriptionJob,
   rejectTranscriptionJob,
   submitHumanTranscription,
   TranscriptionJob
@@ -33,6 +34,7 @@ export function TranscriptionQueue() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterJobType, setFilterJobType] = useState('all');
   const [selectedJob, setSelectedJob] = useState<TranscriptionJob | null>(null);
+  const [selectedArchiveJob, setSelectedArchiveJob] = useState<TranscriptionJob | null>(null);
   const [transcript, setTranscript] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [queueItems, setQueueItems] = useState<TranscriptionJob[]>([]);
@@ -257,6 +259,14 @@ export function TranscriptionQueue() {
             description: "Job has been resubmitted to Speechmatics. It may take a few minutes to complete.",
           });
           break;
+        case 'archive':
+          await archiveTranscriptionJob(jobId, user?.uid || 'unknown-admin');
+          setSelectedArchiveJob(null);
+          toast({
+            title: "Job archived",
+            description: "The job was removed from the active work list. No files were deleted.",
+          });
+          break;
       }
       
       // Refresh the queue after action
@@ -275,6 +285,8 @@ export function TranscriptionQueue() {
   };
 
   const filteredItems = queueItems.filter(item => {
+    if (item.isArchived) return false;
+
     const userEmail = userEmails[item.userId] || '';
     const filename = item.originalFilename || item.filename || '';
     const matchesSearch = filename.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -315,6 +327,8 @@ export function TranscriptionQueue() {
 
   // Calculate stats only for jobs that need admin action
   const adminActionItems = queueItems.filter(item => {
+    if (item.isArchived) return false;
+
     return (item.type === 'office' && !['complete', 'cancelled'].includes(item.status)) ||
            (item.mode === 'human' && !['complete', 'cancelled'].includes(item.status)) || 
            (item.mode === 'hybrid' && ['pending-review', 'under-review'].includes(item.status)) ||
@@ -556,6 +570,16 @@ export function TranscriptionQueue() {
                         <XCircle className="h-4 w-4 mr-1" />
                         Reject
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-gray-700"
+                        onClick={() => setSelectedArchiveJob(item)}
+                        disabled={isLoading}
+                      >
+                        <Archive className="h-4 w-4 mr-1" />
+                        Archive job
+                      </Button>
                       {item.downloadURL && (
                         <Button variant="ghost" size="sm" className="text-gray-600">
                           <a href={item.downloadURL} target="_blank" rel="noopener noreferrer" className="flex items-center">
@@ -702,6 +726,16 @@ export function TranscriptionQueue() {
                       >
                         <XCircle className="h-4 w-4 mr-1" />
                         Reject
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-gray-700"
+                        onClick={() => setSelectedArchiveJob(item)}
+                        disabled={isLoading}
+                      >
+                        <Archive className="h-4 w-4 mr-1" />
+                        Archive job
                       </Button>
                       {item.downloadURL && (
                         <Button variant="ghost" size="sm" className="text-gray-600">
@@ -876,6 +910,38 @@ export function TranscriptionQueue() {
                   </Button>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedArchiveJob && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-[#003366] mb-2">
+              Remove from work list?
+            </h3>
+            <p className="text-sm text-gray-600 mb-2">
+              Remove this job from the work list? This will hide it from the active admin queue but will not delete files.
+            </p>
+            <p className="text-xs text-gray-500 mb-5">
+              {selectedArchiveJob.originalFilename || selectedArchiveJob.filename || 'Unknown file'}
+            </p>
+            <div className="flex flex-col sm:flex-row justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setSelectedArchiveJob(null)}
+                disabled={isLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-[#003366] hover:bg-[#004080] text-white"
+                onClick={() => selectedArchiveJob.id && handleAction(selectedArchiveJob.id, 'archive')}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Removing...' : 'Remove from work list'}
+              </Button>
             </div>
           </div>
         </div>
