@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import ClientWrapper from "@/components/ClientWrapper";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { validateProductionEnvironment, logValidationResults } from "@/lib/config/production-validation";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
-
-const inter = Inter({ subsets: ["latin"] });
 
 // Run production validation on server startup
 if (typeof window === 'undefined') {
@@ -37,7 +34,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body>
         {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && (
           <GoogleAnalytics GA_MEASUREMENT_ID={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
         )}
