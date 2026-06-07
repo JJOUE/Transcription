@@ -2,6 +2,77 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 
+type SpeechmaticsFormToken = {
+  content?: string;
+  speaker?: string;
+};
+
+type SpeechmaticsResult = {
+  type?: string;
+  alternatives?: SpeechmaticsFormToken[];
+  content?: string;
+  start_time?: number;
+  end_time?: number;
+  speaker?: string;
+  attaches_to?: 'previous' | 'next';
+  is_eos?: boolean;
+  entity_class?: string;
+  spoken_form?: SpeechmaticsFormToken[];
+  written_form?: SpeechmaticsFormToken[];
+};
+
+const isTranscriptTextToken = (result: SpeechmaticsResult) =>
+  result.type === 'word' || result.type === 'entity';
+
+const getFormTokenContent = (token: SpeechmaticsFormToken | string | undefined) => {
+  if (!token) return '';
+  return typeof token === 'string' ? token : token.content || '';
+};
+
+const getSpeechmaticsResultContent = (result: SpeechmaticsResult) => {
+  const alternativeContent = result.alternatives?.[0]?.content;
+  if (alternativeContent) return alternativeContent;
+
+  if (typeof result.content === 'string' && result.content.trim()) {
+    return result.content;
+  }
+
+  if (result.type === 'entity' && result.written_form?.length) {
+    return result.written_form
+      .map(getFormTokenContent)
+      .filter(Boolean)
+      .join(' ');
+  }
+
+  return '';
+};
+
+const summarizeSpeechmaticsResults = (results: SpeechmaticsResult[]) => {
+  const typeCounts: Record<string, number> = {};
+  const skippedTypeCounts: Record<string, number> = {};
+  const entityClassCounts: Record<string, number> = {};
+
+  for (const result of results) {
+    const type = result.type || 'unknown';
+    typeCounts[type] = (typeCounts[type] || 0) + 1;
+
+    if (result.type === 'entity') {
+      const entityClass = result.entity_class || 'unknown';
+      entityClassCounts[entityClass] = (entityClassCounts[entityClass] || 0) + 1;
+    }
+
+    const hasTranscriptContent =
+      (isTranscriptTextToken(result) || result.type === 'punctuation') &&
+      Boolean(getSpeechmaticsResultContent(result));
+
+    if (!hasTranscriptContent) {
+      skippedTypeCounts[type] = (skippedTypeCounts[type] || 0) + 1;
+    }
+  }
+
+  return { typeCounts, skippedTypeCounts, entityClassCounts };
+};
+
 export async function POST(request: NextRequest) {
   console.log('[Speechmatics Webhook] ========================================');
   console.log('[Speechmatics Webhook] WEBHOOK RECEIVED at:', new Date().toISOString());
@@ -47,7 +118,6 @@ export async function POST(request: NextRequest) {
 
     if (!speechmaticsJobId) {
       console.error('[Speechmatics Webhook] Missing job ID in payload. Payload keys:', Object.keys(payload));
-      console.error('[Speechmatics Webhook] Full payload:', JSON.stringify(payload, null, 2));
       return NextResponse.json({ error: 'Missing job ID' }, { status: 400 });
     }
 
@@ -141,86 +211,90 @@ export async function POST(request: NextRequest) {
 
         console.log(`[Speechmatics Webhook] Retrieved transcript for job ${jobId}`);
 
-        // Debug: Log the overall transcript structure
-        console.log(`[Speechmatics Webhook] Transcript metadata:`, JSON.stringify(transcriptData.metadata, null, 2));
-        console.log(`[Speechmatics Webhook] First 3 results sample:`, JSON.stringify(transcriptData.results?.slice(0, 3), null, 2));
-
         // Create timestamped segments from Speechmatics results
         const timestampedSegments = [];
         console.log(`[Speechmatics Webhook] Processing results for timestamped segments. Results count: ${transcriptData.results?.length || 0}`);
 
         if (transcriptData.results && Array.isArray(transcriptData.results)) {
+          const resultSummary = summarizeSpeechmaticsResults(transcriptData.results);
+          console.log('[Speechmatics Webhook] Result token summary:', resultSummary);
+
           let currentSentence = '';
-          let sentenceStartTime = null;
+          let sentenceStartTime: number | null = null;
           let sentenceEndTime = 0;
-          let currentSpeaker = null; // Track current speaker
+          let currentSpeaker: string | null = null; // Track current speaker
 
-          for (const result of transcriptData.results) {
-            if (result.alternatives && result.alternatives[0] && result.alternatives[0].content) {
-              const word = result.alternatives[0].content;
-              const startTime = result.start_time || 0;
-              const endTime = result.end_time || 0;
+          for (const result of transcriptData.results as SpeechmaticsResult[]) {
+            const tokenContent = getSpeechmaticsResultContent(result);
+            const isTextToken = isTranscriptTextToken(result);
+            const isPunctuationToken = result.type === 'punctuation';
 
-              // Check both possible speaker field locations
-              const speakerId = result.speaker || result.alternatives[0].speaker || 'UU';
+            if (!tokenContent || (!isTextToken && !isPunctuationToken)) {
+              continue;
+            }
 
-              // Debug log to see the actual structure
-              if (result.type === 'word') {
-                console.log(`[Speechmatics Webhook] Word: "${word}", Speaker from result: ${result.speaker}, Speaker from alternative: ${result.alternatives[0].speaker}, Final speakerId: ${speakerId}`);
+            const startTime = typeof result.start_time === 'number' ? result.start_time : sentenceStartTime ?? 0;
+            const endTime = typeof result.end_time === 'number' ? result.end_time : sentenceEndTime;
+
+            // Check both possible speaker field locations. Entity tokens can carry their own span.
+            const speakerId = result.speaker || result.alternatives?.[0]?.speaker || currentSpeaker || 'UU';
+
+            // Initialize sentence start time and speaker
+            if (sentenceStartTime === null && isTextToken) {
+              sentenceStartTime = startTime;
+              currentSpeaker = speakerId;
+            }
+
+            // Check if speaker changed - if so, end current sentence and start new one
+            const speakerChanged = Boolean(currentSpeaker && currentSpeaker !== speakerId && isTextToken);
+
+            if (speakerChanged && currentSentence.trim()) {
+              // Complete the current sentence before speaker change
+              timestampedSegments.push({
+                start: sentenceStartTime,
+                end: sentenceEndTime,
+                text: currentSentence.trim(),
+                speaker: currentSpeaker
+              });
+
+              // Start new sentence with new speaker
+              currentSentence = tokenContent;
+              sentenceStartTime = startTime;
+              currentSpeaker = speakerId;
+              sentenceEndTime = endTime;
+            } else {
+              // Add text or punctuation to current sentence
+              if (isPunctuationToken && result.attaches_to === 'previous') {
+                currentSentence += tokenContent; // Attach punctuation directly
+              } else if (isTextToken) {
+                currentSentence += (currentSentence ? ' ' : '') + tokenContent;
+                if (!currentSpeaker) currentSpeaker = speakerId; // Set speaker if not set
+              } else if (isPunctuationToken) {
+                currentSentence += tokenContent;
               }
 
-              // Initialize sentence start time and speaker
-              if (sentenceStartTime === null && result.type === 'word') {
-                sentenceStartTime = startTime;
-                currentSpeaker = speakerId;
-              }
-
-              // Check if speaker changed - if so, end current sentence and start new one
-              const speakerChanged = currentSpeaker && currentSpeaker !== speakerId && result.type === 'word';
-
-              if (speakerChanged && currentSentence.trim()) {
-                // Complete the current sentence before speaker change
-                timestampedSegments.push({
-                  start: sentenceStartTime,
-                  end: sentenceEndTime,
-                  text: currentSentence.trim(),
-                  speaker: currentSpeaker
-                });
-
-                // Start new sentence with new speaker
-                currentSentence = word;
-                sentenceStartTime = startTime;
-                currentSpeaker = speakerId;
+              if (isTextToken || typeof result.end_time === 'number') {
                 sentenceEndTime = endTime;
-              } else {
-                // Add word or punctuation to current sentence
-                if (result.type === 'punctuation' && result.attaches_to === 'previous') {
-                  currentSentence += word; // Attach punctuation directly
-                } else if (result.type === 'word') {
-                  currentSentence += (currentSentence ? ' ' : '') + word;
-                  if (!currentSpeaker) currentSpeaker = speakerId; // Set speaker if not set
-                }
-                sentenceEndTime = endTime;
               }
+            }
 
-              // Check if this ends a sentence
-              const endsWithPunctuation = result.type === 'punctuation' && result.is_eos;
+            // Check if this ends a sentence
+            const endsWithPunctuation = isPunctuationToken && result.is_eos;
 
-              if (endsWithPunctuation && currentSentence.trim()) {
-                // Complete the sentence segment
-                timestampedSegments.push({
-                  start: sentenceStartTime,
-                  end: sentenceEndTime,
-                  text: currentSentence.trim(),
-                  speaker: currentSpeaker
-                });
+            if (endsWithPunctuation && currentSentence.trim()) {
+              // Complete the sentence segment
+              timestampedSegments.push({
+                start: sentenceStartTime,
+                end: sentenceEndTime,
+                text: currentSentence.trim(),
+                speaker: currentSpeaker
+              });
 
-                // Reset for next sentence
-                currentSentence = '';
-                sentenceStartTime = null;
-                currentSpeaker = null;
-                sentenceEndTime = 0;
-              }
+              // Reset for next sentence
+              currentSentence = '';
+              sentenceStartTime = null;
+              currentSpeaker = null;
+              sentenceEndTime = 0;
             }
           }
 
