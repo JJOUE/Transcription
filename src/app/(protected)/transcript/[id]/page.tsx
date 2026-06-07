@@ -3123,23 +3123,18 @@ export default function TranscriptViewerPage() {
     return !highlightedSpeakers.has(speaker || '');
   };
 
-  // Get unique speakers from the transcript - calculate at component level
+  // Active speakers are the speaker IDs currently assigned to draft transcript segments.
   const getOrderedSpeakers = (): string[] => {
-    if (!transcription?.timestampedTranscript || transcription.timestampedTranscript.length === 0) {
+    const draftSegments = getDraftTimestampedSegmentEntries();
+    if (draftSegments.length === 0) {
       return [];
     }
 
-    const chronologicalSpeakers = [...new Set(
-      transcription.timestampedTranscript
+    return [...new Set(
+      draftSegments
         .map(segment => segment.speaker)
-        .filter((speaker): speaker is string => Boolean(speaker))
-    )].filter(speaker => speaker !== 'UU');
-
-    const speakersAddedOutsideTranscript = speakerOrder.filter(
-      speaker => speaker && speaker !== 'UU' && !chronologicalSpeakers.includes(speaker)
-    );
-
-    return [...chronologicalSpeakers, ...speakersAddedOutsideTranscript];
+        .filter((speaker): speaker is string => Boolean(speaker) && speaker !== 'UU')
+    )];
   };
 
   const orderedSpeakers = getOrderedSpeakers();
@@ -3931,23 +3926,34 @@ export default function TranscriptViewerPage() {
                                             </Button>
                                           </div>
 
-                                          <div className="flex flex-wrap gap-1.5">
-                                            {speakerLabelPresets.map((preset) => (
-                                              <Button
-                                                key={`split-speaker-preset-${segmentIndex}-${preset}`}
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                className="h-7 bg-white px-2 text-[11px]"
-                                                disabled={saving}
-                                                onClick={() => setSplitSpeakerNameDrafts(prev => ({
+                                          <div>
+                                            <label
+                                              htmlFor={`split-speaker-preset-${segmentIndex}`}
+                                              className="mb-1 block text-xs font-medium text-blue-900"
+                                            >
+                                              Preset label
+                                            </label>
+                                            <select
+                                              id={`split-speaker-preset-${segmentIndex}`}
+                                              value=""
+                                              onChange={(e) => {
+                                                const preset = e.target.value;
+                                                if (!preset) return;
+                                                setSplitSpeakerNameDrafts(prev => ({
                                                   ...prev,
                                                   [segmentIndex]: preset
-                                                }))}
-                                              >
-                                                {preset}
-                                              </Button>
-                                            ))}
+                                                }));
+                                              }}
+                                              className="w-full rounded-md border border-blue-200 bg-white px-2 py-1.5 text-xs text-gray-800"
+                                              disabled={saving}
+                                            >
+                                              <option value="">Select preset</option>
+                                              {speakerLabelPresets.map((preset) => (
+                                                <option key={`split-speaker-preset-${segmentIndex}-${preset}`} value={preset}>
+                                                  {preset}
+                                                </option>
+                                              ))}
+                                            </select>
                                           </div>
                                         </div>
                                       )}
@@ -4046,23 +4052,34 @@ export default function TranscriptViewerPage() {
                             </Button>
                           </div>
 
-                          <div className="mt-2 flex flex-wrap gap-1.5">
-                            {speakerLabelPresets.map((preset) => (
-                              <Button
-                                key={`paragraph-speaker-preset-${controlIndex}-${preset}`}
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="h-7 bg-white px-2 text-[11px]"
-                                disabled={saving}
-                                onClick={() => setParagraphSpeakerNameDrafts(prev => ({
+                          <div className="mt-2">
+                            <label
+                              htmlFor={`paragraph-speaker-preset-${controlIndex}`}
+                              className="mb-1 block text-xs font-medium text-blue-900"
+                            >
+                              Preset label
+                            </label>
+                            <select
+                              id={`paragraph-speaker-preset-${controlIndex}`}
+                              value=""
+                              onChange={(e) => {
+                                const preset = e.target.value;
+                                if (!preset) return;
+                                setParagraphSpeakerNameDrafts(prev => ({
                                   ...prev,
                                   [controlIndex]: preset
-                                }))}
-                              >
-                                {preset}
-                              </Button>
-                            ))}
+                                }));
+                              }}
+                              className="w-full rounded-md border border-blue-200 bg-white px-2 py-1.5 text-xs text-gray-800"
+                              disabled={saving}
+                            >
+                              <option value="">Select preset</option>
+                              {speakerLabelPresets.map((preset) => (
+                                <option key={`paragraph-speaker-preset-${controlIndex}-${preset}`} value={preset}>
+                                  {preset}
+                                </option>
+                              ))}
+                            </select>
                           </div>
 
                           <Button
@@ -4376,7 +4393,7 @@ export default function TranscriptViewerPage() {
   const transcriptWordCount = getWordCount(getDraftPlainTranscript());
   const editableParagraphBlocks = buildEditableParagraphBlocks();
   const speakerCount = orderedSpeakers.length;
-  const speakerSegmentCounts = (transcription.timestampedTranscript || []).reduce<Record<string, number>>((counts, segment) => {
+  const speakerSegmentCounts = getDraftTimestampedSegmentEntries().reduce<Record<string, number>>((counts, segment) => {
     if (segment.speaker && segment.speaker !== 'UU') {
       counts[segment.speaker] = (counts[segment.speaker] || 0) + 1;
     }
@@ -5571,26 +5588,32 @@ export default function TranscriptViewerPage() {
                                 Apply Name
                               </Button>
 
-                              <div className="space-y-2">
-                                <p className="text-xs font-medium text-gray-600">Preset shortcuts</p>
-                                <div className="grid grid-cols-2 gap-2">
+                              <div className="space-y-1.5">
+                                <label
+                                  htmlFor={`sidebar-speaker-preset-${speaker}`}
+                                  className="text-xs font-medium text-gray-600"
+                                >
+                                  Preset label
+                                </label>
+                                <select
+                                  id={`sidebar-speaker-preset-${speaker}`}
+                                  value=""
+                                  onChange={(e) => {
+                                    const preset = e.target.value;
+                                    if (!preset) return;
+                                    setSidebarSpeakerNameDraft(speaker, preset);
+                                    updateSpeakerName(speaker, preset);
+                                  }}
+                                  disabled={saving || !isEditing}
+                                  className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+                                >
+                                  <option value="">Select preset</option>
                                   {speakerLabelPresets.map((preset) => (
-                                    <Button
-                                      key={`workspace-preset-${speaker}-${preset}`}
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-auto min-h-8 justify-center whitespace-normal px-2 py-1 text-xs"
-                                      disabled={saving || !isEditing}
-                                      onClick={() => {
-                                        setSidebarSpeakerNameDraft(speaker, preset);
-                                        updateSpeakerName(speaker, preset);
-                                      }}
-                                    >
+                                    <option key={`workspace-preset-${speaker}-${preset}`} value={preset}>
                                       {preset}
-                                    </Button>
+                                    </option>
                                   ))}
-                                </div>
+                                </select>
                               </div>
                             </div>
                           </div>
