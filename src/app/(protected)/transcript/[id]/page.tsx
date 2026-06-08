@@ -1376,7 +1376,7 @@ export default function TranscriptViewerPage() {
 
     toast({
       title: 'Replace complete',
-      description: `Replaced ${replacementCount} occurrence(s). Click "Save Changes" to persist.`,
+      description: `Replaced ${replacementCount} occurrence(s). Click Save Transcript to persist.`,
       variant: 'default'
     });
   };
@@ -1446,7 +1446,7 @@ export default function TranscriptViewerPage() {
 
     toast({
       title: 'Replaced',
-      description: 'Replaced current match. Click "Save Changes" to persist.',
+      description: 'Replaced current match. Click Save Transcript to persist.',
       variant: 'default'
     });
   };
@@ -3531,7 +3531,7 @@ export default function TranscriptViewerPage() {
             <div className="space-y-6">
               <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
                 <p className="text-sm text-green-800">
-                  ✏️ <strong>Editing Transcript:</strong> Click on any speaker section to edit it inline. Changes will be saved when you click "Save Changes".
+                  <strong>Editing Transcript:</strong> Click on any speaker section to edit it inline. Changes will be saved when you click Save Transcript.
                 </p>
               </div>
 
@@ -4984,51 +4984,6 @@ export default function TranscriptViewerPage() {
           </div>
         </div>
 
-        {hasUnsavedTranscriptDraft && (
-          <div className="sticky top-[7.75rem] z-30 -mx-4 mb-6 border-y border-amber-200 bg-amber-50 px-4 py-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="font-medium text-amber-900">Unsaved transcript changes</p>
-                <p className="text-sm text-amber-800">
-                  Save Transcript to keep your edits, or discard them before leaving.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  className="bg-green-600 text-white hover:bg-green-700"
-                  onClick={saveEdits}
-                  disabled={saving}
-                >
-                  {saving ? <LoadingSpinner size="sm" className="mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                  Save Transcript
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={saveAndDownload}
-                  disabled={saving}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Save & Download
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={discardTranscriptChanges}
-                  disabled={saving}
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Discard Changes
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
           {/* Audio Player Section */}
           <div className="lg:col-span-1">
@@ -5153,72 +5108,6 @@ export default function TranscriptViewerPage() {
                         {showSpeakerLabels ? 'Shown' : 'Hidden'}
                       </p>
                     </div>
-                  </div>
-                </section>
-
-                <section className="space-y-3 border-t pt-4">
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-                    Edit Transcript
-                  </h3>
-                  <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
-                    {!isEditing ? (
-                      <>
-                        <p className="text-xs text-gray-600">
-                          Read-only view. Click Edit Transcript to make changes.
-                        </p>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="w-full justify-start"
-                          onClick={() => setIsEditing(true)}
-                          disabled={saving || transcription.status !== 'complete'}
-                        >
-                          <Edit3 className="h-4 w-4 mr-2" />
-                          Edit Transcript
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        {hasUnsavedTranscriptDraft && (
-                          <p className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
-                            Unsaved transcript changes are ready to save.
-                          </p>
-                        )}
-                        <Button
-                          type="button"
-                          size="sm"
-                          className="w-full justify-start bg-green-600 text-white hover:bg-green-700"
-                          onClick={saveEdits}
-                          disabled={saving}
-                        >
-                          {saving ? <LoadingSpinner size="sm" className="mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                          Save Transcript
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="w-full justify-start"
-                          onClick={discardTranscriptChanges}
-                          disabled={saving}
-                        >
-                          <X className="h-4 w-4 mr-2" />
-                          Discard Changes / Cancel Edit
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="w-full justify-start"
-                          onClick={() => setShowSearchPanel(true)}
-                          disabled={saving || !transcription.timestampedTranscript || transcription.timestampedTranscript.length === 0}
-                        >
-                          <Search className="h-4 w-4 mr-2" />
-                          Open Search
-                        </Button>
-                      </>
-                    )}
                   </div>
                 </section>
 
@@ -5842,36 +5731,6 @@ export default function TranscriptViewerPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg text-[#003366]">Transcript</CardTitle>
-                  {isEditing && (
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={discardTranscriptChanges}
-                        disabled={saving}
-                        variant="outline"
-                        size="sm"
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={saveEdits}
-                        disabled={saving}
-                        className="bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400"
-                        size="sm"
-                      >
-                        {saving ? (
-                          <>
-                            <LoadingSpinner size="sm" className="mr-2" />
-                            Saving...
-                          </>
-                        ) : (
-                          <>
-                            <Save className="h-4 w-4 mr-2" />
-                            Save Changes
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -5895,6 +5754,109 @@ export default function TranscriptViewerPage() {
                 ) : (
                   <div className="space-y-4">
                     <div className="bg-white rounded-lg border border-gray-200 p-6">
+                      <div className="sticky top-[8.5rem] z-30 -mx-6 -mt-6 mb-5 rounded-t-lg border-b border-gray-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur-sm">
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-[#003366]">
+                              {isEditing ? 'Editing mode is on' : 'Read-only transcript'}
+                            </p>
+                            <p className={`text-xs ${hasUnsavedTranscriptDraft ? 'text-amber-700' : 'text-gray-500'}`}>
+                              {isEditing
+                                ? hasUnsavedTranscriptDraft
+                                  ? 'Unsaved changes are ready to save.'
+                                  : 'Edit the transcript, then save when finished.'
+                                : 'Click Edit Transcript to make changes.'}
+                            </p>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            {!isEditing ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setIsEditing(true)}
+                                disabled={saving || transcription.status !== 'complete'}
+                              >
+                                <Edit3 className="h-4 w-4 mr-2" />
+                                Edit Transcript
+                              </Button>
+                            ) : (
+                              <>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  className="bg-green-600 text-white hover:bg-green-700"
+                                  onClick={saveEdits}
+                                  disabled={saving}
+                                >
+                                  {saving ? <LoadingSpinner size="sm" className="mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                                  Save Transcript
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={saveAndDownload}
+                                  disabled={saving}
+                                >
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Save & Download
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={discardTranscriptChanges}
+                                  disabled={saving}
+                                >
+                                  <X className="h-4 w-4 mr-2" />
+                                  Discard Changes
+                                </Button>
+                              </>
+                            )}
+
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setShowSearchPanel(true)}
+                              disabled={saving || !transcription.timestampedTranscript || transcription.timestampedTranscript.length === 0}
+                            >
+                              <Search className="h-4 w-4 mr-2" />
+                              Search
+                            </Button>
+
+                            {!isEditing && !isRetentionDeleted(transcription) && !transcription.adminTranscriptURL && (
+                              <div className="flex">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => exportTranscript(selectedFormat)}
+                                  className="rounded-r-none border-r-0"
+                                  size="sm"
+                                >
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Export
+                                </Button>
+                                <select
+                                  value={selectedFormat}
+                                  onChange={(e) => setSelectedFormat(e.target.value as ExportFormat)}
+                                  className="rounded-l-none rounded-r-md border border-gray-300 bg-white px-2 py-1.5 text-sm hover:bg-gray-50"
+                                >
+                                  <option value="pdf">PDF</option>
+                                  <option value="docx">DOCX</option>
+                                  <option value="docx-speaker-tab">DOCX - Speaker + Tab / Hanging Indent</option>
+                                  <option value="docx-speaker-space">DOCX - Speaker + Space</option>
+                                  <option value="srt">SRT</option>
+                                  <option value="vtt">VTT</option>
+                                </select>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
                       {!isEditing && (
                         <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
                           Read-only view. Click Edit Transcript to make changes.
