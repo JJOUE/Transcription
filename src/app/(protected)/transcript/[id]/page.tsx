@@ -248,6 +248,7 @@ export default function TranscriptViewerPage() {
   const [inlineSpeakerNameDraft, setInlineSpeakerNameDraft] = useState('');
   const [speakerOrder, setSpeakerOrder] = useState<string[]>([]);
   const [showSpeakerLabels, setShowSpeakerLabels] = useState(true);
+  const [speakerLabelsUppercase, setSpeakerLabelsUppercase] = useState(false);
   const [mergeSourceSpeaker, setMergeSourceSpeaker] = useState<string>('');
   const [mergeTargetSpeaker, setMergeTargetSpeaker] = useState<string>('');
   const [draggedSpeaker, setDraggedSpeaker] = useState<string | null>(null);
@@ -1077,7 +1078,7 @@ export default function TranscriptViewerPage() {
       const start = format === 'srt' ? formatSRTTimestamp(segment.start) : formatVTTTimestamp(segment.start);
       const end = format === 'srt' ? formatSRTTimestamp(segment.end) : formatVTTTimestamp(segment.end);
       const speakerPrefix = segment.speaker && segment.speaker !== 'UU'
-        ? `${getSpeakerDisplayName(segment.speaker)}: `
+        ? `${getFormattedSpeakerDisplayName(segment.speaker)}: `
         : '';
       const text = segment.text;
 
@@ -1138,13 +1139,13 @@ export default function TranscriptViewerPage() {
           timestampFrequency,
           speakerNames,
           getSpeakerColor,
-          getSpeakerDisplayName
+          getSpeakerDisplayName: getFormattedSpeakerDisplayName
         });
       } else if (format === 'docx' || format === 'docx-speaker-tab' || format === 'docx-speaker-space') {
         await exportTranscriptDOCX(templateData, {
           timestampFrequency,
           speakerNames,
-          getSpeakerDisplayName,
+          getSpeakerDisplayName: getFormattedSpeakerDisplayName,
           speakerLabelLayout: format === 'docx-speaker-tab'
             ? 'tab-hanging'
             : format === 'docx-speaker-space'
@@ -2328,6 +2329,12 @@ export default function TranscriptViewerPage() {
     return `Speaker ${speaker.replace('S', '')}`;
   };
 
+  const formatSpeakerLabel = (displayName: string): string =>
+    speakerLabelsUppercase ? displayName.toLocaleUpperCase('en-CA') : displayName;
+
+  const getFormattedSpeakerDisplayName = (speaker: string | undefined): string =>
+    formatSpeakerLabel(getSpeakerDisplayName(speaker));
+
   // Update speaker name
   const updateSpeakerName = async (speaker: string, newName: string) => {
     const updatedNames = {
@@ -3419,7 +3426,7 @@ export default function TranscriptViewerPage() {
                                   }}
                                   title="Click to rename this speaker"
                                 >
-                                  {getSpeakerDisplayName(segment.speaker)}
+                                  {getFormattedSpeakerDisplayName(segment.speaker)}
                                 </button>
                               )}
                               <span className="text-xs text-gray-500 font-mono">
@@ -3497,7 +3504,7 @@ export default function TranscriptViewerPage() {
                                     .filter((speaker) => speaker !== segment.speaker)
                                     .map((speaker) => (
                                       <option key={`block-${index}-speaker-${speaker}`} value={speaker}>
-                                        {getSpeakerDisplayName(speaker)}
+                                        {getFormattedSpeakerDisplayName(speaker)}
                                       </option>
                                     ))}
                                 </select>
@@ -3706,7 +3713,7 @@ export default function TranscriptViewerPage() {
                             setActiveParagraphSpeakerMenu(prev => prev === controlIndex ? null : controlIndex);
                           }}
                         >
-                          {currentSpeaker ? getSpeakerDisplayName(currentSpeaker) : 'Add speaker label'}
+                          {currentSpeaker ? getFormattedSpeakerDisplayName(currentSpeaker) : 'Add speaker label'}
                         </button>
                         {currentSpeaker && (
                           <button
@@ -3718,7 +3725,7 @@ export default function TranscriptViewerPage() {
                               removeSpeakerFromParagraph(block.segmentIndices);
                             }}
                             title="Remove this paragraph's speaker label without deleting transcript text"
-                            aria-label={`Remove speaker label ${getSpeakerDisplayName(currentSpeaker)} from this paragraph`}
+                            aria-label={`Remove speaker label ${getFormattedSpeakerDisplayName(currentSpeaker)} from this paragraph`}
                             disabled={saving}
                           >
                             Remove label
@@ -3871,7 +3878,7 @@ export default function TranscriptViewerPage() {
                                               <option value="">Choose existing speaker</option>
                                               {orderedSpeakers.map((speaker) => (
                                                 <option key={`split-speaker-${segmentIndex}-${speaker}`} value={speaker}>
-                                                  {getSpeakerDisplayName(speaker)}
+                                                  {getFormattedSpeakerDisplayName(speaker)}
                                                 </option>
                                               ))}
                                             </select>
@@ -3986,7 +3993,7 @@ export default function TranscriptViewerPage() {
                               <option value="">Choose existing speaker</option>
                               {orderedSpeakers.map((speaker) => (
                                 <option key={`paragraph-speaker-${controlIndex}-${speaker}`} value={speaker}>
-                                  {getSpeakerDisplayName(speaker)}
+                                  {getFormattedSpeakerDisplayName(speaker)}
                                 </option>
                               ))}
                             </select>
@@ -4204,7 +4211,7 @@ export default function TranscriptViewerPage() {
                   {showSpeakerLabels && speakerSegment.speaker && (
                     <div className="flex items-center mb-4">
                       <div className={`px-3 py-1 rounded-full text-xs font-semibold ${getSpeakerColor(speakerSegment.speaker)}`}>
-                        {getSpeakerDisplayName(speakerSegment.speaker)}
+                        {getFormattedSpeakerDisplayName(speakerSegment.speaker)}
                       </div>
                     </div>
                   )}
@@ -4475,7 +4482,7 @@ export default function TranscriptViewerPage() {
               </p>
               <p className="mt-2 text-xs text-gray-500">
                 {paragraphDeleteCandidate.speaker && paragraphDeleteCandidate.speaker !== 'UU'
-                  ? `${getSpeakerDisplayName(paragraphDeleteCandidate.speaker)} · `
+                  ? `${getFormattedSpeakerDisplayName(paragraphDeleteCandidate.speaker)} · `
                   : ''}
                 Starts at {formatTimestamp(paragraphDeleteCandidate.start)} · {paragraphDeleteCandidate.segmentIndices.length} segment{paragraphDeleteCandidate.segmentIndices.length === 1 ? '' : 's'}
               </p>
@@ -5538,7 +5545,7 @@ export default function TranscriptViewerPage() {
                               <div className="min-w-0">
                                 <p className="text-xs text-gray-500">{speaker}</p>
                                 <p className="font-semibold text-gray-900 break-words">
-                                  {getSpeakerDisplayName(speaker)}
+                                  {getFormattedSpeakerDisplayName(speaker)}
                                 </p>
                                 <p className="text-xs text-gray-500">
                                   {speakerSegmentCounts[speaker] || 0} segment{speakerSegmentCounts[speaker] === 1 ? '' : 's'}
@@ -5636,6 +5643,20 @@ export default function TranscriptViewerPage() {
                             {showSpeakerLabels ? 'Hide' : 'Show'}
                           </Button>
                         </div>
+                        <label className="flex items-start gap-2 rounded-md bg-gray-50 p-2 text-sm text-gray-700">
+                          <input
+                            type="checkbox"
+                            checked={speakerLabelsUppercase}
+                            onChange={(e) => setSpeakerLabelsUppercase(e.target.checked)}
+                            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#003366] focus:ring-[#003366]"
+                          />
+                          <span>
+                            <span className="font-medium">Speaker labels in ALL CAPS</span>
+                            <span className="block text-xs text-gray-500">
+                              Applies to labels in this workspace and downloads without changing saved speaker names.
+                            </span>
+                          </span>
+                        </label>
                       </div>
 
                       <div className="space-y-2 rounded-lg border border-gray-200 p-3">
@@ -5650,7 +5671,7 @@ export default function TranscriptViewerPage() {
                             <option value="">Merge from</option>
                             {orderedSpeakers.map((speaker) => (
                               <option key={`workspace-merge-source-${speaker}`} value={speaker}>
-                                {getSpeakerDisplayName(speaker)}
+                                {getFormattedSpeakerDisplayName(speaker)}
                               </option>
                             ))}
                           </select>
@@ -5665,7 +5686,7 @@ export default function TranscriptViewerPage() {
                               .filter((speaker) => speaker !== mergeSourceSpeaker)
                               .map((speaker) => (
                                 <option key={`workspace-merge-target-${speaker}`} value={speaker}>
-                                  {getSpeakerDisplayName(speaker)}
+                                  {getFormattedSpeakerDisplayName(speaker)}
                                 </option>
                               ))}
                           </select>
@@ -5795,7 +5816,7 @@ export default function TranscriptViewerPage() {
                           }}
                           className={`w-full px-3 py-2.5 rounded-lg text-sm font-semibold text-left transition-all hover:scale-[1.02] hover:shadow-md ${getSpeakerColor(speaker)}`}
                         >
-                          {getSpeakerDisplayName(speaker)}
+                          {getFormattedSpeakerDisplayName(speaker)}
                         </button>
                       ))}
                     </div>
