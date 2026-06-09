@@ -460,6 +460,7 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
   const speakerNames = options?.speakerNames || {};
   const speakerLabelLayout = options?.speakerLabelLayout || 'separate-line';
   const usesInlineSpeakerLabels = speakerLabelLayout === 'tab-hanging' || speakerLabelLayout === 'space-inline';
+  const hangingIndentTwips = 2268; // 4 cm, so wrapped lines align under transcript text.
 
   const getSpeakerDisplayName = (speaker: string | undefined): string => {
     const providedDisplayName = options?.getSpeakerDisplayName?.(speaker);
@@ -487,7 +488,7 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
         children.push(new TextRun({
           text: `${speakerDisplayName}:`,
           bold: true,
-          color: "003366",
+          color: "000000",
           size: 24
         }));
 
@@ -510,7 +511,7 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
         children.push(new TextRun({
           text: ` [${pendingTimestamp}]`,
           bold: true,
-          color: "003366", // Brand color for timestamps
+          color: "000000",
           size: 22
         }));
       }
@@ -518,10 +519,10 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
       paragraphs.push(new Paragraph({
         children,
         indent: speakerLabelLayout === 'tab-hanging'
-          ? { left: 720, hanging: 720 }
+          ? { left: hangingIndentTwips, hanging: hangingIndentTwips }
           : undefined,
         tabStops: speakerLabelLayout === 'tab-hanging'
-          ? [{ type: TabStopType.LEFT, position: 720 }]
+          ? [{ type: TabStopType.LEFT, position: hangingIndentTwips }]
           : undefined,
         spacing: {
           line: 300,
@@ -549,7 +550,7 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
             new TextRun({
               text: getSpeakerDisplayName(segment.speaker),
               bold: true,
-              color: "003366", // Brand color
+              color: "000000",
               size: 24
             })
           ],
@@ -570,7 +571,7 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
             new TextRun({
               text: getSpeakerDisplayName(segment.speaker),
               bold: true,
-              color: "003366",
+              color: "000000",
               size: 24
             })
           ],
