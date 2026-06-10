@@ -262,6 +262,10 @@ export function formatTranscriptMechanically(text: string): string {
   // Add missing space after sentence punctuation when another word follows.
   formatted = formatted.replace(/([.!?])(?=[A-Za-z])/g, '$1 ');
 
+  // Normalize standalone honorifics only; do not touch "ms" inside words.
+  formatted = formatted.replace(/\bmr\.?(?=\s|$)/gi, 'Mr.');
+  formatted = formatted.replace(/\b(?:ms|miss)\.?(?=\s|$)/gi, 'Ms.');
+
   // Capitalize the first letter after sentence-ending punctuation.
   formatted = formatted.replace(
     /([.!?]\s+)(["'“‘(\[]*)([a-z])/g,
@@ -280,6 +284,8 @@ export function formatTranscriptMechanically(text: string): string {
   protectedFragments.forEach((original, token) => {
     formatted = formatted.replace(new RegExp(token, 'g'), original);
   });
+
+  formatted = formatted.replace(/\b(Mr|Ms)\.\s*\./g, '$1.');
 
   return formatted.trim();
 }
@@ -306,6 +312,10 @@ export function demonstrateMechanicalFormatting(): void {
     ['Good morning everyone', 'Good morning, everyone'],
     ['Good afternoon everyone', 'Good afternoon, everyone'],
     ['Good evening everyone', 'Good evening, everyone'],
+    [
+      'mr smith spoke to ms wang. Mr. Jones replied to Ms. Chen. Miss Brown reviewed the forms and claims. The items and terms were listed. This transmission includes no changes to normal words.',
+      'Mr. Smith spoke to Ms. Wang. Mr. Jones replied to Ms. Chen. Ms. Brown reviewed the forms and claims. The items and terms were listed. This transmission includes no changes to normal words.'
+    ],
   ];
 
   console.log('[TranscriptProcessor] Mechanical Formatting Examples:');
