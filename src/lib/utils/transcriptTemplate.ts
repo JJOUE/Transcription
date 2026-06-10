@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import { Document, Packer, Paragraph, TextRun, AlignmentType, Header, Footer, Table, TableRow, TableCell, WidthType, TextDirection, PageBreak, ImageRun, TabStopType } from 'docx';
+import { Document, Packer, Paragraph, TextRun, AlignmentType, PageBreak, TabStopType } from 'docx';
 import { TranscriptionJob, TranscriptSegment } from '@/lib/firebase/transcriptions';
 import { Timestamp } from 'firebase/firestore';
 
@@ -14,30 +14,6 @@ export interface TranscriptTemplateData {
   date: string;
   transcriptContent: string;
   timestampedTranscript?: TranscriptSegment[]; // New field for timestamped data
-}
-
-// Helper function to fetch and convert image to base64 for embedding in DOCX
-async function fetchImageAsBase64(imagePath: string): Promise<string> {
-  try {
-    const response = await fetch(imagePath);
-    if (!response.ok) {
-      console.warn(`Failed to fetch image from ${imagePath}`);
-      return '';
-    }
-    const blob = await response.blob();
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result as string;
-        resolve(base64);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  } catch (error) {
-    console.warn(`Error loading image ${imagePath}:`, error);
-    return '';
-  }
 }
 
 // Utility function to format seconds into MM:SS or HH:MM:SS format
@@ -389,9 +365,8 @@ export async function exportTranscriptPDF(templateData: TranscriptTemplateData, 
   pdf.save(`${filename}_transcript.pdf`);
 }
 
-// Helper function to generate metadata table rows
-function generateMetadataRows(templateData: TranscriptTemplateData): TableRow[] {
-  const metadata = [
+const getTranscriptMetadataEntries = (templateData: TranscriptTemplateData): [string, string][] =>
+  [
     ...(templateData.clientName ? [['Client Name:', templateData.clientName]] : []),
     ...(templateData.projectName ? [['Project Name:', templateData.projectName]] : []),
     ['Date:', templateData.date],
@@ -400,41 +375,31 @@ function generateMetadataRows(templateData: TranscriptTemplateData): TableRow[] 
     ...(templateData.patientName ? [['Patient Name:', templateData.patientName]] : []),
     ...(templateData.location ? [['Location:', templateData.location]] : []),
     ...(templateData.time ? [['Time:', templateData.time]] : []),
-  ];
+  ] as [string, string][];
 
-  return metadata.map(([label, value]) =>
-    new TableRow({
-      children: [
-        new TableCell({
-          children: [new Paragraph({
-            children: [new TextRun({ text: label, bold: true, size: 22 })],
-            spacing: { before: 100, after: 100 },
-          })],
-          width: { size: 30, type: WidthType.PERCENTAGE },
-          shading: { fill: "F5F5F5" }, // Light gray background matching PDF
-          margins: {
-            top: 120,
-            bottom: 120,
-            left: 120,
-            right: 120,
-          },
-        }),
-        new TableCell({
-          children: [new Paragraph({
-            children: [new TextRun({ text: value, size: 22 })],
-            spacing: { before: 100, after: 100 },
-          })],
-          width: { size: 70, type: WidthType.PERCENTAGE },
-          margins: {
-            top: 120,
-            bottom: 120,
-            left: 120,
-            right: 120,
-          },
-        }),
-      ],
-    })
-  );
+function generateCoverPage(templateData: TranscriptTemplateData): Paragraph[] {
+  const metadata = getTranscriptMetadataEntries(templateData);
+
+  return [
+    new Paragraph({
+      children: [new TextRun({ text: "TRANSCRIPT", bold: true, underline: {}, size: 36, color: "000000" })],
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 2600, after: 500 },
+    }),
+    ...metadata.map(([label, value]) =>
+      new Paragraph({
+        children: [
+          new TextRun({ text: `${label} `, bold: true, size: 24, color: "000000" }),
+          new TextRun({ text: value, size: 24, color: "000000" }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 180 },
+      })
+    ),
+    new Paragraph({
+      children: [new PageBreak()],
+    }),
+  ];
 }
 
 // Helper function to generate DOCX transcript content with interval-based timestamps and speakers
@@ -615,114 +580,11 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
 }
 
 export async function exportTranscriptDOCX(templateData: TranscriptTemplateData, options?: ExportOptions): Promise<void> {
-  // Fetch logo for header
-  let logoBase64 = '';
-  try {
-    logoBase64 = await fetchImageAsBase64('/images/logo.png');
-  } catch (error) {
-    console.warn('Failed to load logo:', error);
-  }
-
   const doc = new Document({
     sections: [
       {
-        headers: {
-          default: new Header({
-            children: [
-              // Logo-only professional header
-              new Paragraph({
-                children: logoBase64 ? [
-                  new ImageRun({
-                    data: logoBase64,
-                    transformation: {
-                      width: 110, // ~1.15 inches at 96 DPI
-                      height: 35,
-                    },
-                    type: 'base64',
-                  }),
-                ] : [new TextRun('')],
-                alignment: AlignmentType.LEFT,
-                spacing: { before: 100, after: 200 },
-              }),
-              // Subtle separator line
-              new Paragraph({
-                children: [new TextRun('')],
-                spacing: { after: 200 },
-                border: {
-                  bottom: {
-                    color: "B29DD9",
-                    space: 1,
-                    style: "single",
-                    size: 4, // Subtle line
-                  },
-                },
-              }),
-            ],
-          }),
-        },
-        footers: {
-          default: new Footer({
-            children: [
-              // Footer separator line like PDF
-              new Paragraph({
-                children: [new TextRun("")],
-                border: {
-                  top: {
-                    color: "000000",
-                    space: 1,
-                    style: "single",
-                    size: 4,
-                  },
-                },
-                spacing: { before: 200, after: 200 },
-              }),
-              // Footer content - simple website URL
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: "www.talktotext.ca",
-                    size: 20,
-                  }),
-                ],
-                alignment: AlignmentType.LEFT,
-              }),
-            ],
-          }),
-        },
         children: [
-          // Minimal spacing after logo header
-          new Paragraph({
-            children: [new TextRun("")],
-            spacing: { after: 200 },
-          }),
-
-          // Metadata table - dynamically build rows for existing data only
-          new Table({
-            rows: generateMetadataRows(templateData),
-            width: { size: 100, type: WidthType.PERCENTAGE },
-            borders: {
-              top: { style: "single", size: 4, color: "969696" },
-              bottom: { style: "single", size: 4, color: "969696" },
-              left: { style: "single", size: 4, color: "969696" },
-              right: { style: "single", size: 4, color: "969696" },
-              insideHorizontal: { style: "single", size: 2, color: "CCCCCC" },
-              insideVertical: { style: "single", size: 2, color: "CCCCCC" },
-            },
-          }),
-
-          // Content separator line
-          new Paragraph({
-            children: [new TextRun("")],
-            spacing: { before: 400, after: 200 },
-            border: {
-              top: {
-                color: "000000",
-                space: 1,
-                style: "single",
-                size: 6,
-              },
-            },
-          }),
+          ...generateCoverPage(templateData),
 
           // Transcript section header
           new Paragraph({
@@ -730,10 +592,12 @@ export async function exportTranscriptDOCX(templateData: TranscriptTemplateData,
               new TextRun({
                 text: "TRANSCRIPT",
                 bold: true,
+                underline: {},
+                color: "000000",
                 size: 24,
               }),
             ],
-            alignment: AlignmentType.LEFT,
+            alignment: AlignmentType.CENTER,
             spacing: { before: 400, after: 200 },
           }),
 
