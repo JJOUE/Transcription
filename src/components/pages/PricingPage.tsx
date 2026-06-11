@@ -35,19 +35,37 @@ export function PricingPage() {
   const { activePackages, loading } = usePackages();
   const [pricingSettings, setPricingSettings] = useState<PricingSettings | null>(null);
 
-  // Load pricing settings from database
-  useEffect(() => {
-  const service = searchParams.get('service');
+  const selectPricingTab = React.useCallback((value: string | null) => {
+    const tabMap: Record<string, string> = {
+      ai: 'ai',
+      hybrid: 'hybrid',
+      human: 'human',
+      dictation: 'dictation',
+      documents: 'dictation',
+      'document-workspace': 'dictation',
+    };
 
-  if (
-    service === 'ai' ||
-    service === 'hybrid' ||
-    service === 'human' ||
-    service === 'dictation'
-  ) {
-    setSelectedTab(service);
-  }
-}, [searchParams]);
+    if (value && tabMap[value]) {
+      setSelectedTab(tabMap[value]);
+    }
+  }, []);
+
+  useEffect(() => {
+    selectPricingTab(searchParams.get('service'));
+  }, [searchParams, selectPricingTab]);
+
+  useEffect(() => {
+    const selectTabFromHash = () => {
+      selectPricingTab(window.location.hash.replace('#', ''));
+    };
+
+    selectTabFromHash();
+    window.addEventListener('hashchange', selectTabFromHash);
+
+    return () => window.removeEventListener('hashchange', selectTabFromHash);
+  }, [selectPricingTab]);
+
+  // Load pricing settings from database
   useEffect(() => {
     const loadPricing = async () => {
       try {
@@ -178,7 +196,11 @@ const getTypeInfo = (type: string) => {
               </TabsList>
 
               {Object.entries(packagesByType).map(([type, packages]) => (
-                <TabsContent key={type} value={type}>
+                <TabsContent
+                  key={type}
+                  value={type}
+                  id={type === 'dictation' ? 'document-workspace' : type}
+                >
                   {type === 'dictation' ? (
                   <div className="max-w-5xl mx-auto">
                     <Card className="border-0 shadow-lg">

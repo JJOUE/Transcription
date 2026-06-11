@@ -150,7 +150,7 @@ function LandingPage() {
                 </ul>
 
                   <Button asChild className="mt-6 w-full bg-[#003366] hover:bg-[#002244] text-white">
-                    <Link href="/pricing?service=human">
+                    <Link href="/pricing#document-workspace">
                       View Document Pricing
                     </Link>
                   </Button>
@@ -173,7 +173,7 @@ function LandingPage() {
                 </ul>
 
                 <Button asChild className="mt-6 w-full bg-[#003366] hover:bg-[#002244] text-white">
-                  <Link href="/pricing?service=hybrid">
+                  <Link href="/pricing#document-workspace">
                     View Pricing
                   </Link>
                 </Button>
@@ -196,7 +196,7 @@ function LandingPage() {
                 </ul>
 
                 <Button asChild className="mt-6 w-full bg-[#72629E] hover:bg-[#5D5186] text-white">
-                  <Link href="/pricing?service=dictation">
+                  <Link href="/pricing#document-workspace">
                     View Document Services
                   </Link>
                 </Button>

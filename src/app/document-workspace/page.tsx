@@ -94,7 +94,7 @@ export default function DocumentWorkspacePage() {
               </Link>
 
               <Link
-                href="/pricing"
+                href="/pricing#document-workspace"
                 className="inline-flex items-center justify-center rounded-md border border-[#003366] px-6 py-3 text-[#003366] font-semibold hover:bg-[#003366] hover:text-white"
               >
                 View Pricing
@@ -295,7 +295,7 @@ export default function DocumentWorkspacePage() {
               </Link>
 
               <Link
-                href="/pricing"
+                href="/pricing#document-workspace"
                 className="inline-flex items-center justify-center rounded-md border border-white px-6 py-3 text-white font-semibold hover:bg-white hover:text-[#003366]"
               >
                 View Pricing
