@@ -37,6 +37,45 @@ const howItWorks = [
   'Download in the format you need',
 ];
 
+const usageSteps = [
+  {
+    title: 'Create your account',
+    text: 'Sign in or create an account to access your secure workspace.',
+  },
+  {
+    title: 'Upload your audio or video',
+    text: 'Choose your transcription service and upload your audio or video file.',
+  },
+  {
+    title: 'Add helpful details',
+    text: 'Enter the expected number of speakers and any names, spellings, places, organizations, or project dictionary terms that may help with accuracy.',
+  },
+  {
+    title: 'Wait for your transcript',
+    text: 'Your file will be processed according to the transcription option you selected.',
+  },
+  {
+    title: 'Open your transcript',
+    text: 'When your transcript is ready, open it in Transcript Workspace from your dashboard.',
+  },
+  {
+    title: 'Review and edit',
+    text: 'Use Edit Transcript to correct text, rename speakers, adjust speaker labels, split speakers, and clean up formatting.',
+  },
+  {
+    title: 'Use cleanup tools',
+    text: 'Use light cleanup tools for filler words, duplicate words, timestamps, and formatting. These tools are designed to help clean the transcript without rewriting the meaning.',
+  },
+  {
+    title: 'Save and download',
+    text: 'Save your edits and download your completed transcript.',
+  },
+  {
+    title: 'Download before retention ends',
+    text: 'Completed files remain active for 30 days, may be archived after 30 days, and may be deleted after 90 days unless a retention hold applies. Download anything you need before the deletion date shown in your dashboard.',
+  },
+];
+
 const features = [
   {
     title: 'AI, Hybrid, and Human Review',
@@ -166,6 +205,30 @@ export default function TranscriptWorkspacePage() {
                   No video is linked yet, so there is no broken media to load.
                 </p>
               </div>
+            </div>
+          </div>
+
+          <div className="mb-14 rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-[#003366] mb-3">
+                How to use Transcript Workspace
+              </h2>
+              <p className="text-gray-700 max-w-2xl mx-auto">
+                Follow these steps to upload, review, edit, save, and download your transcript from
+                your secure workspace.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {usageSteps.map((step, index) => (
+                <div key={step.title} className="rounded-xl border border-gray-200 bg-gray-50 p-5">
+                  <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-[#b29dd9]/20 text-sm font-bold text-[#003366]">
+                    {index + 1}
+                  </div>
+                  <h3 className="font-semibold text-[#003366] mb-2">{step.title}</h3>
+                  <p className="text-sm text-gray-700">{step.text}</p>
+                </div>
+              ))}
             </div>
           </div>
 
