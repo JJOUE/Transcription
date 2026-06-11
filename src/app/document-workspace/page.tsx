@@ -52,6 +52,45 @@ const workflow = [
   'Download the completed document when it is ready.',
 ];
 
+const usageSteps = [
+  {
+    title: 'Create your account',
+    text: 'Sign in or create an account to access your secure workspace.',
+  },
+  {
+    title: 'Start a Document Workspace project',
+    text: 'Choose Document Workspace and select the type of support you need: dictation cleanup, copy typing, handwriting transcription, or document preparation.',
+  },
+  {
+    title: 'Upload your file',
+    text: 'Upload your dictation, document, scan, handwriting image, PDF, typed draft, or other supported source file.',
+  },
+  {
+    title: 'Add helpful instructions',
+    text: 'Tell us what you need prepared, cleaned up, typed, formatted, or organized. You can also include names, spellings, preferred formatting, or special instructions.',
+  },
+  {
+    title: 'Add a template or reference file if needed',
+    text: 'If you have a template, sample, letterhead, form, or reference document, upload it as an optional reference file.',
+  },
+  {
+    title: 'Submit your project',
+    text: 'Review your project details and submit your request through the secure workspace.',
+  },
+  {
+    title: 'Human preparation',
+    text: 'Your project is reviewed and prepared according to the instructions provided. Talk to Text Canada provides document preparation support, not legal advice or legal representation.',
+  },
+  {
+    title: 'Download your completed document',
+    text: 'When your completed document is ready, you can download it from your dashboard.',
+  },
+  {
+    title: 'Download before retention ends',
+    text: 'Completed files remain active for 30 days, may be archived after 30 days, and may be deleted after 90 days unless a retention hold applies. Download anything you need before the deletion date shown in your dashboard.',
+  },
+];
+
 const safeguards = [
   'Canadian English',
   'Professional formatting',
@@ -125,6 +164,35 @@ export default function DocumentWorkspacePage() {
                 download a completed document when ready.
               </p>
             </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm mb-12">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-[#003366] mb-3">
+                How to use Document Workspace
+              </h2>
+              <p className="text-gray-700 max-w-2xl mx-auto">
+                Use Document Workspace to submit dictation cleanup, copy typing, handwriting
+                transcription, or document preparation projects through your secure account.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {usageSteps.map((step, index) => (
+                <div key={step.title} className="rounded-xl border border-gray-200 bg-gray-50 p-5">
+                  <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-[#b29dd9]/20 text-sm font-bold text-[#003366]">
+                    {index + 1}
+                  </div>
+                  <h3 className="font-semibold text-[#003366] mb-2">{step.title}</h3>
+                  <p className="text-sm text-gray-700">{step.text}</p>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-sm text-gray-600 mt-6 text-center">
+              Non-audio document, scan, handwriting, and copy typing projects may require a custom
+              quote depending on length, clarity, formatting, and complexity.
+            </p>
           </div>
 
           <h2 className="text-3xl font-bold text-[#003366] text-center mb-8">
