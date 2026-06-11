@@ -24,18 +24,50 @@ import { PricingSettings, getPricingSettings } from '@/lib/firebase/settings';
 interface UploadFile {
   file: File;
   duration: number;
+  isMedia: boolean;
 }
 
-type DocumentType = 'letter' | 'case-notes' | 'court-document' | 'general-dictation' | 'medical' | 'other';
+type OfficeServiceType = 'dictation-cleanup' | 'copy-typing' | 'handwriting-transcription' | 'document-preparation';
 
-const DOCUMENT_TYPES: { value: DocumentType; label: string }[] = [
-  { value: 'letter', label: 'Letter' },
-  { value: 'case-notes', label: 'Case Notes' },
-  { value: 'court-document', label: 'Court Document' },
-  { value: 'general-dictation', label: 'General Dictation' },
-  { value: 'medical', label: 'Medical' },
-  { value: 'other', label: 'Other' }
+const OFFICE_SERVICE_TYPES: { value: OfficeServiceType; label: string; description: string }[] = [
+  {
+    value: 'dictation-cleanup',
+    label: 'Dictation cleanup',
+    description: 'Long dictations cleaned up into notes, letters, reports, summaries, or memos.'
+  },
+  {
+    value: 'copy-typing',
+    label: 'Copy typing',
+    description: 'Scanned documents, PDFs, images, or typed drafts recreated as clean editable documents.'
+  },
+  {
+    value: 'handwriting-transcription',
+    label: 'Handwriting transcription',
+    description: 'Handwritten notes, letters, file notes, or forms typed into readable digital documents.'
+  },
+  {
+    value: 'document-preparation',
+    label: 'Document preparation',
+    description: 'Dictation, notes, references, and instructions turned into an organized document.'
+  }
 ];
+
+const MAIN_FILE_ACCEPT = 'audio/*,video/*,.doc,.docx,.pdf,.txt,.jpg,.jpeg,.png,.heic';
+const DOCUMENT_EXTENSIONS = ['.doc', '.docx', '.pdf', '.txt'];
+const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.heic'];
+
+const getOfficeServiceLabel = (serviceType?: OfficeServiceType) =>
+  OFFICE_SERVICE_TYPES.find(service => service.value === serviceType)?.label || 'Document Workspace';
+
+const isMediaFile = (file: File) => {
+  const type = file.type.split('/')[0];
+  return type === 'audio' || type === 'video';
+};
+
+const hasAllowedDocumentWorkspaceExtension = (file: File) => {
+  const filename = file.name.toLowerCase();
+  return [...DOCUMENT_EXTENSIONS, ...IMAGE_EXTENSIONS].some(ext => filename.endsWith(ext));
+};
 
 export default function OfficeUploadPage() {
   const [uploadedFiles, setUploadedFiles] = useState<UploadFile[]>([]);
@@ -45,8 +77,8 @@ export default function OfficeUploadPage() {
   const [processingProgress, setProcessingProgress] = useState({ current: 0, total: 0, stage: '' });
   const [overallProgress, setOverallProgress] = useState(0);
 
-  // Office-specific fields
-  const [documentType, setDocumentType] = useState<DocumentType>('general-dictation');
+  // Document Workspace fields
+  const [officeServiceType, setOfficeServiceType] = useState<OfficeServiceType>('dictation-cleanup');
   const [formattingInstructions, setFormattingInstructions] = useState('');
   const [templateFile, setTemplateFile] = useState<File | null>(null);
   const [rushDelivery, setRushDelivery] = useState(false);
@@ -84,6 +116,7 @@ export default function OfficeUploadPage() {
 
   // Calculate total cost
   const totalDuration = uploadedFiles.reduce((sum, f) => sum + f.duration, 0);
+  const hasDocumentSourceFiles = uploadedFiles.some(f => !f.isMedia);
   const totalCost = (totalDuration / 60) * costPerMinute;
   const rushCost = rushDelivery ? Math.ceil(totalDuration / 60) * 0.50 : 0; // $0.50 per minute for rush
   const totalWithRush = totalCost + rushCost;
@@ -118,15 +151,14 @@ export default function OfficeUploadPage() {
   };
 
   const processFiles = async (files: File[]) => {
-    const audioVideoFiles = files.filter(f => {
-      const type = f.type.split('/')[0];
-      return type === 'audio' || type === 'video';
+    const supportedFiles = files.filter(f => {
+      return isMediaFile(f) || hasAllowedDocumentWorkspaceExtension(f);
     });
 
-    if (audioVideoFiles.length === 0) {
+    if (supportedFiles.length === 0) {
       toast({
         title: "Invalid file type",
-        description: "Please upload audio or video files only.",
+        description: "Please upload audio, video, document, PDF, text, or common image files.",
         variant: "destructive"
       });
       return;
@@ -134,7 +166,7 @@ export default function OfficeUploadPage() {
 
     // Process each file for duration
     const newFiles: UploadFile[] = [];
-    for (const file of audioVideoFiles) {
+    for (const file of supportedFiles) {
       if (file.size > 1024 * 1024 * 1024) {
         toast({
           title: "File too large",
@@ -144,16 +176,20 @@ export default function OfficeUploadPage() {
         continue;
       }
 
-      try {
-        const duration = await getMediaDuration(file);
-        newFiles.push({ file, duration });
-      } catch (error) {
-        console.error('Error processing file:', error);
-        toast({
-          title: "Error processing file",
-          description: `Could not read duration from ${file.name}`,
-          variant: "destructive"
-        });
+      if (isMediaFile(file)) {
+        try {
+          const duration = await getMediaDuration(file);
+          newFiles.push({ file, duration, isMedia: true });
+        } catch (error) {
+          console.error('Error processing file:', error);
+          toast({
+            title: "Error processing file",
+            description: `Could not read duration from ${file.name}`,
+            variant: "destructive"
+          });
+        }
+      } else {
+        newFiles.push({ file, duration: 0, isMedia: false });
       }
     }
 
@@ -282,7 +318,7 @@ export default function OfficeUploadPage() {
           creditsUsed: Math.round(((uploadFile.duration / 60) * costPerMinute) * 100),
           rushDelivery,
           // Office-specific fields
-          domain: documentType,
+          officeServiceType,
           specialInstructions: formattingInstructions || undefined,
           officeNotes: officeNotes || undefined
         };
@@ -377,7 +413,7 @@ export default function OfficeUploadPage() {
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-[#003366] mb-2">Document Workspace</h1>
           <p className="text-lg text-gray-600">
-            Upload dictation, templates, and instructions for professional document preparation.
+            Upload dictation, documents, scans, handwriting, or reference files for preparation.
           </p>
         </div>
 
@@ -389,31 +425,35 @@ export default function OfficeUploadPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Document Type */}
+            {/* Service Type */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Document Type
+                Service needed
               </label>
               <select
-                value={documentType}
-                onChange={(e) => setDocumentType(e.target.value as DocumentType)}
+                value={officeServiceType}
+                onChange={(e) => setOfficeServiceType(e.target.value as OfficeServiceType)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003366] focus:border-transparent"
+                required
               >
-                {DOCUMENT_TYPES.map(dt => (
-                  <option key={dt.value} value={dt.value}>{dt.label}</option>
+                {OFFICE_SERVICE_TYPES.map(service => (
+                  <option key={service.value} value={service.value}>{service.label}</option>
                 ))}
               </select>
+              <p className="text-xs text-gray-500 mt-2">
+                {OFFICE_SERVICE_TYPES.find(service => service.value === officeServiceType)?.description}
+              </p>
             </div>
 
             {/* Formatting Instructions */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Formatting Instructions (Optional)
+                Instructions or formatting notes (Optional)
               </label>
               <Textarea
                 value={formattingInstructions}
                 onChange={(e) => setFormattingInstructions(e.target.value)}
-                placeholder="e.g., Use APA format, include page breaks, double spacing..."
+                placeholder="Tell us what you need prepared, typed, cleaned up, or formatted."
                 className="min-h-24"
               />
             </div>
@@ -421,7 +461,7 @@ export default function OfficeUploadPage() {
             {/* Template Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Template Upload (Optional)
+                Optional template or reference document
               </label>
               <div className="relative">
                 <input
@@ -437,10 +477,13 @@ export default function OfficeUploadPage() {
                 >
                   <FileUp className="h-5 w-5 text-gray-400 mr-2" />
                   <span className="text-sm text-gray-600">
-                    {templateFile ? templateFile.name : 'Upload template file'}
+                    {templateFile ? templateFile.name : 'Upload optional template or reference'}
                   </span>
                 </label>
               </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Use this for a sample, letterhead, formatting reference, or document you want us to follow.
+              </p>
             </div>
 
             {/* Rush Delivery */}
@@ -476,7 +519,7 @@ export default function OfficeUploadPage() {
         <Card className="mb-6 border-0 shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg font-semibold text-[#003366]">
-              Upload Audio or Video Files
+              Upload your file
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -495,7 +538,10 @@ export default function OfficeUploadPage() {
                 Drag files here or click to select
               </p>
               <p className="text-sm text-gray-500 mb-4">
-                Supported: MP3, WAV, M4A, MP4, MOV (Max 1GB each)
+                Upload dictation, documents, scans, handwriting, or reference files for preparation.
+              </p>
+              <p className="text-xs text-gray-500 mb-4">
+                Supported: audio, video, DOC, DOCX, PDF, TXT, JPG, PNG, HEIC (Max 1GB each)
               </p>
               <input
                 type="file"
@@ -503,7 +549,7 @@ export default function OfficeUploadPage() {
                 className="hidden"
                 id="file-input"
                 multiple
-                accept="audio/*,video/*"
+                accept={MAIN_FILE_ACCEPT}
               />
               <label htmlFor="file-input">
                 <Button
@@ -536,7 +582,8 @@ export default function OfficeUploadPage() {
                             {file.file.name}
                           </p>
                           <p className="text-xs text-gray-500">
-                            {formatDuration(file.duration)} · {(file.file.size / 1024 / 1024).toFixed(2)} MB
+                            {file.isMedia ? `${formatDuration(file.duration)} · ` : 'Custom quote may apply · '}
+                            {(file.file.size / 1024 / 1024).toFixed(2)} MB
                           </p>
                         </div>
                       </div>
@@ -583,6 +630,12 @@ export default function OfficeUploadPage() {
                       Wallet charge: <span className="font-medium">CA${(minutesFromWallet * costPerMinute).toFixed(2)}</span>
                     </p>
                   )}
+                </div>
+              )}
+
+              {hasDocumentSourceFiles && (
+                <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded text-amber-800 text-sm">
+                  Custom quote may apply for document, handwriting, scan, or copy typing projects.
                 </div>
               )}
 

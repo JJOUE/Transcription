@@ -5,6 +5,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 export type TranscriptionStatus = 'processing' | 'pending-review' | 'pending-transcription' | 'complete' | 'failed';
 export type TranscriptionMode = 'ai' | 'hybrid' | 'human';
 export type TranscriptionDomain = 'general' | 'medical' | 'legal';
+export type OfficeServiceType = 'dictation-cleanup' | 'copy-typing' | 'handwriting-transcription' | 'document-preparation';
 export type DeletionStatus = 'active' | 'archived' | 'pending' | 'deleted' | 'error' | 'held';
 
 export interface TranscriptSegment {
@@ -24,6 +25,7 @@ export interface TranscriptionJob {
   downloadURL: string;
   status: TranscriptionStatus;
   mode: TranscriptionMode;
+  type?: 'transcription' | 'office';
   domain?: TranscriptionDomain; // Domain for specialized vocabulary
   language?: string; // Transcription language (e.g., 'en', 'fr')
   duration: number; // in seconds (exact duration)
@@ -57,6 +59,16 @@ export interface TranscriptionJob {
   speakerCount?: number; // Number of speakers in the recording
   addOnCost?: number; // Additional cost for add-ons in CAD
   hasPackage?: boolean; // Whether user has active package (add-ons are free)
+  // Template/reference file and Document Workspace fields
+  templatePath?: string;
+  templateURL?: string;
+  templateFilename?: string;
+  officeServiceType?: OfficeServiceType;
+  officeNotes?: string;
+  officeCompletedDocumentURL?: string;
+  officeCompletedDocumentPath?: string;
+  officeCompletedFilename?: string;
+  officeStatus?: string;
 }
 
 const TRANSCRIPTIONS_COLLECTION = 'transcriptions';

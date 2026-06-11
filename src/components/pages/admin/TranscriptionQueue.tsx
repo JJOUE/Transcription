@@ -30,6 +30,21 @@ import { formatRetentionLabel, isRetentionDeleted } from '@/lib/utils/retention'
 import { doc, getDoc, getFirestore } from 'firebase/firestore';
 import { AudioPlayer } from '@/components/ui/AudioPlayer';
 
+const getOfficeServiceLabel = (serviceType?: string) => {
+  switch (serviceType) {
+    case 'dictation-cleanup':
+      return 'Dictation cleanup';
+    case 'copy-typing':
+      return 'Copy typing';
+    case 'handwriting-transcription':
+      return 'Handwriting transcription';
+    case 'document-preparation':
+      return 'Document preparation';
+    default:
+      return 'Document Workspace';
+  }
+};
+
 export function TranscriptionQueue() {
   const { user, userData } = useAuth();
   const { refundCredits } = useCredits();
@@ -716,8 +731,7 @@ export function TranscriptionQueue() {
                       </div>
                       <div className="flex items-center space-x-4 text-sm text-gray-600">
                         <span>{userEmails[item.userId] || 'Loading...'}</span>
-                        <span>Document Workspace</span>
-                        {item.domain && <span>📄 {item.domain.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>}
+                        <span>{getOfficeServiceLabel(item.officeServiceType)}</span>
                         <span>{formatDuration(item.duration || 0)}</span>
                         <CreditDisplay amount={item.creditsUsed || 0} size="sm" />
                         {formatRetentionLabel(item) && (
@@ -865,7 +879,11 @@ export function TranscriptionQueue() {
             <div className="p-4 sm:p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-base sm:text-lg font-semibold text-[#003366]">
-                  {selectedJob.status === 'pending-review' ? 'Review AI Transcript' : 'Create Transcript'}
+                  {selectedJob.type === 'office'
+                    ? 'Document Workspace Project Details'
+                    : selectedJob.status === 'pending-review'
+                      ? 'Review AI Transcript'
+                      : 'Create Transcript'}
                 </h3>
                 <Button
                   variant="ghost"
@@ -887,12 +905,37 @@ export function TranscriptionQueue() {
                 <p className="text-sm text-gray-600">
                   <strong>User:</strong> <span className="break-words">{userEmails[selectedJob.userId] || 'Loading...'}</span>
                 </p>
-                <p className="text-sm text-gray-600">
-                  <strong>Duration:</strong> {formatDuration(selectedJob.duration || 0)}
-                </p>
-                <p className="text-sm text-gray-600">
-                  <strong>Mode:</strong> {selectedJob.mode || 'Unknown'}
-                </p>
+                {selectedJob.type === 'office' ? (
+                  <p className="text-sm text-gray-600">
+                    <strong>Service:</strong> {getOfficeServiceLabel(selectedJob.officeServiceType)}
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-sm text-gray-600">
+                      <strong>Duration:</strong> {formatDuration(selectedJob.duration || 0)}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      <strong>Mode:</strong> {selectedJob.mode || 'Unknown'}
+                    </p>
+                  </>
+                )}
+                {selectedJob.type === 'office' && selectedJob.duration > 0 && (
+                  <p className="text-sm text-gray-600">
+                    <strong>Media duration:</strong> {formatDuration(selectedJob.duration || 0)}
+                  </p>
+                )}
+                {selectedJob.type === 'office' && selectedJob.specialInstructions && (
+                  <div className="p-3 bg-cyan-50 border border-cyan-200 rounded">
+                    <h4 className="font-medium text-cyan-900 mb-1 text-sm">Instructions:</h4>
+                    <p className="text-sm text-cyan-800 whitespace-pre-wrap">{selectedJob.specialInstructions}</p>
+                  </div>
+                )}
+                {selectedJob.type === 'office' && selectedJob.officeNotes && (
+                  <div className="p-3 bg-gray-50 border border-gray-200 rounded">
+                    <h4 className="font-medium text-gray-900 mb-1 text-sm">Additional notes:</h4>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedJob.officeNotes}</p>
+                  </div>
+                )}
                 {formatRetentionLabel(selectedJob) && (
                   <p className={`text-sm ${isRetentionDeleted(selectedJob) ? 'font-medium text-red-600' : 'text-gray-600'}`}>
                     <strong>Retention:</strong> {formatRetentionLabel(selectedJob)}

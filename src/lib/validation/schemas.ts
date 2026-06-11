@@ -37,6 +37,13 @@ const TranscriptionModeSchema = z.enum(['ai', 'hybrid', 'human'], {
  */
 const TranscriptionTypeSchema = z.enum(['transcription', 'office']);
 
+const OfficeServiceTypeSchema = z.enum([
+  'dictation-cleanup',
+  'copy-typing',
+  'handwriting-transcription',
+  'document-preparation',
+]);
+
 /**
  * Transcription domain validation
  */
@@ -96,6 +103,7 @@ export const CreateTranscriptionJobSchema = z.object({
   officeNotes: z.string()
     .max(1000, 'Office notes too long')
     .optional(),
+  officeServiceType: OfficeServiceTypeSchema.optional(),
   projectDictionaryTerms: z.array(
     z.string()
       .trim()

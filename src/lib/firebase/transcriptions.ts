@@ -5,6 +5,7 @@ export type TranscriptionStatus = 'processing' | 'pending-review' | 'pending-tra
 export type TranscriptionMode = 'ai' | 'hybrid' | 'human';
 export type OfficeStatus = 'submitted' | 'assigned' | 'in_progress' | 'waiting_review' | 'completed' | 'delivered';
 export type OfficePriority = 'standard' | 'rush' | 'same_day';
+export type OfficeServiceType = 'dictation-cleanup' | 'copy-typing' | 'handwriting-transcription' | 'document-preparation';
 export type DeletionStatus = 'active' | 'archived' | 'pending' | 'deleted' | 'error' | 'held';
 
 export interface TranscriptSegment {
@@ -93,6 +94,7 @@ export interface TranscriptionJob {
   officeDueDate?: Timestamp; // Due date for Office Studio project
   officePriority?: OfficePriority; // Priority level (standard, rush, same_day)
   officeStatus?: OfficeStatus; // Office-specific workflow status
+  officeServiceType?: OfficeServiceType; // Document Workspace service requested
   officeNotes?: string; // Additional notes for office projects
   officeCompletedDocumentURL?: string; // Download URL for completed document
   officeCompletedDocumentPath?: string; // Storage path for completed document

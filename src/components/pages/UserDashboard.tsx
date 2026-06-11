@@ -18,6 +18,21 @@ import { Timestamp } from 'firebase/firestore';
 
 // Transaction interface now comes from CreditContext
 
+const getOfficeServiceLabel = (serviceType?: string) => {
+  switch (serviceType) {
+    case 'dictation-cleanup':
+      return 'Dictation cleanup';
+    case 'copy-typing':
+      return 'Copy typing';
+    case 'handwriting-transcription':
+      return 'Handwriting transcription';
+    case 'document-preparation':
+      return 'Document preparation';
+    default:
+      return 'Document Workspace';
+  }
+};
+
 export function UserDashboard() {
   const { user, userData } = useAuth();
   const { transactions } = useCredits();
@@ -626,7 +641,7 @@ export function UserDashboard() {
                             <StatusBadge status={job.status} />
                           </div>
                           <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
-                            <span>Document Workspace</span>
+                            <span>{getOfficeServiceLabel(job.officeServiceType)}</span>
                             <span>{Math.ceil(job.duration / 60)} min</span>
                             <span>
                               {new Date(job.createdAt).toLocaleDateString()}

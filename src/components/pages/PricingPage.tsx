@@ -247,6 +247,7 @@ const getTypeInfo = (type: string) => {
   <div className="space-y-2 text-sm text-gray-600">
     <p>General document preparation starting at CA$20</p>
     <p>Complex formatting or custom document projects starting at CA$45</p>
+    <p>Custom quote may apply for document, handwriting, scan, or copy typing projects</p>
     <p>Custom quotes available for larger projects</p>
   </div>
 </div>

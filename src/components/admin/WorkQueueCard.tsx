@@ -36,6 +36,21 @@ interface WorkQueueCardProps {
   onComplete: () => void;
 }
 
+const getOfficeServiceLabel = (serviceType?: string) => {
+  switch (serviceType) {
+    case 'dictation-cleanup':
+      return 'Dictation cleanup';
+    case 'copy-typing':
+      return 'Copy typing';
+    case 'handwriting-transcription':
+      return 'Handwriting transcription';
+    case 'document-preparation':
+      return 'Document preparation';
+    default:
+      return 'Document Workspace';
+  }
+};
+
 export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps) {
   const [showModal, setShowModal] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -646,9 +661,9 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
 
               {/* Queue Metadata */}
               <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
-                {job.type === 'office' && job.domain && (
+                {job.type === 'office' && (
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#f0ebf8] text-[#003366] font-medium">
-                    📄 {job.domain.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                    📄 {getOfficeServiceLabel(job.officeServiceType)}
                   </span>
                 )}
                 
@@ -1046,9 +1061,9 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                     <strong>Mode:</strong> {job.mode || 'Unknown'}
                   </p>
                 )}
-                {job.type === 'office' && job.domain && (
+                {job.type === 'office' && (
                   <p className="text-sm text-gray-600">
-                    <strong>Project Type:</strong> {job.domain.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                    <strong>Service:</strong> {getOfficeServiceLabel(job.officeServiceType)}
                   </p>
                 )}
 
@@ -1161,11 +1176,9 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                   <p className="text-xs text-[#003366]/80 mt-1">
                     This is a Document Workspace project. Review the document and template details above. Use appropriate action buttons to process or reject this project.
                   </p>
-                  {job.domain && (
-                    <p className="text-xs text-[#003366]/80 mt-2">
-                      <strong>Project Type:</strong> {job.domain.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-                    </p>
-                  )}
+                  <p className="text-xs text-[#003366]/80 mt-2">
+                    <strong>Service:</strong> {getOfficeServiceLabel(job.officeServiceType)}
+                  </p>
                 </div>
               )}
 
