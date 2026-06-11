@@ -31,8 +31,8 @@ function AboutPage() {
               About Talk To Text Canada
             </h1>
             <p className="text-xl text-gray-300 mb-8 max-w-3xl mx-auto">
-              We&apos;re dedicated to providing the most accurate, secure, and reliable 
-              transcription services for Canadian professionals and businesses.
+              Canadian transcription, dictation cleanup, copy typing, handwriting transcription,
+              and document preparation for professionals.
             </p>
           </div>
         </div>
@@ -47,15 +47,14 @@ function AboutPage() {
                 Our Mission
               </h2>
               <p className="text-lg text-gray-600 mb-6">
-                At Talk To Text Canada, we believe that accurate transcription shouldn&apos;t 
-                be a luxury. Our mission is to democratize access to professional-grade 
-                transcription services through innovative technology and human expertise.
+                At Talk To Text Canada, our mission is to make professional transcription
+                and document preparation easier to access, with secure upload and download,
+                clear service options, and practical human support where needed.
               </p>
               <p className="text-lg text-gray-600">
-                Whether you&apos;re a legal professional handling sensitive depositions, 
-                a business conducting important meetings, or an individual with personal 
-                recordings, we provide the tools and services you need to convert speech 
-                to text with confidence.
+                Whether you are sending audio, video, dictation, scanned pages, handwriting,
+                typed drafts, or notes, we help turn source material into clean transcripts
+                and editable documents you can review and use.
               </p>
             </div>
             <div className="bg-gray-50 p-12 rounded-xl">
@@ -131,8 +130,8 @@ function AboutPage() {
                   <h3 className="text-xl font-semibold text-[#003366]">Quality</h3>
                 </div>
                 <p className="text-gray-600 text-left">
-                  We maintain the highest standards of accuracy through advanced AI 
-                  and expert human review.
+                  We support careful transcription, typing, formatting, and document preparation
+                  through practical tools and human review options.
                 </p>
               </CardContent>
             </Card>
@@ -152,8 +151,8 @@ function AboutPage() {
                   <h3 className="text-xl font-semibold text-[#003366]">Service</h3>
                 </div>
                 <p className="text-gray-600 text-left">
-                  Our dedicated support team is here to help you succeed with 
-                  personalized assistance.
+                  Our support is built around real client work, including transcription,
+                  copy typing, dictation cleanup, and document preparation projects.
                 </p>
               </CardContent>
             </Card>
@@ -190,8 +189,8 @@ function AboutPage() {
               Our Expertise
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Our team combines cutting-edge technology with human expertise to 
-              deliver exceptional results.
+              Our team combines transcription experience, document formatting, and secure
+              tools to help clients move from source material to usable documents.
             </p>
           </div>
 
@@ -207,11 +206,11 @@ function AboutPage() {
                 />
               </div>
               <h3 className="text-xl font-semibold text-[#003366] mb-4">
-                Advanced AI Technology
+                Practical Transcription Tools
               </h3>
               <p className="text-gray-600">
-                Our proprietary AI models are trained specifically for Canadian accents 
-                and legal terminology, ensuring superior accuracy.
+                AI tools support fast transcription and draft creation while clients can
+                choose human review when a file needs extra attention.
               </p>
             </div>
 
@@ -226,11 +225,11 @@ function AboutPage() {
                 />
               </div>
               <h3 className="text-xl font-semibold text-[#003366] mb-4">
-                Expert Transcribers
+                Experienced Document Support
               </h3>
               <p className="text-gray-600">
-                Our certified human transcribers have extensive experience in legal, 
-                medical, and business transcription.
+                Experienced transcription and document support professionals help with audio,
+                dictation, copy typing, handwriting, and formatting.
               </p>
             </div>
 
@@ -271,11 +270,11 @@ function AboutPage() {
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">
-            Ready to Experience the Difference?
+            Ready to Send a File?
           </h2>
           <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-            Join the growing number of Canadian professionals who trust 
-            Talk To Text Canada for their transcription needs.
+            Start a transcription, copy typing, handwriting, or document preparation project
+            with a Canadian service built for professional work.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a

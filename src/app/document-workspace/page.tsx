@@ -6,12 +6,12 @@ import { Footer } from '@/components/layout/Footer';
 export const metadata: Metadata = {
   title: 'Document Workspace | Talk to Text Canada',
   description:
-    'Document preparation support for dictation, audio, notes, templates, and instructions, with completed document download through Talk to Text Canada.',
+    'Document preparation support for dictation, notes, scanned documents, handwriting, audio, video, and typed drafts, with completed document download through Talk to Text Canada.',
   metadataBase: new URL('https://www.talktotext.ca'),
   openGraph: {
     title: 'Document Workspace | Talk to Text Canada',
     description:
-      'Document preparation support for dictation, audio, notes, templates, and instructions, with completed document download through Talk to Text Canada.',
+      'Document preparation support for dictation, notes, scanned documents, handwriting, audio, video, and typed drafts, with completed document download through Talk to Text Canada.',
     url: 'https://www.talktotext.ca/document-workspace',
     type: 'website',
   },
@@ -19,24 +19,24 @@ export const metadata: Metadata = {
 
 const features = [
   {
-    title: 'Dictation and Audio Upload',
-    text: 'Signed-in clients can upload dictation or audio notes for document preparation through the secure workspace.',
+    title: 'Dictation, Audio and Video',
+    text: 'Upload spoken instructions, long dictations, audio notes, or video files for transcription or document preparation.',
   },
   {
-    title: 'Template Upload',
-    text: 'Provide your own template, letterhead, sample document, or formatting reference when it is available.',
+    title: 'Copy Typing',
+    text: 'Send scanned documents, PDFs, images, or typed drafts to be recreated as clean editable documents.',
+  },
+  {
+    title: 'Handwriting Transcription',
+    text: 'Handwritten notes, letters, file notes, and forms can be typed into readable digital documents.',
   },
   {
     title: 'Notes and Instructions',
-    text: 'Add document type, formatting notes, project details, special instructions, and supporting context.',
+    text: 'Add formatting notes, project details, special instructions, and supporting context.',
   },
   {
-    title: 'Human-Prepared Workflow',
-    text: 'Document Workspace is built around human preparation and review, not automatic legal form generation.',
-  },
-  {
-    title: 'Dashboard Status',
-    text: 'Project status can be managed through the dashboard workflow while the work is being prepared.',
+    title: 'Human-Prepared Documents',
+    text: 'Document Workspace is built around practical preparation, formatting, and review support.',
   },
   {
     title: 'Completed Document Download',
@@ -46,8 +46,8 @@ const features = [
 
 const workflow = [
   'Sign in or contact us to start a document project.',
-  'Upload dictation/audio, notes, instructions, or a template.',
-  'Human preparation and formatting are handled through the Document Workspace workflow.',
+  'Upload dictation, notes, scanned documents, handwritten pages, audio, video, or typed drafts.',
+  'We prepare, type, clean up, or format the document according to the service requested.',
   'Review project status in your dashboard.',
   'Download the completed document when it is ready.',
 ];
@@ -55,9 +55,10 @@ const workflow = [
 const safeguards = [
   'Canadian English',
   'Professional formatting',
-  'Human document preparation',
+  'Document preparation',
+  'Copy typing',
+  'Handwriting transcription',
   'Secure dashboard delivery',
-  'Client template uploads',
   'Completed document download',
 ];
 
@@ -81,7 +82,7 @@ export default function DocumentWorkspacePage() {
               Turn dictation, notes, templates, and instructions into organized, editable documents.
             </p>
             <p className="text-sm text-gray-500 max-w-3xl mx-auto mb-8">
-              Built on practical legal documentation and transcription experience for Canadian professional workflows.
+              Document Workspace helps professionals turn dictation, notes, scanned documents, handwritten pages, transcripts, and typed drafts into clean, downloadable documents.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -120,8 +121,8 @@ export default function DocumentWorkspacePage() {
               </div>
               <p className="text-white/90 max-w-2xl mx-auto">
                 A short walkthrough video will appear here showing how clients start a document
-                project, upload instructions or templates, track status, and download a completed
-                document when ready.
+                project, upload dictation, notes, scans, handwriting, or drafts, track status, and
+                download a completed document when ready.
               </p>
             </div>
           </div>
@@ -163,9 +164,10 @@ export default function DocumentWorkspacePage() {
                 Important Note
               </h2>
               <p className="text-gray-700">
-                Document Workspace supports document preparation and formatting based on the
-                information provided. It does not provide legal advice, legal representation, or
-                certified court reporting.
+                Talk to Text Canada provides transcription, copy typing, formatting, and document
+                preparation support. We do not provide legal advice, legal representation, or
+                certified court reporting services. Clients are responsible for reviewing and
+                approving all final documents before use.
               </p>
             </div>
 
@@ -174,8 +176,9 @@ export default function DocumentWorkspacePage() {
                 What Clients Can Provide
               </h2>
               <p className="text-gray-700">
-                You can provide dictation or audio, written notes, project instructions, document
-                type, formatting preferences, and your own template file where applicable.
+                You can provide dictation, notes, scanned documents, handwritten pages, audio,
+                video, typed drafts, formatting preferences, and your own template file where
+                applicable.
               </p>
             </div>
           </div>
@@ -197,7 +200,7 @@ export default function DocumentWorkspacePage() {
               Completed documents can be delivered through your client workspace so you can
               download and keep your own copies. Editable document delivery, including DOCX where
               applicable, is intended for prepared document projects. Custom formatting, rush work,
-              and complex document requests may require a custom quote.
+              and complex requests may require a custom quote.
             </p>
           </div>
 
@@ -226,7 +229,8 @@ export default function DocumentWorkspacePage() {
                 </h3>
                 <p className="text-gray-700 text-sm">
                   No. Transcription turns audio into text. Document Workspace supports document
-                  preparation from dictation, instructions, notes, and templates.
+                  preparation from dictation, notes, scanned documents, handwriting, typed drafts,
+                  and instructions.
                 </p>
               </div>
 
@@ -245,9 +249,9 @@ export default function DocumentWorkspacePage() {
                   Does this service provide legal advice?
                 </h3>
                 <p className="text-gray-700 text-sm">
-                  No. Talk to Text Canada provides transcription, dictation, formatting, and document
-                  preparation support. We do not provide legal advice, legal representation, or
-                  certified court reporting.
+                  No. Talk to Text Canada provides transcription, copy typing, formatting, and
+                  document preparation support. We do not provide legal advice, legal
+                  representation, or certified court reporting services.
                 </p>
               </div>
 
@@ -256,8 +260,8 @@ export default function DocumentWorkspacePage() {
                   What kinds of documents can be prepared?
                 </h3>
                 <p className="text-gray-700 text-sm">
-                  Examples may include letters, correspondence, case notes, file summaries, reports,
-                  office documents, meeting notes, and documents based on client instructions.
+                  Examples may include letters, correspondence, notes, reports, memos, typed drafts,
+                  copy typing projects, meeting notes, and documents based on client instructions.
                 </p>
               </div>
 

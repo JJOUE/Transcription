@@ -112,10 +112,10 @@ const getTypeInfo = (type: string) => {
 
     case 'dictation':
       return {
-        title: 'Document Workspace',
-        subtitle: 'Upload dictated instructions and receive polished finished documents',
+        title: 'Document Preparation Services',
+        subtitle: 'Dictation cleanup, copy typing, handwriting transcription, and document formatting',
         icon: FileText,
-        label: 'Dictation'
+        label: 'Documents'
       };
 
     default:
@@ -140,10 +140,10 @@ const getTypeInfo = (type: string) => {
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-6">
-            Professional Transcription & Document Pricing
+            Pricing for Transcription & Document Services
           </h1>
           <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-            Choose from AI transcription, Hybrid review, Human transcription, or Document Workspace dictation services designed for real professional workflow.
+            Choose AI transcription, hybrid review, human transcription, dictation cleanup, copy typing, handwriting transcription, or document preparation.
             Save with bundled packages or pay as you go.
           </p>
         </div>
@@ -173,7 +173,7 @@ const getTypeInfo = (type: string) => {
                 </TabsTrigger>
                 <TabsTrigger value="dictation" className="flex items-center justify-center">
                   <FileText className="h-4 w-4 mr-2" />
-                  Dictation
+                  Documents
                 </TabsTrigger>
               </TabsList>
 
@@ -185,11 +185,11 @@ const getTypeInfo = (type: string) => {
                       <CardContent className="p-10">
                         <div className="text-center mb-10">
                           <h3 className="text-3xl font-bold text-[#003366] mb-4">
-                            Document Workspace
+                            Document Preparation
                           </h3>
                           
                           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                            Have you ever needed documents typed up but didn’t have an assistant or the time to do it yourself?
+                            Need audio, notes, handwriting, scans, PDFs, or drafts turned into a clean document?
                           </p>
                         </div>
                         
@@ -200,15 +200,15 @@ const getTypeInfo = (type: string) => {
                             </h4>
                             
             <p className="text-gray-600 mb-6">
-              Talk to Text Canada can act as your transcription and dictation assistant.
+              Talk to Text Canada can help with transcription, long dictation cleanup, copy typing, handwriting transcription, and document formatting.
             </p>
 
             <p className="text-gray-600 mb-6">
-              Simply upload your dictated instructions and, if desired, upload your own template or explain how you would like the document formatted.
+              Upload dictation, notes, scanned documents, handwritten pages, audio, video, or typed drafts.
             </p>
 
             <p className="text-gray-600">
-              We will prepare your document according to your instructions and return it as a polished, ready-to-use file.
+              We prepare a clean, editable document based on the service requested and your instructions.
             </p>
           </div>
 
@@ -220,11 +220,13 @@ const getTypeInfo = (type: string) => {
             <ul className="space-y-3">
               {[
                 'Letters',
-                'Case notes',
+                'File notes',
                 'Reports',
                 'Summaries',
-                'Court documents',
-                'Office correspondence'
+                'Memos',
+                'Copy typing',
+                'Handwritten notes',
+                'Scanned documents'
               ].map((item) => (
                 <li key={item} className="flex items-center text-gray-600">
                   <Check className="h-5 w-5 text-green-500 mr-3" />
@@ -243,8 +245,8 @@ const getTypeInfo = (type: string) => {
               </div>
               
   <div className="space-y-2 text-sm text-gray-600">
-    <p>General office documents starting at CA$20</p>
-    <p>Complex legal or court documents starting at CA$45</p>
+    <p>General document preparation starting at CA$20</p>
+    <p>Complex formatting or custom document projects starting at CA$45</p>
     <p>Custom quotes available for larger projects</p>
   </div>
 </div>
@@ -259,7 +261,7 @@ const getTypeInfo = (type: string) => {
             className="bg-[#72629E] hover:bg-[#5D5186] text-white px-8 py-3"
           >
             <Link href="/signup">
-              Start a Dictation Job
+              Start a Document Project
             </Link>
           </Button>
         </div>
@@ -426,7 +428,7 @@ const getTypeInfo = (type: string) => {
                   Professional human transcription
                 </p>
                 <p className="text-xs text-gray-400 mt-2">
-                  Maximum accuracy guaranteed
+                  Highest review level
                 </p>
               </CardContent>
             </Card>
@@ -561,7 +563,7 @@ const getTypeInfo = (type: string) => {
                   <th className="p-4 text-center">AI</th>
                   <th className="p-4 text-center">Hybrid</th>
                   <th className="p-4 text-center">Human</th>
-                  <th className="p-4 text-center">Dictation</th>
+                  <th className="p-4 text-center">Documents</th>
                 </tr>
               </thead>
               <tbody>
@@ -570,7 +572,7 @@ const getTypeInfo = (type: string) => {
                   <td className="p-4 text-center">95%+</td>
                   <td className="p-4 text-center">98%+</td>
                   <td className="p-4 text-center">99%+</td>
-                  <td className="p-4 text-center">Professional formatting</td>
+                  <td className="p-4 text-center">Document preparation</td>
                 </tr>
                 <tr className="border-b bg-gray-50">
                   <td className="p-4 font-semibold">Turnaround Time</td>

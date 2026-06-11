@@ -30,30 +30,30 @@ function LandingPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
             <div className="text-center lg:text-left">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-                Your Canadian Workspace for Transcription, Dictation and Documents
+                Canadian Transcription & Document Preparation Services
               </h1>
               <p className="text-lg md:text-xl text-gray-300 mb-4 max-w-xl mx-auto lg:mx-0">
-                Upload audio, edit transcripts, request human review, and turn dictation into polished professional documents with Canadian English, legal and medical terminology support, and secure project delivery.
+                Turn audio, video, dictation, handwritten notes, scanned documents, and typed drafts into clean, organized documents.
               </p>
               <p className="text-base text-gray-200 mb-4 max-w-xl mx-auto lg:mx-0">
-                Built on 27 years of legal documentation and transcription experience.
+                Canadian transcription, dictation cleanup, copy typing, and document preparation for professionals.
               </p>
               <p className="text-base text-gray-200 mb-8 max-w-xl mx-auto lg:mx-0">
-                Designed to simplify your workflow, reduce editing time, and deliver finished files that are ready for review and download.
+                Upload your file, choose the service you need, and download a polished transcript, letter, note, report, memo, or editable document.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto lg:mx-0 mb-10 text-left">
                 <div className="rounded-3xl bg-white/10 p-4">
                   <p className="text-sm uppercase tracking-[0.2em] text-[#b29dd9] mb-2">Step 1</p>
-                  <p className="font-semibold text-white">Upload your audio or dictation file</p>
+                  <p className="font-semibold text-white">Upload audio, video, notes, scans, handwriting, or drafts</p>
                 </div>
                 <div className="rounded-3xl bg-white/10 p-4">
                   <p className="text-sm uppercase tracking-[0.2em] text-[#b29dd9] mb-2">Step 2</p>
-                  <p className="font-semibold text-white">Choose transcription or dictation-to-document service</p>
+                  <p className="font-semibold text-white">Choose transcription, dictation cleanup, copy typing, or document preparation</p>
                 </div>
                 <div className="rounded-3xl bg-white/10 p-4">
                   <p className="text-sm uppercase tracking-[0.2em] text-[#b29dd9] mb-2">Step 3</p>
-                  <p className="font-semibold text-white">Download transcripts or finished documents</p>
+                  <p className="font-semibold text-white">Download a clean transcript or editable document</p>
                 </div>
               </div>
 
@@ -64,7 +64,7 @@ function LandingPage() {
                   className="bg-[#b29dd9] hover:bg-[#9d87c7] text-white text-lg px-15 py-4"
                 >
                   <Link href="/signin">
-                    Start Your Workspace
+                    Start a Project
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
@@ -79,7 +79,7 @@ function LandingPage() {
               </div>
 
               <p className="text-sm text-gray-200 mt-6 max-w-xl mx-auto lg:mx-0">
-                Download options may include PDF, locked PDF, DOCX, TXT, SRT, and VTT depending on the service selected.
+                Services include transcription, long dictation cleanup, copy typing, handwriting transcription, document formatting, and document preparation.
               </p>
             </div>
 
@@ -103,10 +103,10 @@ function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-[#003366] mb-4">
-              Choose the Service That Fits Your Workflow
+              Services for Clean, Organized Documents
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              We offer AI, human, hybrid, and dictation-to-document services to meet different accuracy, budget, and workflow needs.
+              Send the material you have. We help turn it into the document you need.
             </p>
           </div>
 
@@ -116,19 +116,19 @@ function LandingPage() {
                 <div className="w-16 h-16 bg-[#b29dd9] rounded-full flex items-center justify-center mx-auto mb-6">
                   <Image src="/images/AI.svg" alt="AI Transcription" width={48} height={48} className="w-12 h-12" />
                 </div>
-                <h3 className="text-xl font-semibold text-[#003366] mb-4">AI Transcription</h3>
+                <h3 className="text-xl font-semibold text-[#003366] mb-4">Transcription Services</h3>
                 <p className="text-gray-600 mb-6">
-                  Fast AI transcription for clear audio, meetings, interviews, notes, and general recordings.
+                  Audio and video transcription with AI, hybrid, or human review options.
                 </p>
                 <ul className="text-sm text-gray-600 space-y-2">
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Instant processing</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />AI, hybrid, and human options</li>
                   <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Editable transcripts</li>
                   <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />PDF, DOCX, TXT, SRT, VTT</li>
                 </ul>
 
                 <Button asChild className="mt-6 w-full bg-[#003366] hover:bg-[#002244] text-white">
                   <Link href="/pricing?service=ai">
-                    View AI Pricing
+                    View Transcription Pricing
                   </Link>
                 </Button>
               </CardContent>
@@ -139,19 +139,19 @@ function LandingPage() {
                 <div className="w-16 h-16 bg-[#b29dd9] rounded-full flex items-center justify-center mx-auto mb-6">
                   <Image src="/images/Human.svg" alt="Human Transcription" width={48} height={48} className="w-12 h-12" />
                 </div>
-                <h3 className="text-xl font-semibold text-[#003366] mb-4">Human Transcription</h3>
+                <h3 className="text-xl font-semibold text-[#003366] mb-4">Dictation to Document</h3>
                 <p className="text-gray-600 mb-6">
-                  Professional human transcription for legal, business, academic, and complex audio.
+                  Long dictations turned into case notes, file notes, letters, reports, summaries, and memos.
                 </p>
                 <ul className="text-sm text-gray-600 space-y-2">
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Human-prepared accuracy</li>
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Professional formatting</li>
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Locked PDF or DOCX options</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Instructions cleaned up</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Professional document formatting</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Editable document delivery</li>
                 </ul>
 
                   <Button asChild className="mt-6 w-full bg-[#003366] hover:bg-[#002244] text-white">
                     <Link href="/pricing?service=human">
-                      View Human Pricing
+                      View Document Pricing
                     </Link>
                   </Button>
               </CardContent>
@@ -162,19 +162,19 @@ function LandingPage() {
                 <div className="w-16 h-16 bg-[#b29dd9] rounded-full flex items-center justify-center mx-auto mb-6">
                   <Image src="/images/Hybrid.svg" alt="Hybrid Review" width={56} height={56} className="w-14 h-14" />
                 </div>
-                <h3 className="text-xl font-semibold text-[#003366] mb-4">Hybrid Review</h3>
+                <h3 className="text-xl font-semibold text-[#003366] mb-4">Copy Typing</h3>
                 <p className="text-gray-600 mb-6">
-                  AI speed combined with human review for cleaner, more reliable Canadian transcripts.
+                  Scanned documents, PDFs, images, and typed drafts recreated as clean editable documents.
                 </p>
                 <ul className="text-sm text-gray-600 space-y-2">
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Fast + accurate</li>
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Human reviewed</li>
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />PDF, DOCX, TXT, SRT, VTT</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />PDFs and scanned pages</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Clean formatting</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Editable final files</li>
                 </ul>
 
                 <Button asChild className="mt-6 w-full bg-[#003366] hover:bg-[#002244] text-white">
                   <Link href="/pricing?service=hybrid">
-                    View Hybrid Pricing
+                    View Pricing
                   </Link>
                 </Button>
               </CardContent>
@@ -185,19 +185,19 @@ function LandingPage() {
                 <div className="w-16 h-16 bg-[#b29dd9] rounded-full flex items-center justify-center mx-auto mb-6">
                   <FileText className="h-9 w-9 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold text-[#003366] mb-4">Document Workspace</h3>
+                <h3 className="text-xl font-semibold text-[#003366] mb-4">Handwriting Transcription</h3>
                 <p className="text-gray-600 mb-6">
-                  Upload dictated audio and receive a finished document — not just a transcript.
+                  Handwritten notes, letters, file notes, and forms typed into readable digital documents.
                 </p>
                 <ul className="text-sm text-gray-600 space-y-2">
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Letters, case notes, reports</li>
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Court and office documents</li>
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Editable DOCX and PDF options</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Notes and letters typed</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Readable formatting</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Digital document delivery</li>
                 </ul>
 
                 <Button asChild className="mt-6 w-full bg-[#72629E] hover:bg-[#5D5186] text-white">
                   <Link href="/pricing?service=dictation">
-                    View Dictation Pricing
+                    View Document Services
                   </Link>
                 </Button>
               </CardContent>
@@ -211,10 +211,10 @@ function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-[#003366] mb-4">
-              Built for Legal, Business, and Professional Workflows
+              Built for Professional Service Work
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Secure, confidential, and designed to support practical transcript and document preparation.
+              Secure, confidential, and designed for practical transcription and document preparation.
             </p>
           </div>
 
@@ -262,7 +262,7 @@ function LandingPage() {
         </div>
       </section>
 
-      {/* Office Studio CTA Section */}
+      {/* Document Workspace CTA Section */}
       <section className="py-24 bg-gradient-to-br from-[#f0ebf8] to-[#e8e0f2]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
@@ -270,10 +270,10 @@ function LandingPage() {
               <FileText className="h-8 w-8 text-[#b29dd9]" />
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-[#003366] mb-4">
-              Document Workspace — Transcription, Dictation and Documents
+              Document Workspace — Dictation, Notes, Scans and Drafts
             </h2>
             <p className="text-lg text-gray-700 mb-8 max-w-2xl mx-auto">
-              Upload audio, edit transcripts, request human review, and turn dictation into polished professional documents with Canadian English, legal and medical terminology support, and secure project delivery.
+              Upload dictation, notes, scanned documents, handwritten pages, audio, video, or typed drafts. We help turn them into clean, editable documents you can review, save, and download.
             </p>
             <Button
               asChild
@@ -303,11 +303,14 @@ function LandingPage() {
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">
-            From Audio to Finished Work — Faster
+            Get the Document You Need
           </h2>
           <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-            <span className="block mb-4"><strong>Transcription:</strong> Convert audio into structured transcripts with AI, human, or hybrid options.</span>
-            <span className="block"><strong>Dictation:</strong> Upload spoken instructions and receive polished letters, case notes, reports, court documents, or other finished documents.</span>
+            <span className="block mb-4"><strong>Transcription:</strong> Convert audio or video into structured transcripts with AI, human, or hybrid options.</span>
+            <span className="block"><strong>Documents:</strong> Send dictation, scanned pages, handwriting, notes, or drafts and receive a clean document for review and download.</span>
+          </p>
+          <p className="text-sm text-gray-200 mb-8 max-w-3xl mx-auto">
+            Talk to Text Canada provides transcription, copy typing, formatting, and document preparation support. We do not provide legal advice, legal representation, or certified court reporting services. Clients are responsible for reviewing and approving all final documents before use.
           </p>
           <Button
             asChild

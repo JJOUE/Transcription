@@ -75,8 +75,8 @@ function ContactPage() {
               Get in Touch
             </h1>
             <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-              Have questions about our transcription services? We&apos;re here to help. 
-              Reach out to our team for personalized assistance.
+              Have questions about transcription, dictation cleanup, copy typing,
+              handwriting transcription, or document preparation? We&apos;re here to help.
             </p>
           </div>
         </div>
@@ -180,7 +180,7 @@ function ContactPage() {
                         Email Support
                       </h3>
                       <p className="text-gray-600 mb-2">
-                        Get help with your account, billing, or technical issues.
+                        Get help with your account, billing, uploads, or a service question.
                       </p>
                       <a
                         href="mailto:jennifer@talktotext.ca"
@@ -304,8 +304,9 @@ function ContactPage() {
                 How quickly can I get my transcription?
               </h3>
               <p className="text-gray-600">
-                AI transcriptions are typically completed within minutes. Human and hybrid 
-                transcriptions usually take 24-48 hours depending on file length and complexity.
+                AI transcription can be completed quickly. Hybrid review, human transcription,
+                copy typing, handwriting transcription, and document preparation depend on the
+                file length, clarity, and service requested.
               </p>
             </div>
 
@@ -334,9 +335,9 @@ function ContactPage() {
                 Is my data secure and confidential?
               </h3>
               <p className="text-gray-600">
-                Absolutely. We use enterprise-grade encryption, are SOC 2 compliant, and 
-                all staff sign strict confidentiality agreements. Files are automatically 
-                deleted after 30 days.
+                Files are handled through secure upload and download workflows with a focus on
+                confidentiality. Completed files are active for 30 days, may be archived after
+                30 days, and may be deleted after 90 days unless a retention hold applies.
               </p>
             </div>
           </div>

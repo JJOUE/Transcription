@@ -52,8 +52,8 @@ export function Footer() {
               )}
             </div>
             <p className={`max-w-md ${isLightFooter ? "text-gray-600" : "text-gray-300"}`}>
-              Professional transcription services for legal professionals, businesses, and individuals
-              across Canada. Accurate, secure, and reliable.
+              Canadian transcription, dictation cleanup, copy typing, handwriting transcription,
+              and document preparation for professionals.
             </p>
           </div>
 
@@ -88,6 +88,26 @@ export function Footer() {
                   }`}
                 >
                   Hybrid Review
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/document-workspace"
+                  className={`transition-colors ${
+                    isLightFooter ? "hover:text-[#003366]" : "hover:text-white"
+                  }`}
+                >
+                  Document Preparation
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/document-workspace"
+                  className={`transition-colors ${
+                    isLightFooter ? "hover:text-[#003366]" : "hover:text-white"
+                  }`}
+                >
+                  Copy Typing
                 </Link>
               </li>
             </ul>
