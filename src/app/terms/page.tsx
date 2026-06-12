@@ -1,6 +1,13 @@
 import React from 'react';
+import type { Metadata } from 'next';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+
+export const metadata: Metadata = {
+  title: 'Terms of Service | Talk to Text Canada',
+  description:
+    "Review the terms for using Talk to Text Canada's transcription, document preparation, upload, download, and workspace services.",
+};
 
 export default function TermsPage() {
   return (

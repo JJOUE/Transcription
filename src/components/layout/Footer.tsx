@@ -62,7 +62,7 @@ export function Footer() {
             <ul className={`space-y-2 ${isLightFooter ? "text-gray-600" : "text-gray-300"}`}>
               <li>
                 <Link
-                  href="/pricing"
+                  href="/pricing?service=ai"
                   className={`transition-colors ${
                     isLightFooter ? "hover:text-[#003366]" : "hover:text-white"
                   }`}
@@ -72,7 +72,7 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/pricing"
+                  href="/pricing?service=human"
                   className={`transition-colors ${
                     isLightFooter ? "hover:text-[#003366]" : "hover:text-white"
                   }`}
@@ -82,7 +82,7 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/pricing"
+                  href="/pricing?service=hybrid"
                   className={`transition-colors ${
                     isLightFooter ? "hover:text-[#003366]" : "hover:text-white"
                   }`}
@@ -92,7 +92,7 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/document-workspace"
+                  href="/pricing#document-workspace"
                   className={`transition-colors ${
                     isLightFooter ? "hover:text-[#003366]" : "hover:text-white"
                   }`}

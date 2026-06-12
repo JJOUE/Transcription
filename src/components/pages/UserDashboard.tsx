@@ -620,7 +620,7 @@ export function UserDashboard() {
                     </div>
                   )}
 
-                  {/* Office Studio Projects Section */}
+                  {/* Document Workspace Projects Section */}
                   <div className="pt-2 border-t border-gray-100 mt-6">
                     <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
                       Document Workspace Projects
