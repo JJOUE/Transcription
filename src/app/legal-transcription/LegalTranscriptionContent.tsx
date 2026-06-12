@@ -32,7 +32,7 @@ const faqItems: FAQItem[] = [
   },
   {
     question: 'Do you support legal hearings and administrative proceedings?',
-    answer: 'Yes. We support transcription of legal hearings, administrative proceedings, statements, interviews, and dictation. Our Canadian English transcription service is designed for Canadian legal workflows and document support.'
+    answer: 'Yes. We support transcription of legal hearings, administrative proceedings, statements, interviews, and audio instructions for document preparation. Our Canadian English transcription service is designed for Canadian legal workflows and document support.'
   },
   {
     question: 'Is AI transcription appropriate for legal audio?',
@@ -58,7 +58,7 @@ export function LegalTranscriptionContent() {
           Legal Transcription Services Built for Canadian Legal Workflows
         </h1>
         <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
-          Professional transcription for legal hearings, statements, interviews, dictation, and law office workflows. Backed by experienced legal transcription specialists and modern AI tools.
+          Professional transcription for legal hearings, statements, interviews, audio instructions for document preparation, and law office workflows. Backed by experienced legal transcription specialists and modern AI tools.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button
@@ -164,15 +164,15 @@ export function LegalTranscriptionContent() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Briefcase className="h-5 w-5 text-[#b29dd9]" />
-                Legal Dictation & Correspondence
+                Audio Instructions & Correspondence
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-3">
-                Convert dictation, correspondence, memos, and case notes into polished documents for legal office use.
+                Convert audio instructions, correspondence, memos, and case notes into polished documents for legal office use.
               </p>
               <ul className="space-y-1 text-sm text-gray-600">
-                <li>✓ Professional dictation support</li>
+                <li>✓ Professional document preparation support</li>
                 <li>✓ Office-ready formatting</li>
                 <li>✓ Human review available</li>
               </ul>

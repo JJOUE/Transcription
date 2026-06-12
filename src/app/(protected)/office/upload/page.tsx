@@ -32,8 +32,8 @@ type OfficeServiceType = 'dictation-cleanup' | 'copy-typing' | 'handwriting-tran
 const OFFICE_SERVICE_TYPES: { value: OfficeServiceType; label: string; description: string }[] = [
   {
     value: 'dictation-cleanup',
-    label: 'Dictation cleanup',
-    description: 'Long dictations cleaned up into notes, letters, reports, summaries, or memos.'
+    label: 'Audio instructions for document preparation',
+    description: 'Upload audio instructions for a document you want prepared.'
   },
   {
     value: 'copy-typing',
@@ -48,7 +48,7 @@ const OFFICE_SERVICE_TYPES: { value: OfficeServiceType; label: string; descripti
   {
     value: 'document-preparation',
     label: 'Document preparation',
-    description: 'Dictation, notes, references, and instructions turned into an organized document.'
+    description: 'Notes, files, references, and instructions turned into an organized document.'
   }
 ];
 
@@ -413,7 +413,10 @@ export default function OfficeUploadPage() {
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-[#003366] mb-2">Document Workspace</h1>
           <p className="text-lg text-gray-600">
-            Upload dictation, documents, scans, handwriting, or reference files for preparation.
+            Upload audio instructions, documents, scans, handwriting, or reference files for preparation.
+          </p>
+          <p className="text-sm text-gray-500 mt-2">
+            If you only need audio or video converted into text, use AI Transcription instead.
           </p>
         </div>
 
@@ -538,7 +541,7 @@ export default function OfficeUploadPage() {
                 Drag files here or click to select
               </p>
               <p className="text-sm text-gray-500 mb-4">
-                Upload dictation, documents, scans, handwriting, or reference files for preparation.
+                Upload audio instructions, documents, scans, handwriting, or reference files for preparation.
               </p>
               <p className="text-xs text-gray-500 mb-4">
                 Supported: audio, video, DOC, DOCX, PDF, TXT, JPG, PNG, HEIC (Max 1GB each)

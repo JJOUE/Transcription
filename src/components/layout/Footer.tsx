@@ -52,8 +52,8 @@ export function Footer() {
               )}
             </div>
             <p className={`max-w-md ${isLightFooter ? "text-gray-600" : "text-gray-300"}`}>
-              Canadian transcription, dictation cleanup, copy typing, handwriting transcription,
-              and document preparation for professionals.
+              Canadian transcription, audio instructions for document preparation, copy typing,
+              handwriting transcription, and document preparation for professionals.
             </p>
           </div>
 

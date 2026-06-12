@@ -39,7 +39,7 @@ interface WorkQueueCardProps {
 const getOfficeServiceLabel = (serviceType?: string) => {
   switch (serviceType) {
     case 'dictation-cleanup':
-      return 'Dictation cleanup';
+      return 'Audio instructions for document preparation';
     case 'copy-typing':
       return 'Copy typing';
     case 'handwriting-transcription':
@@ -66,7 +66,7 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
   const retentionDeleted = isRetentionDeleted(job);
   const retentionHeld = job.retentionHold || job.deletionStatus === 'held';
   
-  // Office Studio management state
+  // Document Workspace management state
   const [assignedTypistInput, setAssignedTypistInput] = useState(job.assignedTypistName || '');
   const [dueDateInput, setDueDateInput] = useState('');
   const [uploadingCompletedDoc, setUploadingCompletedDoc] = useState(false);
@@ -414,7 +414,7 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
     }
   };
 
-  // Office Studio handlers
+  // Document Workspace handlers
   const handleAssignTypist = async () => {
     if (!job.id || !assignedTypistInput.trim()) {
       toast({
@@ -755,7 +755,7 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
 
           {/* Actions based on status */}
 
-          {/* Office Studio jobs: management controls */}
+          {/* Document Workspace jobs: management controls */}
           {job.type === 'office' && !['complete', 'cancelled'].includes(job.status) && (
             <>
               <Button
@@ -920,7 +920,7 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
           )}
         </div>
         
-        {/* Office Studio Management Panel */}
+        {/* Document Workspace Management Panel */}
         {job.type === 'office' && !['complete', 'cancelled'].includes(job.status) && (
           <div className="mt-4 p-4 bg-[#f0ebf8] border border-[#b29dd9] rounded-lg space-y-3">
             <h4 className="font-medium text-[#003366] text-sm">📋 Document Workspace Management</h4>
@@ -1167,7 +1167,7 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                 </div>
               )}
 
-              {/* Office Studio message */}
+              {/* Document Workspace message */}
               {job.type === 'office' && (
                 <div className="mb-4 p-4 bg-[#f0ebf8] border border-[#b29dd9] rounded-lg">
                   <p className="text-sm text-[#003366] font-medium">

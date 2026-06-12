@@ -88,10 +88,10 @@ export interface TranscriptionJob {
   adminTranscriptPath?: string; // Storage path for admin-uploaded transcript
   adminTranscriptURL?: string; // Download URL for admin-uploaded transcript
   adminTranscriptFilename?: string; // Original filename of admin-uploaded transcript
-  // Office Studio specific fields
+  // Document Workspace specific fields
   assignedTypist?: string; // UID of assigned typist
   assignedTypistName?: string; // Name of assigned typist
-  officeDueDate?: Timestamp; // Due date for Office Studio project
+  officeDueDate?: Timestamp; // Due date for Document Workspace project
   officePriority?: OfficePriority; // Priority level (standard, rush, same_day)
   officeStatus?: OfficeStatus; // Office-specific workflow status
   officeServiceType?: OfficeServiceType; // Document Workspace service requested
@@ -100,8 +100,8 @@ export interface TranscriptionJob {
   officeCompletedDocumentPath?: string; // Storage path for completed document
   officeCompletedFilename?: string; // Filename of completed document
   officeReviewed?: boolean; // Whether Office project has been reviewed
-  officeTemplateCategory?: string; // Category of template used (for template library)
-  officeTemplateName?: string; // Name of template used (for template library)
+  officeTemplateCategory?: string; // Legacy template/reference category
+  officeTemplateName?: string; // Legacy template/reference name
 }
 
 const TRANSCRIPTIONS_COLLECTION = 'transcriptions';
@@ -290,8 +290,8 @@ export const getModeDetails = (mode: TranscriptionMode) => {
       turnaround: '3-5 business days'
     },
     human: {
-      name: 'Dictation & Human Transcription',
-      description: 'Professional human transcription for dictation and highest accuracy',
+      name: 'Human Transcription',
+      description: 'Professional human transcription for the highest review level',
       creditsPerMinute: 200, // Legacy support
       costPerMinute: 2.50, // Pay as you go rate in CAD
       turnaround: '3-5 business days'
@@ -347,7 +347,7 @@ export const getTranscriptionByShareId = async (shareId: string): Promise<Transc
   } as TranscriptionJob;
 };
 
-// Office Studio specific functions
+// Document Workspace specific functions
 export const updateOfficeStatus = async (
   id: string,
   officeStatus: OfficeStatus,

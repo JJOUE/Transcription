@@ -33,7 +33,7 @@ import { AudioPlayer } from '@/components/ui/AudioPlayer';
 const getOfficeServiceLabel = (serviceType?: string) => {
   switch (serviceType) {
     case 'dictation-cleanup':
-      return 'Dictation cleanup';
+      return 'Audio instructions for document preparation';
     case 'copy-typing':
       return 'Copy typing';
     case 'handwriting-transcription':
@@ -334,7 +334,7 @@ export function TranscriptionQueue() {
     // - Hybrid mode jobs that need review (pending-review, under-review)
     // - Failed AI/Hybrid jobs that might need retry
     // - Stuck processing jobs (processing status but no speechmaticsJobId)
-    // - Office Studio jobs (all non-completed statuses)
+    // - Document Workspace jobs (all non-completed statuses)
     const isStuckProcessing = item.status === 'processing' && !item.speechmaticsJobId;
     const needsAdminAction = (item.type === 'office' && !['complete', 'cancelled'].includes(item.status)) ||
                             (item.mode === 'human' && !['complete', 'cancelled'].includes(item.status)) ||
@@ -690,7 +690,7 @@ export function TranscriptionQueue() {
           </CardContent>
         </Card>
 
-        {/* Office Studio Queue Items */}
+        {/* Document Workspace Queue Items */}
         <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg font-semibold text-[#003366]">

@@ -260,8 +260,8 @@ export default function UploadPage() {
     },
     {
       id: 'human',
-      name: 'Dictation & Human Transcription',
-      description: 'Professional human transcription for dictation and highest accuracy',
+      name: 'Human Transcription',
+      description: 'Professional human transcription for the highest review level',
       creditsPerMinute: 200, // Legacy support
       costPerMinute: pricingSettings?.payAsYouGo.human || 2.50, // CA$ per minute from database
       turnaround: '3-5 days',
@@ -627,7 +627,7 @@ export default function UploadPage() {
           hasPackage: hasPackage,
           // Template for human transcription
           ...templateData,
-          // Office Studio fields
+          // Document Workspace fields
           ...(transcriptionMode === 'human' && {
             officeStatus: 'submitted' as const,
             officePriority: rushDelivery ? 'rush' : 'standard'

@@ -21,7 +21,7 @@ import { Timestamp } from 'firebase/firestore';
 const getOfficeServiceLabel = (serviceType?: string) => {
   switch (serviceType) {
     case 'dictation-cleanup':
-      return 'Dictation cleanup';
+      return 'Audio instructions for document preparation';
     case 'copy-typing':
       return 'Copy typing';
     case 'handwriting-transcription':
@@ -522,7 +522,7 @@ export function UserDashboard() {
                           <span>
                             {job.mode === 'ai' ? 'AI Transcription' :
                              job.mode === 'hybrid' ? 'Hybrid Review' :
-                             job.mode === 'human' ? 'Dictation & Human' : job.mode}
+                             job.mode === 'human' ? 'Human Transcription' : job.mode}
                           </span>
                           <span>{Math.ceil(job.duration / 60)} min</span>
 
@@ -581,7 +581,7 @@ export function UserDashboard() {
                                     : job.mode === 'hybrid'
                                     ? 'Hybrid Review'
                                     : job.mode === 'human'
-                                    ? 'Dictation & Human'
+                                    ? 'Human Transcription'
                                     : job.mode}
                                 </span>
                                     

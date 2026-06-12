@@ -5,11 +5,11 @@ import { LegalTranscriptionContent } from './LegalTranscriptionContent';
 
 export const metadata: Metadata = {
   title: 'Legal Transcription Services Canada | Talk to Text Canada',
-  description: 'Professional legal transcription services in Canada for legal hearings, statements, interviews, dictation, and law office workflows. AI transcription, human review, Canadian English, and secure dashboard delivery available.',
+  description: 'Professional legal transcription services in Canada for legal hearings, statements, interviews, audio instructions for document preparation, and law office workflows. AI transcription, human review, Canadian English, and secure dashboard delivery available.',
   metadataBase: new URL('https://www.talktotext.ca'),
   openGraph: {
     title: 'Legal Transcription Services Canada | Talk to Text Canada',
-    description: 'Professional legal transcription services in Canada for legal hearings, statements, interviews, dictation, and law office workflows. AI transcription, human review, Canadian English, and secure dashboard delivery available.',
+    description: 'Professional legal transcription services in Canada for legal hearings, statements, interviews, audio instructions for document preparation, and law office workflows. AI transcription, human review, Canadian English, and secure dashboard delivery available.',
     url: 'https://www.talktotext.ca/legal-transcription',
     type: 'website',
   },

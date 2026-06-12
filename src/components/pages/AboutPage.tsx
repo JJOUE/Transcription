@@ -31,8 +31,8 @@ function AboutPage() {
               About Talk To Text Canada
             </h1>
             <p className="text-xl text-gray-300 mb-8 max-w-3xl mx-auto">
-              Canadian transcription, dictation cleanup, copy typing, handwriting transcription,
-              and document preparation for professionals.
+              Canadian transcription, audio instructions for document preparation, copy typing,
+              handwriting transcription, and document preparation for professionals.
             </p>
           </div>
         </div>
@@ -52,7 +52,7 @@ function AboutPage() {
                 clear service options, and practical human support where needed.
               </p>
               <p className="text-lg text-gray-600">
-                Whether you are sending audio, video, dictation, scanned pages, handwriting,
+                Whether you are sending audio, video, audio instructions, scanned pages, handwriting,
                 typed drafts, or notes, we help turn source material into clean transcripts
                 and editable documents you can review and use.
               </p>
@@ -152,7 +152,7 @@ function AboutPage() {
                 </div>
                 <p className="text-gray-600 text-left">
                   Our support is built around real client work, including transcription,
-                  copy typing, dictation cleanup, and document preparation projects.
+                  copy typing, document preparation from audio instructions, and document preparation projects.
                 </p>
               </CardContent>
             </Card>
@@ -229,7 +229,7 @@ function AboutPage() {
               </h3>
               <p className="text-gray-600">
                 Experienced transcription and document support professionals help with audio,
-                dictation, copy typing, handwriting, and formatting.
+                audio instructions, copy typing, handwriting, and formatting.
               </p>
             </div>
 

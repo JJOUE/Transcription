@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Guide | Talk to Text Canada',
     description:
-      'Learn how to use Talk to Text Canada for transcription, dictation cleanup, copy typing, handwriting transcription, document preparation, and secure downloads.',
+      'Learn how to use Talk to Text Canada for transcription, audio instructions for document preparation, copy typing, handwriting transcription, document preparation, and secure downloads.',
     url: 'https://www.talktotext.ca/guide',
     type: 'website',
   },
@@ -42,7 +42,7 @@ const transcriptSteps = [
 ];
 
 const documentSteps = [
-  'Choose Document Workspace for dictation cleanup, copy typing, handwriting transcription, or document preparation.',
+  'Choose Document Workspace for audio instructions for document preparation, copy typing, handwriting transcription, or document preparation from notes or files.',
   'Upload audio, video, documents, scans, handwriting images, PDFs, TXT, DOC, DOCX, JPG, PNG, or HEIC files where supported.',
   'Add instructions describing what should be prepared, typed, cleaned up, formatted, or organized.',
   'Upload an optional template, sample, letterhead, form, or reference document if it helps explain the format you need.',
@@ -114,9 +114,9 @@ export default function GuidePage() {
                 What You Can Use This Service For
               </h2>
               <p className="text-gray-700 mb-4">
-                Talk to Text Canada provides Canadian transcription, dictation cleanup, copy typing,
-                handwriting transcription, formatting, and document preparation support for
-                professionals.
+                Talk to Text Canada provides Canadian transcription, audio instructions for document
+                preparation, copy typing, handwriting transcription, formatting, and document
+                preparation support for professionals.
               </p>
               <p className="text-gray-700">
                 You can upload audio, video, notes, scans, handwriting, PDFs, typed drafts, and
@@ -175,8 +175,8 @@ export default function GuidePage() {
                   Document Workspace
                 </h2>
                 <p className="text-gray-700 max-w-3xl">
-                  Document Workspace is for dictation cleanup, copy typing, handwriting
-                  transcription, and document preparation projects.
+                  Document Workspace is for human-prepared documents from audio instructions, copy
+                  typing, handwriting transcription, notes, files, and references.
                 </p>
               </div>
               <Link

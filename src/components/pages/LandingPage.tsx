@@ -33,10 +33,10 @@ function LandingPage() {
                 Canadian Transcription & Document Preparation Services
               </h1>
               <p className="text-lg md:text-xl text-gray-300 mb-4 max-w-xl mx-auto lg:mx-0">
-                Turn audio, video, dictation, handwritten notes, scanned documents, and typed drafts into clean, organized documents.
+                Turn audio, video, audio instructions, handwritten notes, scanned documents, and typed drafts into clean, organized documents.
               </p>
               <p className="text-base text-gray-200 mb-4 max-w-xl mx-auto lg:mx-0">
-                Canadian transcription, dictation cleanup, copy typing, and document preparation for professionals.
+                Canadian transcription, audio instructions for document preparation, copy typing, and document preparation for professionals.
               </p>
               <p className="text-base text-gray-200 mb-8 max-w-xl mx-auto lg:mx-0">
                 Upload your file, choose the service you need, and download a polished transcript, letter, note, report, memo, or editable document.
@@ -49,7 +49,7 @@ function LandingPage() {
                 </div>
                 <div className="rounded-3xl bg-white/10 p-4">
                   <p className="text-sm uppercase tracking-[0.2em] text-[#b29dd9] mb-2">Step 2</p>
-                  <p className="font-semibold text-white">Choose transcription, dictation cleanup, copy typing, or document preparation</p>
+                  <p className="font-semibold text-white">Choose transcription, document preparation from audio instructions, copy typing, or document preparation</p>
                 </div>
                 <div className="rounded-3xl bg-white/10 p-4">
                   <p className="text-sm uppercase tracking-[0.2em] text-[#b29dd9] mb-2">Step 3</p>
@@ -79,7 +79,7 @@ function LandingPage() {
               </div>
 
               <p className="text-sm text-gray-200 mt-6 max-w-xl mx-auto lg:mx-0">
-                Services include transcription, long dictation cleanup, copy typing, handwriting transcription, document formatting, and document preparation.
+                Services include transcription, document preparation from audio instructions, copy typing, handwriting transcription, document formatting, and document preparation.
               </p>
             </div>
 
@@ -139,9 +139,9 @@ function LandingPage() {
                 <div className="w-16 h-16 bg-[#b29dd9] rounded-full flex items-center justify-center mx-auto mb-6">
                   <Image src="/images/Human.svg" alt="Human Transcription" width={48} height={48} className="w-12 h-12" />
                 </div>
-                <h3 className="text-xl font-semibold text-[#003366] mb-4">Dictation to Document</h3>
+                <h3 className="text-xl font-semibold text-[#003366] mb-4">Audio Instructions to Document</h3>
                 <p className="text-gray-600 mb-6">
-                  Long dictations turned into case notes, file notes, letters, reports, summaries, and memos.
+                  Audio instructions turned into notes, letters, reports, summaries, and memos.
                 </p>
                 <ul className="text-sm text-gray-600 space-y-2">
                   <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Instructions cleaned up</li>
@@ -270,10 +270,10 @@ function LandingPage() {
               <FileText className="h-8 w-8 text-[#b29dd9]" />
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-[#003366] mb-4">
-              Document Workspace — Dictation, Notes, Scans and Drafts
+              Document Workspace — Audio Instructions, Notes, Scans and Drafts
             </h2>
             <p className="text-lg text-gray-700 mb-8 max-w-2xl mx-auto">
-              Upload dictation, notes, scanned documents, handwritten pages, audio, video, or typed drafts. We help turn them into clean, editable documents you can review, save, and download.
+              Upload audio instructions, notes, scanned documents, handwritten pages, audio, video, or typed drafts. We help turn them into clean, editable documents you can review, save, and download. If you only need audio or video converted into text, use AI Transcription instead.
             </p>
             <Button
               asChild
@@ -307,7 +307,7 @@ function LandingPage() {
           </h2>
           <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
             <span className="block mb-4"><strong>Transcription:</strong> Convert audio or video into structured transcripts with AI, human, or hybrid options.</span>
-            <span className="block"><strong>Documents:</strong> Send dictation, scanned pages, handwriting, notes, or drafts and receive a clean document for review and download.</span>
+            <span className="block"><strong>Documents:</strong> Send audio instructions, scanned pages, handwriting, notes, or drafts and receive a clean document for review and download.</span>
           </p>
           <p className="text-sm text-gray-200 mb-8 max-w-3xl mx-auto">
             Talk to Text Canada provides transcription, copy typing, formatting, and document preparation support. We do not provide legal advice, legal representation, or certified court reporting services. Clients are responsible for reviewing and approving all final documents before use.

@@ -21,7 +21,7 @@ export default function TermsPage() {
               1. Definitions
             </h2>
             <ul className="list-disc pl-6 mb-6 text-gray-700 space-y-2">
-              <li><strong>&quot;Services&quot;</strong> means transcription, dictation cleanup, copy typing, handwriting transcription, formatting, document preparation, and related account features.</li>
+              <li><strong>&quot;Services&quot;</strong> means transcription, audio instructions for document preparation, copy typing, handwriting transcription, formatting, document preparation, and related account features.</li>
               <li><strong>&quot;Client Content&quot;</strong> means all audio, video, notes, scanned documents, handwritten pages, typed drafts, templates, transcripts, and data you upload.</li>
               <li><strong>&quot;Dashboard&quot;</strong> means your secure online account area.</li>
               <li><strong>&quot;User&quot;</strong> means any person or entity accessing or using the Services.</li>
@@ -50,7 +50,7 @@ export default function TermsPage() {
               <li>AI Transcription (automated, temporary US-based processing)</li>
               <li>Human Transcription (conducted entirely in Canada)</li>
               <li>Hybrid Transcription (AI plus human review)</li>
-              <li>Document preparation, dictation cleanup, copy typing, handwriting transcription, and formatting support</li>
+              <li>Document preparation from audio instructions, copy typing, handwriting transcription, and formatting support</li>
             </ul>
 
             <h2 className="text-2xl font-semibold text-[#003366] mt-8 mb-4">

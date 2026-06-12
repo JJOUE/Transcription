@@ -123,7 +123,7 @@ export default function AdminPage() {
 
         const isStuckProcessing = job.status === 'processing' && !job.speechmaticsJobId;
         return (
-          // Office Studio jobs (except completed/cancelled)
+          // Document Workspace jobs (except completed/cancelled)
           (job.type === 'office' && !['complete', 'cancelled'].includes(job.status)) ||
           // Human mode jobs (except completed/cancelled)
           (job.mode === 'human' && !['complete', 'cancelled'].includes(job.status)) ||
@@ -776,7 +776,7 @@ export default function AdminPage() {
                   {queueFilter === 'transcription'
                     ? 'AI, hybrid, and human transcription jobs requiring review, processing, or retry'
                     : queueFilter === 'office'
-                    ? 'Document Workspace dictation and document projects needing admin attention'
+                    ? 'Document Workspace projects needing admin attention'
                     : 'Human review, failed jobs, rush jobs, and items requiring admin attention'}
                 </p>
               </div>

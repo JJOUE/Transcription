@@ -6,12 +6,12 @@ import { Footer } from '@/components/layout/Footer';
 export const metadata: Metadata = {
   title: 'Document Workspace | Talk to Text Canada',
   description:
-    'Document preparation support for dictation, notes, scanned documents, handwriting, audio, video, and typed drafts, with completed document download through Talk to Text Canada.',
+    'Document preparation support from audio instructions, notes, scanned documents, handwriting, audio, video, and typed drafts, with completed document download through Talk to Text Canada.',
   metadataBase: new URL('https://www.talktotext.ca'),
   openGraph: {
     title: 'Document Workspace | Talk to Text Canada',
     description:
-      'Document preparation support for dictation, notes, scanned documents, handwriting, audio, video, and typed drafts, with completed document download through Talk to Text Canada.',
+      'Document preparation support from audio instructions, notes, scanned documents, handwriting, audio, video, and typed drafts, with completed document download through Talk to Text Canada.',
     url: 'https://www.talktotext.ca/document-workspace',
     type: 'website',
   },
@@ -19,8 +19,8 @@ export const metadata: Metadata = {
 
 const features = [
   {
-    title: 'Dictation, Audio and Video',
-    text: 'Upload spoken instructions, long dictations, audio notes, or video files for transcription or document preparation.',
+    title: 'Audio Instructions and Reference Files',
+    text: 'Upload audio instructions when you want Talk to Text Canada to prepare a document based on what you explain in the recording.',
   },
   {
     title: 'Copy Typing',
@@ -46,7 +46,7 @@ const features = [
 
 const workflow = [
   'Sign in or contact us to start a document project.',
-  'Upload dictation, notes, scanned documents, handwritten pages, audio, video, or typed drafts.',
+  'Upload audio instructions, notes, scanned documents, handwritten pages, audio, video, or typed drafts.',
   'We prepare, type, clean up, or format the document according to the service requested.',
   'Review project status in your dashboard.',
   'Download the completed document when it is ready.',
@@ -59,11 +59,11 @@ const usageSteps = [
   },
   {
     title: 'Start a Document Workspace project',
-    text: 'Choose Document Workspace and select the type of support you need: dictation cleanup, copy typing, handwriting transcription, or document preparation.',
+    text: 'Choose Document Workspace and select the type of support you need: audio instructions for document preparation, copy typing, handwriting transcription, or document preparation from notes or files.',
   },
   {
     title: 'Upload your file',
-    text: 'Upload your dictation, document, scan, handwriting image, PDF, typed draft, or other supported source file.',
+    text: 'Upload your audio instructions, document, scan, handwriting image, PDF, typed draft, or other supported source file.',
   },
   {
     title: 'Add helpful instructions',
@@ -118,10 +118,10 @@ export default function DocumentWorkspacePage() {
             </h1>
 
             <p className="text-lg md:text-xl text-gray-700 max-w-3xl mx-auto mb-6">
-              Turn dictation, notes, templates, and instructions into organized, editable documents.
+              Turn audio instructions, notes, templates, and reference files into organized, editable documents.
             </p>
             <p className="text-sm text-gray-500 max-w-3xl mx-auto mb-8">
-              Document Workspace helps professionals turn dictation, notes, scanned documents, handwritten pages, transcripts, and typed drafts into clean, downloadable documents.
+              Document Workspace helps professionals turn audio instructions, notes, scanned documents, handwritten pages, transcripts, and typed drafts into clean, downloadable documents. If you only need audio or video converted into text, use AI Transcription instead.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -160,7 +160,7 @@ export default function DocumentWorkspacePage() {
               </div>
               <p className="text-white/90 max-w-2xl mx-auto">
                 A short walkthrough video will appear here showing how clients start a document
-                project, upload dictation, notes, scans, handwriting, or drafts, track status, and
+                project, upload audio instructions, notes, scans, handwriting, or drafts, track status, and
                 download a completed document when ready.
               </p>
             </div>
@@ -172,8 +172,8 @@ export default function DocumentWorkspacePage() {
                 How to use Document Workspace
               </h2>
               <p className="text-gray-700 max-w-2xl mx-auto">
-                Use Document Workspace to submit dictation cleanup, copy typing, handwriting
-                transcription, or document preparation projects through your secure account.
+                Use Document Workspace to submit audio instructions for document preparation, copy
+                typing, handwriting transcription, or document preparation from notes or files.
               </p>
             </div>
 
@@ -244,7 +244,7 @@ export default function DocumentWorkspacePage() {
                 What Clients Can Provide
               </h2>
               <p className="text-gray-700">
-                You can provide dictation, notes, scanned documents, handwritten pages, audio,
+                You can provide audio instructions, notes, scanned documents, handwritten pages, audio,
                 video, typed drafts, formatting preferences, and your own template file where
                 applicable.
               </p>
@@ -297,8 +297,8 @@ export default function DocumentWorkspacePage() {
                 </h3>
                 <p className="text-gray-700 text-sm">
                   No. Transcription turns audio into text. Document Workspace supports document
-                  preparation from dictation, notes, scanned documents, handwriting, typed drafts,
-                  and instructions.
+                  preparation from audio instructions, notes, scanned documents, handwriting, typed
+                  drafts, and reference files.
                 </p>
               </div>
 

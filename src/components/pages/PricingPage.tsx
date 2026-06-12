@@ -131,7 +131,7 @@ const getTypeInfo = (type: string) => {
     case 'dictation':
       return {
         title: 'Document Preparation Services',
-        subtitle: 'Dictation cleanup, copy typing, handwriting transcription, and document formatting',
+        subtitle: 'Audio instructions for document preparation, copy typing, handwriting transcription, and document formatting',
         icon: FileText,
         label: 'Documents'
       };
@@ -161,7 +161,7 @@ const getTypeInfo = (type: string) => {
             Pricing for Transcription & Document Services
           </h1>
           <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-            Choose AI transcription, hybrid review, human transcription, dictation cleanup, copy typing, handwriting transcription, or document preparation.
+            Choose AI transcription, hybrid review, human transcription, audio instructions for document preparation, copy typing, handwriting transcription, or document preparation.
             Save with bundled packages or pay as you go.
           </p>
         </div>
@@ -222,11 +222,11 @@ const getTypeInfo = (type: string) => {
                             </h4>
                             
             <p className="text-gray-600 mb-6">
-              Talk to Text Canada can help with transcription, long dictation cleanup, copy typing, handwriting transcription, and document formatting.
+              Talk to Text Canada can help with transcription, document preparation from audio instructions, copy typing, handwriting transcription, and document formatting.
             </p>
 
             <p className="text-gray-600 mb-6">
-              Upload dictation, notes, scanned documents, handwritten pages, audio, video, or typed drafts.
+              Upload audio instructions, notes, scanned documents, handwritten pages, audio, video, or typed drafts.
             </p>
 
             <p className="text-gray-600">
@@ -269,6 +269,7 @@ const getTypeInfo = (type: string) => {
   <div className="space-y-2 text-sm text-gray-600">
     <p>General document preparation starting at CA$20</p>
     <p>Complex formatting or custom document projects starting at CA$45</p>
+    <p>Projects based on audio instructions are quoted after review because pricing depends on the instructions, template, length, formatting, and final document required</p>
     <p>Custom quote may apply for document, handwriting, scan, or copy typing projects</p>
     <p>Custom quotes available for larger projects</p>
   </div>

@@ -75,7 +75,7 @@ function ContactPage() {
               Get in Touch
             </h1>
             <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-              Have questions about transcription, dictation cleanup, copy typing,
+              Have questions about transcription, audio instructions for document preparation, copy typing,
               handwriting transcription, or document preparation? We&apos;re here to help.
             </p>
           </div>
