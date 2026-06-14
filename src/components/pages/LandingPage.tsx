@@ -9,6 +9,73 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 
+const serviceChooserCards = [
+  {
+    title: 'I need audio or video transcribed',
+    text: 'Choose AI, Hybrid, or Human transcription for meetings, interviews, recordings, notes, or video files.',
+    actions: [
+      {
+        label: 'Go to Transcript Workspace',
+        href: '/transcript-workspace',
+      },
+    ],
+  },
+  {
+    title: 'I have handwritten notes that need typing',
+    text: 'Upload readable handwriting, scans, images, or PDFs and receive a clean typed document.',
+    actions: [
+      {
+        label: 'Handwriting Transcription',
+        href: '/handwriting-transcription',
+      },
+    ],
+  },
+  {
+    title: 'I have a PDF, scan, or typed draft that needs retyping',
+    text: 'Use copy typing for scanned documents, typed drafts, PDFs, image-based text, or notes that need to be typed into a clean document.',
+    actions: [
+      {
+        label: 'Copy Typing Services',
+        href: '/copy-typing-services',
+      },
+    ],
+  },
+  {
+    title: 'I have audio instructions for a document',
+    text: 'Upload a recording explaining what document you need prepared, along with any notes, templates, scans, or reference files.',
+    actions: [
+      {
+        label: 'Audio Instructions for Document Preparation',
+        href: '/audio-instructions-document-preparation',
+      },
+    ],
+  },
+  {
+    title: 'I need a business or academic transcript',
+    text: 'Use transcription services for business meetings, interviews, lectures, research recordings, seminars, or professional audio/video files.',
+    actions: [
+      {
+        label: 'Business Transcription',
+        href: '/business-transcription',
+      },
+      {
+        label: 'Academic Transcription',
+        href: '/academic-transcription',
+      },
+    ],
+  },
+  {
+    title: 'I am not sure what to choose',
+    text: 'Send us a message and we can help you choose the right service.',
+    actions: [
+      {
+        label: 'Contact Us',
+        href: '/contact',
+      },
+    ],
+  },
+];
+
 function LandingPage() {
   return (
     <div className="min-h-screen bg-white">
@@ -94,6 +161,51 @@ function LandingPage() {
                 priority
               />
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Service Chooser Section */}
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <p className="text-sm font-semibold text-[#b29dd9] uppercase tracking-wide mb-3">
+              Service chooser
+            </p>
+            <h2 className="text-3xl md:text-4xl font-bold text-[#003366] mb-4">
+              Not sure where to start?
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Choose the option that best matches your file or project.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {serviceChooserCards.map((card) => (
+              <Card key={card.title} className="border border-gray-200 shadow-sm hover:shadow-lg transition-shadow">
+                <CardContent className="p-6 flex h-full flex-col">
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#f0ebf8]">
+                    <FileText className="h-6 w-6 text-[#003366]" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-[#003366] mb-3">{card.title}</h3>
+                  <p className="text-gray-600 mb-6 flex-1">{card.text}</p>
+                  <div className="flex flex-col gap-3">
+                    {card.actions.map((action) => (
+                      <Button
+                        key={action.href}
+                        asChild
+                        className="w-full bg-[#003366] hover:bg-[#002244] text-white"
+                      >
+                        <Link href={action.href}>
+                          {action.label}
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Link>
+                      </Button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       </section>
