@@ -207,10 +207,10 @@ function ContactPage() {
                         Speak directly with our support team for urgent matters.
                       </p>
                       <a
-                        href="tel:+14164529446"
+                        href="tel:+12894993536"
                         className="text-[#b29dd9] hover:text-[#9d87c7] font-medium"
                       >
-                        (416) 452-9446
+                        (289) 499-3536
                       </a>
                     </div>
                   </div>
@@ -269,7 +269,7 @@ function ContactPage() {
                         Quick questions? Chat with us on WhatsApp for instant support.
                       </p>
                       <a
-                        href="https://wa.me/14164529446"
+                        href="https://wa.me/12894993536"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center px-6 py-3 bg-[#25D366] hover:bg-[#22c55e] text-white font-medium rounded-lg transition-colors"
