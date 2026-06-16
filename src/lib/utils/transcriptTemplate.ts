@@ -469,6 +469,7 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
   let currentSpeaker: string | undefined = undefined;
   let accumulatedText = '';
   let currentParagraphSentenceCount = 0;
+  let shouldRenderSpeakerLabelOnNextParagraph = true;
   // Start from the first timestamp interval (0 seconds)
   let nextTimestampTarget = 0;
   let pendingTimestamp: string | null = null;
@@ -497,7 +498,7 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
       const children: TextRun[] = [];
       const speakerDisplayName = getSpeakerDisplayName(speaker);
 
-      if (usesInlineSpeakerLabels) {
+      if (usesInlineSpeakerLabels && shouldRenderSpeakerLabelOnNextParagraph) {
         children.push(new TextRun({
           text: `${speakerDisplayName}:`,
           bold: true,
@@ -545,6 +546,7 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
 
       accumulatedText = '';
       currentParagraphSentenceCount = 0;
+      shouldRenderSpeakerLabelOnNextParagraph = false;
       pendingTimestamp = null;
     }
   };
@@ -562,15 +564,16 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
       addSpeakerLabelParagraph(segment.speaker);
 
       currentSpeaker = segment.speaker;
+      shouldRenderSpeakerLabelOnNextParagraph = true;
       // Don't reset timestamp target when speaker changes - keep continuous timeline
     } else if (reachedSentenceLimit) {
       addCurrentSegment(currentSpeaker);
-      addSpeakerLabelParagraph(segment.speaker, 200);
     } else if (currentSpeaker === undefined) {
       // First segment - add speaker label
       addSpeakerLabelParagraph(segment.speaker, 200);
 
       currentSpeaker = segment.speaker;
+      shouldRenderSpeakerLabelOnNextParagraph = true;
       // Set the first timestamp target based on the frequency
       nextTimestampTarget = activeTimestampFrequency || 60;
     }
