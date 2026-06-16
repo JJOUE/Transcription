@@ -16,6 +16,27 @@ export interface TranscriptTemplateData {
   timestampedTranscript?: TranscriptSegment[]; // New field for timestamped data
 }
 
+const MAX_SENTENCES_PER_PARAGRAPH = 9;
+
+function normalizeTranscriptSegmentText(text: string): string {
+  return text
+    .replace(/\s+([,.!?;:])/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function countCompletedSentences(text: string): number {
+  const normalized = normalizeTranscriptSegmentText(text);
+  if (!normalized) return 0;
+
+  const protectedText = normalized
+    .replace(/\b(?:[A-Z]\.){2,}/gi, match => match.replace(/\./g, ''))
+    .replace(/\b(?:e\.g\.|i\.e\.)/gi, match => match.replace(/\./g, ''))
+    .replace(/\b\d+\.\d+\b/g, match => match.replace('.', ''));
+
+  return (protectedText.match(/[.!?…]+(?=(?:["'”’)\]]|\s|$))/g) || []).length;
+}
+
 // Utility function to format seconds into MM:SS or HH:MM:SS format
 function formatTimestamp(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
@@ -196,6 +217,7 @@ export async function exportTranscriptPDF(templateData: TranscriptTemplateData, 
     // Process segments to group by speaker with interval-based timestamps
     let currentSpeaker: string | undefined = undefined;
     let accumulatedText = '';
+    let currentParagraphSentenceCount = 0;
     // Start from the first timestamp interval (0 seconds)
     let nextTimestampTarget = 0;
     let pendingTimestamp: string | null = null;
@@ -252,6 +274,7 @@ export async function exportTranscriptPDF(templateData: TranscriptTemplateData, 
       if (accumulatedText.trim()) {
         renderTextWithTimestamp(accumulatedText, pendingTimestamp);
         accumulatedText = '';
+        currentParagraphSentenceCount = 0;
         pendingTimestamp = null;
         yPos += 4; // Extra space between paragraphs
       }
@@ -260,6 +283,7 @@ export async function exportTranscriptPDF(templateData: TranscriptTemplateData, 
     for (let i = 0; i < templateData.timestampedTranscript.length; i++) {
       const segment = templateData.timestampedTranscript[i];
       const speakerChanged = currentSpeaker !== undefined && currentSpeaker !== segment.speaker;
+      const reachedSentenceLimit = currentParagraphSentenceCount >= MAX_SENTENCES_PER_PARAGRAPH;
 
       // If speaker changed, finalize current segment and add speaker label
       if (speakerChanged) {
@@ -279,6 +303,8 @@ export async function exportTranscriptPDF(templateData: TranscriptTemplateData, 
 
         currentSpeaker = segment.speaker;
         // Don't reset timestamp target when speaker changes - keep continuous timeline
+      } else if (reachedSentenceLimit) {
+        addCurrentSegment();
       } else if (currentSpeaker === undefined) {
         // First segment - add speaker label
         if (yPos > pageHeight - 50) {
@@ -309,9 +335,11 @@ export async function exportTranscriptPDF(templateData: TranscriptTemplateData, 
 
       if (pendingTimestamp && endsWithSentence) {
         accumulatedText += segment.text;
+        currentParagraphSentenceCount += countCompletedSentences(segment.text);
         addCurrentSegment();
       } else {
         accumulatedText += segment.text + ' ';
+        currentParagraphSentenceCount += countCompletedSentences(segment.text);
       }
     }
 
@@ -440,9 +468,29 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
   const paragraphs: Paragraph[] = [];
   let currentSpeaker: string | undefined = undefined;
   let accumulatedText = '';
+  let currentParagraphSentenceCount = 0;
   // Start from the first timestamp interval (0 seconds)
   let nextTimestampTarget = 0;
   let pendingTimestamp: string | null = null;
+
+  const addSpeakerLabelParagraph = (speaker: string | undefined, before = 400) => {
+    if (usesInlineSpeakerLabels) return;
+
+    paragraphs.push(new Paragraph({
+      children: [
+        new TextRun({
+          text: getSpeakerDisplayName(speaker),
+          bold: true,
+          color: "000000",
+          size: 24
+        })
+      ],
+      spacing: {
+        before,
+        after: 200
+      }
+    }));
+  };
 
   const addCurrentSegment = (speaker: string | undefined) => {
     if (accumulatedText.trim()) {
@@ -496,6 +544,7 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
       }));
 
       accumulatedText = '';
+      currentParagraphSentenceCount = 0;
       pendingTimestamp = null;
     }
   };
@@ -503,49 +552,23 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
   for (let i = 0; i < templateData.timestampedTranscript.length; i++) {
     const segment = templateData.timestampedTranscript[i];
     const speakerChanged = currentSpeaker !== undefined && currentSpeaker !== segment.speaker;
+    const reachedSentenceLimit = currentParagraphSentenceCount >= MAX_SENTENCES_PER_PARAGRAPH;
 
     // If speaker changed, finalize current segment and add speaker label
     if (speakerChanged) {
       addCurrentSegment(currentSpeaker);
 
       // Add speaker label paragraph
-      if (!usesInlineSpeakerLabels) {
-        paragraphs.push(new Paragraph({
-          children: [
-            new TextRun({
-              text: getSpeakerDisplayName(segment.speaker),
-              bold: true,
-              color: "000000",
-              size: 24
-            })
-          ],
-          spacing: {
-            before: 400,
-            after: 200
-          }
-        }));
-      }
+      addSpeakerLabelParagraph(segment.speaker);
 
       currentSpeaker = segment.speaker;
       // Don't reset timestamp target when speaker changes - keep continuous timeline
+    } else if (reachedSentenceLimit) {
+      addCurrentSegment(currentSpeaker);
+      addSpeakerLabelParagraph(segment.speaker, 200);
     } else if (currentSpeaker === undefined) {
       // First segment - add speaker label
-      if (!usesInlineSpeakerLabels) {
-        paragraphs.push(new Paragraph({
-          children: [
-            new TextRun({
-              text: getSpeakerDisplayName(segment.speaker),
-              bold: true,
-              color: "000000",
-              size: 24
-            })
-          ],
-          spacing: {
-            before: 200,
-            after: 200
-          }
-        }));
-      }
+      addSpeakerLabelParagraph(segment.speaker, 200);
 
       currentSpeaker = segment.speaker;
       // Set the first timestamp target based on the frequency
@@ -567,9 +590,11 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
 
     if (pendingTimestamp && endsWithSentence) {
       accumulatedText += segment.text;
+      currentParagraphSentenceCount += countCompletedSentences(segment.text);
       addCurrentSegment(currentSpeaker);
     } else {
       accumulatedText += segment.text + ' ';
+      currentParagraphSentenceCount += countCompletedSentences(segment.text);
     }
   }
 

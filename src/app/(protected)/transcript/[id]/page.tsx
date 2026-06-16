@@ -140,6 +140,7 @@ interface EditableParagraphBlock {
   end: number;
   wordCount: number;
   characterCount: number;
+  sentenceCount: number;
 }
 
 const cleanupOptionItems: Array<{ key: CleanupOptionKey; label: string }> = [
@@ -180,6 +181,8 @@ const normalizeTranscriptSegmentText = (text: string) =>
     .replace(/\s+/g, ' ')
     .trim();
 
+const MAX_SENTENCES_PER_PARAGRAPH = 9;
+
 const joinTranscriptSegmentTexts = (segments: string[]) =>
   segments
     .map(normalizeTranscriptSegmentText)
@@ -195,6 +198,27 @@ const endsWithProtectedAbbreviation = (text: string) =>
 const endsWithUrlOrFileName = (text: string) =>
   /(?:https?:\/\/|www\.)\S+[.!?]?$/i.test(text.trim()) ||
   /\b\S+\.(?:com|ca|org|net|gov|edu|pdf|docx?|xlsx?|pptx?|txt|csv|mp3|mp4|wav)$/i.test(text.trim());
+
+const countCompletedSentences = (text: string) => {
+  const normalized = normalizeTranscriptSegmentText(text);
+  if (!normalized) return 0;
+
+  const protectedText = normalized
+    .replace(/\b(?:[A-Z]\.){2,}/gi, match => match.replace(/\./g, ''))
+    .replace(/\b(?:e\.g\.|i\.e\.)/gi, match => match.replace(/\./g, ''))
+    .replace(/\b\d+\.\d+\b/g, match => match.replace('.', ''));
+
+  return (protectedText.match(/[.!?…]+(?=(?:["'”’)\]]|\s|$))/g) || []).length;
+};
+
+const getSegmentTextMetrics = (text: string) => {
+  const normalized = normalizeTranscriptSegmentText(text);
+  return {
+    wordCount: normalized ? normalized.split(/\s+/).filter(Boolean).length : 0,
+    characterCount: normalized.length,
+    sentenceCount: countCompletedSentences(normalized)
+  };
+};
 
 const normalizeTimestampFrequency = (value: unknown): TimestampFrequency =>
   value === 'none' || value === 30 || value === 60 || value === 300 ? value : 60;
@@ -663,13 +687,92 @@ export default function TranscriptViewerPage() {
     return getDraftTimestampedSegmentEntries().map(({ originalIndex: _originalIndex, ...segment }) => segment);
   };
 
+  const buildPlainTranscriptParagraphs = (segments: DraftTimestampedSegmentEntry[]) => {
+    const paragraphs: string[] = [];
+    const softWordLimit = 140;
+    const hardWordLimit = 180;
+    const softCharacterLimit = 850;
+    const hardCharacterLimit = 1000;
+    const longPauseSeconds = 2.5;
+    let currentSpeaker: string | undefined;
+    let currentTexts: string[] = [];
+    let currentWordCount = 0;
+    let currentCharacterCount = 0;
+    let currentSentenceCount = 0;
+    let previousSegment: DraftTimestampedSegmentEntry | undefined;
+
+    const flushCurrentParagraph = () => {
+      const paragraphText = joinTranscriptSegmentTexts(currentTexts);
+      if (paragraphText) {
+        paragraphs.push(paragraphText);
+      }
+      currentTexts = [];
+      currentWordCount = 0;
+      currentCharacterCount = 0;
+      currentSentenceCount = 0;
+    };
+
+    segments.forEach((segment) => {
+      const segmentText = normalizeTranscriptSegmentText(segment.text);
+      if (!segmentText) return;
+
+      const metrics = getSegmentTextMetrics(segmentText);
+      const speakerChanged = currentTexts.length > 0 && currentSpeaker !== segment.speaker;
+      const previousText = previousSegment ? previousSegment.text : '';
+      const previousWasQuestion = /\?\s*$/.test(previousText);
+      const hasLongPause = Boolean(
+        previousSegment &&
+        Number.isFinite(previousSegment.end) &&
+        Number.isFinite(segment.start) &&
+        segment.start - previousSegment.end >= longPauseSeconds
+      );
+      const reachedSentenceLimit = currentSentenceCount >= MAX_SENTENCES_PER_PARAGRAPH;
+      const wouldExceedHardLimit = currentTexts.length > 0 && (
+        currentWordCount + metrics.wordCount > hardWordLimit ||
+        currentCharacterCount + metrics.characterCount > hardCharacterLimit
+      );
+      const reachedSoftLimit = currentTexts.length > 0 && (
+        currentWordCount >= softWordLimit ||
+        currentCharacterCount >= softCharacterLimit
+      );
+
+      if (
+        currentTexts.length > 0 &&
+        (
+          speakerChanged ||
+          previousWasQuestion ||
+          hasLongPause ||
+          reachedSentenceLimit ||
+          reachedSoftLimit ||
+          wouldExceedHardLimit
+        )
+      ) {
+        flushCurrentParagraph();
+      }
+
+      if (currentTexts.length === 0) {
+        currentSpeaker = segment.speaker;
+      }
+
+      currentTexts.push(segmentText);
+      currentWordCount += metrics.wordCount;
+      currentCharacterCount += metrics.characterCount;
+      currentSentenceCount += metrics.sentenceCount;
+      previousSegment = segment;
+    });
+
+    flushCurrentParagraph();
+
+    return paragraphs;
+  };
+
   const getDraftPlainTranscript = () => {
     if (!transcription) return '';
 
     const draftTimestampedTranscript = getDraftTimestampedSegmentEntries();
 
     if (transcription.timestampedTranscript && transcription.timestampedTranscript.length > 0) {
-      return joinTranscriptSegmentTexts(draftTimestampedTranscript.map(segment => segment.text));
+      return buildPlainTranscriptParagraphs(draftTimestampedTranscript).join('\n\n');
     }
 
     return editedTranscript || transcription.transcript || '';
@@ -699,21 +802,13 @@ export default function TranscriptViewerPage() {
         ? editedSegments[segmentIndex]
         : transcription.timestampedTranscript![segmentIndex].text;
 
-    const getTextMetrics = (text: string) => {
-      const normalized = normalizeTranscriptSegmentText(text);
-      return {
-        wordCount: normalized ? normalized.split(/\s+/).filter(Boolean).length : 0,
-        characterCount: normalized.length
-      };
-    };
-
     transcription.timestampedTranscript.forEach((segment, segmentIndex) => {
       if (deletedSegmentIndexes.has(segmentIndex)) {
         return;
       }
 
       const segmentText = getSegmentDraftText(segmentIndex);
-      const metrics = getTextMetrics(segmentText);
+      const metrics = getSegmentTextMetrics(segmentText);
       const previousSegment = previousSegmentIndex !== null
         ? transcription.timestampedTranscript![previousSegmentIndex]
         : undefined;
@@ -722,6 +817,10 @@ export default function TranscriptViewerPage() {
         : '';
       const speakerChanged = Boolean(currentBlock) && currentBlock?.speaker !== segment.speaker;
       const previousWasQuestion = /\?\s*$/.test(previousText);
+      const reachedSentenceLimit = Boolean(
+        currentBlock &&
+        currentBlock.sentenceCount >= MAX_SENTENCES_PER_PARAGRAPH
+      );
       const hasLongPause = Boolean(
         previousSegment &&
         Number.isFinite(previousSegment.end) &&
@@ -746,6 +845,7 @@ export default function TranscriptViewerPage() {
         speakerChanged ||
         previousWasQuestion ||
         hasLongPause ||
+        reachedSentenceLimit ||
         reachedSoftLimit ||
         wouldExceedHardLimit;
 
@@ -757,7 +857,8 @@ export default function TranscriptViewerPage() {
           start: segment.start,
           end: segment.end,
           wordCount: metrics.wordCount,
-          characterCount: metrics.characterCount
+          characterCount: metrics.characterCount,
+          sentenceCount: metrics.sentenceCount
         };
         blocks.push(currentBlock);
       } else if (currentBlock) {
@@ -765,6 +866,7 @@ export default function TranscriptViewerPage() {
         currentBlock.end = segment.end;
         currentBlock.wordCount += metrics.wordCount;
         currentBlock.characterCount += metrics.characterCount;
+        currentBlock.sentenceCount += metrics.sentenceCount;
       }
 
       previousSegmentIndex = segmentIndex;
