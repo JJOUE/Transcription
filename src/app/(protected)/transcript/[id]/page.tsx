@@ -224,6 +224,7 @@ export default function TranscriptViewerPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedTranscript, setEditedTranscript] = useState('');
   const [editedSegments, setEditedSegments] = useState<{[key: number]: string}>({});
+  const [editedParagraphBlocks, setEditedParagraphBlocks] = useState<Record<string, string>>({});
   const [deletedSegmentIndexes, setDeletedSegmentIndexes] = useState<Set<number>>(new Set());
   const [speakerSegmentsDirty, setSpeakerSegmentsDirty] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -243,12 +244,12 @@ export default function TranscriptViewerPage() {
     segmentIndices: number[];
     speaker?: string;
     start: number;
+    blockId: string;
   } | null>(null);
   const [inlineEditingSpeaker, setInlineEditingSpeaker] = useState<string | null>(null);
   const [inlineSpeakerNameDraft, setInlineSpeakerNameDraft] = useState('');
   const [speakerOrder, setSpeakerOrder] = useState<string[]>([]);
   const [showSpeakerLabels, setShowSpeakerLabels] = useState(true);
-  const [speakerLabelsUppercase, setSpeakerLabelsUppercase] = useState(false);
   const [mergeSourceSpeaker, setMergeSourceSpeaker] = useState<string>('');
   const [mergeTargetSpeaker, setMergeTargetSpeaker] = useState<string>('');
   const [draggedSpeaker, setDraggedSpeaker] = useState<string | null>(null);
@@ -287,7 +288,7 @@ export default function TranscriptViewerPage() {
   };
 
   const audioPlayerRef = useRef<AudioPlayerRef>(null);
-  const contentEditableRefs = useRef<Record<number, HTMLElement | null>>({});
+  const paragraphEditableRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     if (id && user) {
@@ -410,7 +411,7 @@ export default function TranscriptViewerPage() {
 
       // Load saved speaker names
       if (transcriptionData.speakerNames) {
-        setSpeakerNames(transcriptionData.speakerNames);
+        setSpeakerNames(normalizeSpeakerNameMap(transcriptionData.speakerNames));
       }
 
     } catch (err) {
@@ -501,6 +502,8 @@ export default function TranscriptViewerPage() {
     if (!transcription || !transcription.timestampedTranscript) return;
     if (!sourceSpeaker || !targetSpeaker || sourceSpeaker === targetSpeaker) return;
 
+    materializeParagraphDraftsForSegments(transcription.timestampedTranscript.map((_segment, index) => index));
+
     const updatedTranscript = transcription.timestampedTranscript.map((segment) => ({
       ...segment,
       speaker: segment.speaker === sourceSpeaker ? targetSpeaker : segment.speaker
@@ -554,6 +557,10 @@ export default function TranscriptViewerPage() {
       return true;
     }
 
+    if (Object.keys(editedParagraphBlocks).length > 0) {
+      return true;
+    }
+
     if (deletedSegmentIndexes.size > 0 || speakerSegmentsDirty) {
       return true;
     }
@@ -565,16 +572,83 @@ export default function TranscriptViewerPage() {
     return false;
   };
 
+  const distributeParagraphTextAcrossSegments = (
+    paragraphText: string,
+    segmentIndices: number[]
+  ): Record<number, string> => {
+    if (segmentIndices.length === 0) {
+      return {};
+    }
+
+    const normalizedText = normalizeTranscriptSegmentText(paragraphText);
+    if (segmentIndices.length === 1) {
+      return { [segmentIndices[0]]: normalizedText };
+    }
+
+    if (!normalizedText) {
+      return Object.fromEntries(segmentIndices.map(segmentIndex => [segmentIndex, '']));
+    }
+
+    const words = normalizedText.split(/\s+/).filter(Boolean);
+    if (words.length === 0) {
+      return Object.fromEntries(segmentIndices.map(segmentIndex => [segmentIndex, '']));
+    }
+
+    const originalWeights = segmentIndices.map(segmentIndex => {
+      const originalText = transcription?.timestampedTranscript?.[segmentIndex]?.text || '';
+      return Math.max(normalizeTranscriptSegmentText(originalText).length, 1);
+    });
+    const totalWeight = originalWeights.reduce((sum, weight) => sum + weight, 0);
+    const distributed: Record<number, string> = {};
+    let cursor = 0;
+
+    segmentIndices.forEach((segmentIndex, position) => {
+      const remainingSegments = segmentIndices.length - position;
+      const remainingWords = words.length - cursor;
+
+      if (remainingSegments <= 1) {
+        distributed[segmentIndex] = words.slice(cursor).join(' ');
+        cursor = words.length;
+        return;
+      }
+
+      const proportionalCount = Math.round((originalWeights[position] / totalWeight) * words.length);
+      const wordsForSegment = Math.max(1, Math.min(proportionalCount, remainingWords - (remainingSegments - 1)));
+      distributed[segmentIndex] = words.slice(cursor, cursor + wordsForSegment).join(' ');
+      cursor += wordsForSegment;
+    });
+
+    return distributed;
+  };
+
   const getDraftTimestampedSegmentEntries = (): DraftTimestampedSegmentEntry[] => {
     if (!transcription?.timestampedTranscript || transcription.timestampedTranscript.length === 0) {
       return [];
+    }
+
+    const paragraphTextBySegment = new Map<number, string>();
+    if (Object.keys(editedParagraphBlocks).length > 0) {
+      buildEditableParagraphBlocks().forEach((block) => {
+        const editedParagraphText = editedParagraphBlocks[block.id];
+        if (editedParagraphText === undefined) return;
+
+        const distributedText = distributeParagraphTextAcrossSegments(
+          editedParagraphText,
+          block.segmentIndices
+        );
+        Object.entries(distributedText).forEach(([segmentIndex, text]) => {
+          paragraphTextBySegment.set(Number(segmentIndex), text);
+        });
+      });
     }
 
     return transcription.timestampedTranscript
       .map((segment, originalIndex) => ({
         ...segment,
         originalIndex,
-        text: editedSegments[originalIndex] !== undefined
+        text: paragraphTextBySegment.has(originalIndex)
+          ? paragraphTextBySegment.get(originalIndex)!
+          : editedSegments[originalIndex] !== undefined
           ? editedSegments[originalIndex]
           : segment.text
       }))
@@ -699,8 +773,13 @@ export default function TranscriptViewerPage() {
     return blocks;
   };
 
-  const focusEditableSegment = (segmentIndex: number) => {
-    const editableElement = contentEditableRefs.current[segmentIndex];
+  const getEditableParagraphText = (block: EditableParagraphBlock) =>
+    editedParagraphBlocks[block.id] !== undefined
+      ? editedParagraphBlocks[block.id]
+      : joinTranscriptSegmentTexts(block.segmentIndices.map(segmentIndex => getSegmentDraftText(segmentIndex)));
+
+  const focusEditableParagraph = (blockId: string) => {
+    const editableElement = paragraphEditableRefs.current[blockId];
     if (!editableElement) return;
 
     editableElement.focus({ preventScroll: true });
@@ -721,73 +800,49 @@ export default function TranscriptViewerPage() {
       : transcription.timestampedTranscript[segmentIndex].text;
   };
 
-  const getParagraphFocusSegmentIndex = (
+  const focusParagraphBlockFromClick = (
     block: EditableParagraphBlock,
     event: React.MouseEvent<HTMLElement>
   ) => {
     const target = event.target as HTMLElement;
     if (target.closest('[contenteditable="true"], button, input, select, textarea, a')) {
-      return null;
+      return;
     }
-
-    const editableCandidates = block.segmentIndices
-      .map(segmentIndex => ({
-        segmentIndex,
-        element: contentEditableRefs.current[segmentIndex]
-      }))
-      .filter((candidate): candidate is { segmentIndex: number; element: HTMLElement } =>
-        Boolean(candidate.element)
-      );
-
-    if (editableCandidates.length === 0) {
-      return block.segmentIndices.find(segmentIndex => getSegmentDraftText(segmentIndex).trim().length === 0)
-        ?? block.segmentIndices[block.segmentIndices.length - 1]
-        ?? null;
-    }
-
-    let nearestSegmentIndex = editableCandidates[editableCandidates.length - 1].segmentIndex;
-    let nearestDistance = Number.POSITIVE_INFINITY;
-
-    editableCandidates.forEach(({ segmentIndex, element }) => {
-      const rect = element.getBoundingClientRect();
-      const verticalDistance = event.clientY < rect.top
-        ? rect.top - event.clientY
-        : event.clientY > rect.bottom
-        ? event.clientY - rect.bottom
-        : 0;
-      const horizontalDistance = event.clientX < rect.left
-        ? rect.left - event.clientX
-        : event.clientX > rect.right
-        ? event.clientX - rect.right
-        : 0;
-      const distance = verticalDistance * 1000 + horizontalDistance;
-
-      if (distance < nearestDistance) {
-        nearestDistance = distance;
-        nearestSegmentIndex = segmentIndex;
-      }
-    });
-
-    return nearestSegmentIndex;
-  };
-
-  const focusParagraphBlockFromClick = (
-    block: EditableParagraphBlock,
-    event: React.MouseEvent<HTMLElement>
-  ) => {
-    const segmentIndex = getParagraphFocusSegmentIndex(block, event);
-    if (segmentIndex === null) return;
 
     event.preventDefault();
-    focusEditableSegment(segmentIndex);
+    focusEditableParagraph(block.id);
   };
 
   const requestDeleteParagraphBlock = (block: EditableParagraphBlock) => {
     setParagraphDeleteCandidate({
       segmentIndices: [...block.segmentIndices],
       speaker: block.speaker,
-      start: block.start
+      start: block.start,
+      blockId: block.id
     });
+  };
+
+  const materializeParagraphDraftsForSegments = (segmentIndices: number[]) => {
+    if (Object.keys(editedParagraphBlocks).length === 0) return;
+
+    const affectedSegmentIndices = new Set(segmentIndices);
+    const nextEditedSegments = { ...editedSegments };
+    const nextEditedParagraphBlocks = { ...editedParagraphBlocks };
+
+    buildEditableParagraphBlocks().forEach((block) => {
+      const hasAffectedSegment = block.segmentIndices.some(segmentIndex => affectedSegmentIndices.has(segmentIndex));
+      const editedParagraphText = editedParagraphBlocks[block.id];
+      if (!hasAffectedSegment || editedParagraphText === undefined) return;
+
+      const distributedText = distributeParagraphTextAcrossSegments(editedParagraphText, block.segmentIndices);
+      Object.entries(distributedText).forEach(([segmentIndex, text]) => {
+        nextEditedSegments[Number(segmentIndex)] = text;
+      });
+      delete nextEditedParagraphBlocks[block.id];
+    });
+
+    setEditedSegments(nextEditedSegments);
+    setEditedParagraphBlocks(nextEditedParagraphBlocks);
   };
 
   const cancelDeleteParagraphBlock = () => {
@@ -806,6 +861,11 @@ export default function TranscriptViewerPage() {
     setEditedSegments(prev => {
       const next = { ...prev };
       segmentIndices.forEach(segmentIndex => delete next[segmentIndex]);
+      return next;
+    });
+    setEditedParagraphBlocks(prev => {
+      const next = { ...prev };
+      delete next[paragraphDeleteCandidate.blockId];
       return next;
     });
     setParagraphSpeakerSelections(prev => {
@@ -848,6 +908,7 @@ export default function TranscriptViewerPage() {
     setIsEditing(false);
     setIsEditingSpeakerSegments(false);
     setEditedSegments({});
+    setEditedParagraphBlocks({});
     setDeletedSegmentIndexes(new Set());
     setSpeakerSegmentsDirty(false);
     setParagraphSpeakerSelections({});
@@ -929,6 +990,7 @@ export default function TranscriptViewerPage() {
           timestampFrequency
         } : null);
         setEditedSegments({});
+        setEditedParagraphBlocks({});
         setDeletedSegmentIndexes(new Set());
         setSpeakerSegmentsDirty(false);
         setParagraphSpeakerSelections({});
@@ -954,6 +1016,7 @@ export default function TranscriptViewerPage() {
           transcript: draftPlainTranscript.trim(),
           timestampFrequency
         } : null);
+        setEditedParagraphBlocks({});
 
       } else {
         console.log('[Save] Saving transcript metadata...');
@@ -2255,7 +2318,7 @@ export default function TranscriptViewerPage() {
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [editedSegments, editedTranscript, deletedSegmentIndexes, speakerSegmentsDirty, timestampFrequency, transcription]);
+  }, [editedSegments, editedParagraphBlocks, editedTranscript, deletedSegmentIndexes, speakerSegmentsDirty, timestampFrequency, transcription]);
 
   useEffect(() => {
     const handleDocumentClick = (event: MouseEvent) => {
@@ -2277,7 +2340,7 @@ export default function TranscriptViewerPage() {
 
     document.addEventListener('click', handleDocumentClick, true);
     return () => document.removeEventListener('click', handleDocumentClick, true);
-  }, [editedSegments, editedTranscript, deletedSegmentIndexes, speakerSegmentsDirty, timestampFrequency, transcription]);
+  }, [editedSegments, editedParagraphBlocks, editedTranscript, deletedSegmentIndexes, speakerSegmentsDirty, timestampFrequency, transcription]);
 
   const formatTimestamp = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
@@ -2319,33 +2382,53 @@ export default function TranscriptViewerPage() {
     return colors[(speakerNum - 1) % colors.length];
   };
 
+  const normalizeSpeakerDisplayName = (name: string): string =>
+    name.trim().replace(/\s+/g, ' ').toLocaleUpperCase('en-CA');
+
+  const getDefaultSpeakerDisplayName = (speaker: string): string => {
+    const speakerNumber =
+      /^S(\d+)$/i.exec(speaker)?.[1] ||
+      /^speaker[_\s-]*(\d+)$/i.exec(speaker)?.[1];
+
+    return speakerNumber ? `SPEAKER ${speakerNumber}` : normalizeSpeakerDisplayName(speaker);
+  };
+
+  const normalizeSpeakerNameMap = (names: Record<string, string>) =>
+    Object.fromEntries(
+      Object.entries(names).map(([speaker, name]) => [
+        speaker,
+        normalizeSpeakerDisplayName(name || getDefaultSpeakerDisplayName(speaker))
+      ])
+    );
+
   // Format speaker display name
   const getSpeakerDisplayName = (speaker: string | undefined): string => {
-    if (!speaker || speaker === 'UU') return 'Speaker';
+    if (!speaker || speaker === 'UU') return 'SPEAKER';
     // Check if there's a custom name for this speaker
     if (speakerNames[speaker]) {
-      return speakerNames[speaker];
+      return normalizeSpeakerDisplayName(speakerNames[speaker]);
     }
-    return `Speaker ${speaker.replace('S', '')}`;
+    return getDefaultSpeakerDisplayName(speaker);
   };
 
   const formatSpeakerLabel = (displayName: string): string =>
-    speakerLabelsUppercase ? displayName.toLocaleUpperCase('en-CA') : displayName;
+    normalizeSpeakerDisplayName(displayName);
 
   const getFormattedSpeakerDisplayName = (speaker: string | undefined): string =>
     formatSpeakerLabel(getSpeakerDisplayName(speaker));
 
   // Update speaker name
   const updateSpeakerName = async (speaker: string, newName: string) => {
+    const normalizedName = normalizeSpeakerDisplayName(newName);
     const updatedNames = {
       ...speakerNames,
-      [speaker]: newName
+      [speaker]: normalizedName
     };
 
     setSpeakerNames(updatedNames);
     setSidebarSpeakerNameDrafts(prev => ({
       ...prev,
-      [speaker]: newName
+      [speaker]: normalizedName
     }));
 
     // Save to database
@@ -3006,13 +3089,10 @@ export default function TranscriptViewerPage() {
     });
     setSpeakerSegmentsDirty(true);
 
-    // Get speaker display name for toast
-    const speakerDisplayName = speakerNames[newSpeaker] || `Speaker ${newSpeaker.replace('S', '')}`;
-
     // Show feedback
     toast({
       title: 'Speaker changed',
-      description: `${selectedSegments.size} segment${selectedSegments.size !== 1 ? 's' : ''} assigned to ${speakerDisplayName}`,
+      description: `${selectedSegments.size} segment${selectedSegments.size !== 1 ? 's' : ''} assigned to ${getSpeakerDisplayName(newSpeaker)}`,
     });
 
     // Clear selection after changing
@@ -3022,6 +3102,8 @@ export default function TranscriptViewerPage() {
   // Change speaker for the existing segments represented by one editable paragraph block.
   const changeSpeakerForSegments = (segmentIndices: number[], newSpeaker: string | undefined) => {
     if (!transcription?.timestampedTranscript) return;
+
+    materializeParagraphDraftsForSegments(segmentIndices);
 
     const segmentIndexSet = new Set(segmentIndices);
     const updatedTranscript = transcription.timestampedTranscript.map((segment, index) =>
@@ -3676,13 +3758,8 @@ export default function TranscriptViewerPage() {
                 const currentSpeaker = block.speaker && block.speaker !== 'UU' ? block.speaker : '';
                 const selectedParagraphSpeaker = paragraphSpeakerSelections[controlIndex] ?? currentSpeaker;
                 const paragraphSpeakerNameDraft = paragraphSpeakerNameDrafts[controlIndex] || '';
-                const isEmptyDraft = block.segmentIndices.every((segmentIndex) => {
-                  const segment = transcription.timestampedTranscript![segmentIndex];
-                  const segmentText = editedSegments[segmentIndex] !== undefined
-                    ? editedSegments[segmentIndex]
-                    : segment.text;
-                  return segmentText.trim().length === 0;
-                });
+                const paragraphText = getEditableParagraphText(block);
+                const isEmptyDraft = paragraphText.trim().length === 0;
 
                 return (
                   <div
@@ -4106,64 +4183,38 @@ export default function TranscriptViewerPage() {
                       className="min-h-24 cursor-text p-4"
                       onMouseDown={(e) => focusParagraphBlockFromClick(block, e)}
                     >
-                      <div className="min-h-16 cursor-text text-gray-800 leading-relaxed text-base whitespace-pre-wrap break-words">
-                        {block.segmentIndices.map((segmentIndex, segmentPosition) => {
-                          const segment = transcription.timestampedTranscript![segmentIndex];
-                          const currentSegmentText = editedSegments[segmentIndex] !== undefined
-                            ? editedSegments[segmentIndex]
-                            : segment.text;
-                          const hasSearchHighlight = searchMatches.some(match => match.segmentIndex === segmentIndex);
-
-                          return (
-                            <React.Fragment key={`edit-segment-${segmentIndex}`}>
-                              <span
-                                id={`segment-${segmentIndex}`}
-                                data-segment-index={segmentIndex}
-                                className="inline"
-                              >
-                                {hasSearchHighlight ? (
-                                  <span className="inline">
-                                    {renderTextWithHighlights(currentSegmentText, [segmentIndex], [{
-                                      text: currentSegmentText,
-                                      index: segmentIndex
-                                    }])}
-                                  </span>
-                                ) : (
-                                  <span
-                                    ref={(el) => {
-                                      if (el) {
-                                        contentEditableRefs.current[segmentIndex] = el;
-                                        const isFocused = document.activeElement === el;
-                                        if (!isFocused && el.textContent !== currentSegmentText) {
-                                          el.textContent = currentSegmentText;
-                                        }
-                                      } else {
-                                        delete contentEditableRefs.current[segmentIndex];
-                                      }
-                                    }}
-                                    contentEditable
-                                    suppressContentEditableWarning
-                                    onPaste={(e) => {
-                                      e.preventDefault();
-                                      const pasteText = e.clipboardData.getData('text/plain');
-                                      document.execCommand('insertText', false, pasteText);
-                                    }}
-                                    onInput={(e) => {
-                                      const newText = e.currentTarget.textContent || '';
-                                      setEditedSegments(prev => ({
-                                        ...prev,
-                                        [segmentIndex]: newText
-                                      }));
-                                    }}
-                                    className="inline min-w-[1ch] border-0 bg-transparent p-0 m-0 outline-none focus:bg-transparent focus:shadow-[inset_0_-2px_0_rgba(37,99,235,0.35)]"
-                                  />
-                                )}
-                              </span>
-                              {segmentPosition < block.segmentIndices.length - 1 ? ' ' : null}
-                            </React.Fragment>
-                          );
-                        })}
-                      </div>
+                      <div
+                        id={`segment-${controlIndex}`}
+                        data-segment-index={controlIndex}
+                        data-segment-indices={block.segmentIndices.join(',')}
+                        ref={(el) => {
+                          if (el) {
+                            paragraphEditableRefs.current[block.id] = el;
+                            const isFocused = document.activeElement === el;
+                            if (!isFocused && el.textContent !== paragraphText) {
+                              el.textContent = paragraphText;
+                            }
+                          } else {
+                            delete paragraphEditableRefs.current[block.id];
+                          }
+                        }}
+                        contentEditable
+                        suppressContentEditableWarning
+                        onPaste={(e) => {
+                          e.preventDefault();
+                          const pasteText = e.clipboardData.getData('text/plain');
+                          document.execCommand('insertText', false, pasteText);
+                        }}
+                        onInput={(e) => {
+                          const newText = e.currentTarget.textContent || '';
+                          setEditedParagraphBlocks(prev => ({
+                            ...prev,
+                            [block.id]: newText
+                          }));
+                        }}
+                        className="min-h-16 w-full cursor-text whitespace-pre-wrap break-words rounded-md border border-transparent bg-transparent text-base leading-relaxed text-gray-800 outline-none focus:border-blue-200 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                        aria-label={`Editable paragraph starting at ${formatTimestamp(block.start)}`}
+                      />
 
                       {isEmptyDraft && (
                         <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-amber-200 bg-white p-3">
@@ -4179,6 +4230,11 @@ export default function TranscriptViewerPage() {
                               setDeletedSegmentIndexes(prev => {
                                 const next = new Set(prev);
                                 block.segmentIndices.forEach(segmentIndex => next.add(segmentIndex));
+                                return next;
+                              });
+                              setEditedParagraphBlocks(prev => {
+                                const next = { ...prev };
+                                delete next[block.id];
                                 return next;
                               });
                               setEditedSegments(prev => {
@@ -5532,20 +5588,9 @@ export default function TranscriptViewerPage() {
                             {showSpeakerLabels ? 'Hide' : 'Show'}
                           </Button>
                         </div>
-                        <label className="flex items-start gap-2 rounded-md bg-gray-50 p-2 text-sm text-gray-700">
-                          <input
-                            type="checkbox"
-                            checked={speakerLabelsUppercase}
-                            onChange={(e) => setSpeakerLabelsUppercase(e.target.checked)}
-                            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#003366] focus:ring-[#003366]"
-                          />
-                          <span>
-                            <span className="font-medium">Speaker labels in ALL CAPS</span>
-                            <span className="block text-xs text-gray-500">
-                              Applies to labels in this workspace and downloads without changing saved speaker names.
-                            </span>
-                          </span>
-                        </label>
+                        <p className="rounded-md bg-gray-50 p-2 text-xs text-gray-600">
+                          Speaker display names are saved and shown in ALL CAPS.
+                        </p>
                       </div>
 
                       <div className="space-y-2 rounded-lg border border-gray-200 p-3">
