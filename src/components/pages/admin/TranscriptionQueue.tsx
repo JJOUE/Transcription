@@ -862,12 +862,31 @@ export function TranscriptionQueue() {
                   </div>
 
                   {/* Office-specific metadata display */}
-                  {item.specialInstructions && (
-                    <div className="mt-3 p-3 bg-cyan-50 border border-cyan-200 rounded">
-                      <h4 className="font-medium text-cyan-900 mb-1 text-sm">Formatting Instructions:</h4>
-                      <p className="text-sm text-cyan-800 line-clamp-2">{item.specialInstructions}</p>
+                  <div className="mt-3 rounded border border-[#b29dd9] bg-[#f8f5fc] p-3">
+                    <h4 className="mb-2 text-sm font-medium text-[#003366]">Client Instructions</h4>
+                    <div className="grid gap-2 text-sm md:grid-cols-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Written</p>
+                        <p className="mt-1 text-gray-700 line-clamp-2">
+                          {item.specialInstructions || 'No written instructions were provided.'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Voice</p>
+                        <p className="mt-1 text-gray-700">
+                          {item.hasVoiceInstructions
+                            ? `Included${item.voiceInstructionsDuration ? ` · ${formatDuration(item.voiceInstructionsDuration)}` : ''}`
+                            : 'No voice instructions were provided.'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Materials</p>
+                        <p className="mt-1 text-gray-700 line-clamp-2">
+                          {item.templateFilename ? `Reference: ${item.templateFilename}` : 'No template/reference file included.'}
+                        </p>
+                      </div>
                     </div>
-                  )}
+                  </div>
 
                   {/* Timestamps */}
                   <div className="flex justify-between text-xs text-gray-500 mt-2">
@@ -940,16 +959,42 @@ export function TranscriptionQueue() {
                     <strong>Media duration:</strong> {formatDuration(selectedJob.duration || 0)}
                   </p>
                 )}
-                {selectedJob.type === 'office' && selectedJob.specialInstructions && (
-                  <div className="p-3 bg-cyan-50 border border-cyan-200 rounded">
-                    <h4 className="font-medium text-cyan-900 mb-1 text-sm">Instructions:</h4>
-                    <p className="text-sm text-cyan-800 whitespace-pre-wrap">{selectedJob.specialInstructions}</p>
-                  </div>
-                )}
-                {selectedJob.type === 'office' && selectedJob.officeNotes && (
-                  <div className="p-3 bg-gray-50 border border-gray-200 rounded">
-                    <h4 className="font-medium text-gray-900 mb-1 text-sm">Additional notes:</h4>
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedJob.officeNotes}</p>
+                {selectedJob.type === 'office' && (
+                  <div className="rounded-lg border border-[#b29dd9] bg-[#f8f5fc] p-4">
+                    <h4 className="mb-3 text-sm font-semibold text-[#003366]">Client Instructions</h4>
+                    <div className="space-y-3 text-sm">
+                      <div>
+                        <p className="font-medium text-gray-900">Written instructions</p>
+                        <p className="mt-1 whitespace-pre-wrap text-gray-700">
+                          {selectedJob.specialInstructions || 'No written instructions were provided.'}
+                        </p>
+                      </div>
+                      {selectedJob.officeNotes && (
+                        <div>
+                          <p className="font-medium text-gray-900">Additional notes</p>
+                          <p className="mt-1 whitespace-pre-wrap text-gray-700">{selectedJob.officeNotes}</p>
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-medium text-gray-900">Voice instructions</p>
+                        <p className="mt-1 text-gray-700">
+                          {selectedJob.hasVoiceInstructions
+                            ? `Included${selectedJob.voiceInstructionsDuration ? ` · ${formatDuration(selectedJob.voiceInstructionsDuration)}` : ''}`
+                            : 'No voice instructions were provided.'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">Uploaded materials</p>
+                        <p className="mt-1 text-gray-700">
+                          Main file: {selectedJob.originalFilename || selectedJob.filename || 'Unknown file'}
+                        </p>
+                        <p className="mt-1 text-gray-700">
+                          {selectedJob.templateFilename
+                            ? `Template/reference: ${selectedJob.templateFilename}`
+                            : 'No template/reference file included.'}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
                 {formatRetentionLabel(selectedJob) && (

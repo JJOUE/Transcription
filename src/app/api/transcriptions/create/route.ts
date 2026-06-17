@@ -3,7 +3,7 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimiters } from '@/lib/middleware/rate-limit';
 import { CreateTranscriptionJobSchema, validateData } from '@/lib/validation/schemas';
-import { sendSimpleNotification } from '@/lib/email/simple-email';
+import { sendDocumentWorkspaceNotification, sendSimpleNotification } from '@/lib/email/simple-email';
 
 function redactProjectDictionaryTerms(value: unknown): unknown {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -90,12 +90,22 @@ export async function POST(request: NextRequest) {
 
     console.log(`[API] Created transcription job ${docRef.id} for user ${userId}`);
 
-    // Send email notification for human/hybrid transcriptions
-    if (validatedBody.mode === 'human' || validatedBody.mode === 'hybrid') {
-      // Get user email from the database
-      const userDoc = await adminDb.collection('users').doc(userId).get();
-      const userData = userDoc.data();
+    const userDoc = await adminDb.collection('users').doc(userId).get();
+    const userData = userDoc.data();
 
+    if (validatedBody.type === 'office') {
+      await sendDocumentWorkspaceNotification({
+        jobId: docRef.id,
+        clientName: userData?.name,
+        clientEmail: userData?.email,
+        serviceType: validatedBody.officeServiceType,
+        originalFilename: validatedBody.originalFilename,
+        hasWrittenInstructions: Boolean(validatedBody.specialInstructions?.trim() || validatedBody.officeNotes?.trim()),
+        hasVoiceInstructions: Boolean(validatedBody.hasVoiceInstructions),
+        hasTemplate: Boolean(validatedBody.templateURL || validatedBody.templateFilename),
+        rushDelivery: validatedBody.rushDelivery,
+      });
+    } else if (validatedBody.mode === 'human' || validatedBody.mode === 'hybrid') {
       if (userData?.email) {
         // Send simple email to Jennifer
         await sendSimpleNotification(

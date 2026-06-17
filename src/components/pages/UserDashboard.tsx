@@ -658,17 +658,15 @@ export function UserDashboard() {
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
-                          {job.status === 'complete' && (
-                            <Button
-                              size="sm"
-                              asChild
-                              className="bg-white border border-[#003366] text-[#003366] hover:bg-[#003366] hover:text-white shadow-sm"
-                            >
-                              <Link href={`/transcript/${job.id}`}>
-                                Open Workspace
-                              </Link>
-                            </Button>
-                          )}
+                          <Button
+                            size="sm"
+                            asChild
+                            className="bg-white border border-[#003366] text-[#003366] hover:bg-[#003366] hover:text-white shadow-sm"
+                          >
+                            <Link href={`/document-workspace/${job.id}`}>
+                              Open Project
+                            </Link>
+                          </Button>
                           {isRetentionDeleted(job) && job.officeCompletedDocumentURL && (
                             <span className="text-sm font-medium text-red-600">Files expired/deleted</span>
                           )}

@@ -725,6 +725,37 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
           </div>
         </div>
 
+        {job.type === 'office' && (
+          <div className="mt-4 rounded-lg border border-[#b29dd9] bg-[#f8f5fc] p-4">
+            <h4 className="mb-3 text-sm font-semibold text-[#003366]">Client Instructions</h4>
+            <div className="grid gap-3 text-sm md:grid-cols-3">
+              <div className="rounded-md bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Written instructions</p>
+                <p className="mt-2 text-gray-700">
+                  {job.specialInstructions ? job.specialInstructions : 'No written instructions were provided.'}
+                </p>
+              </div>
+              <div className="rounded-md bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Voice instructions</p>
+                <p className="mt-2 text-gray-700">
+                  {job.hasVoiceInstructions
+                    ? `Included${job.voiceInstructionsDuration ? ` · ${formatDuration(job.voiceInstructionsDuration)}` : ''}`
+                    : 'No voice instructions were provided.'}
+                </p>
+              </div>
+              <div className="rounded-md bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Uploaded materials</p>
+                <p className="mt-2 text-gray-700">
+                  Main file: {job.originalFilename || job.filename || 'Unknown file'}
+                </p>
+                <p className="mt-1 text-gray-700">
+                  {job.templateFilename ? `Reference: ${job.templateFilename}` : 'No template/reference file included.'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Action Buttons Row */}
         <div className="flex flex-wrap gap-2">
           {/* Download Audio */}
@@ -1115,6 +1146,41 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                     </Button>
                   )}
                 </div>
+
+                {job.type === 'office' && (
+                  <div className="rounded-lg border border-[#b29dd9] bg-[#f8f5fc] p-4">
+                    <h4 className="mb-3 text-sm font-semibold text-[#003366]">Client Instructions</h4>
+                    <div className="space-y-3 text-sm">
+                      <div>
+                        <p className="font-medium text-gray-900">Written instructions</p>
+                        <p className="mt-1 whitespace-pre-wrap text-gray-700">
+                          {job.specialInstructions || 'No written instructions were provided.'}
+                        </p>
+                      </div>
+                      {job.officeNotes && (
+                        <div>
+                          <p className="font-medium text-gray-900">Additional notes</p>
+                          <p className="mt-1 whitespace-pre-wrap text-gray-700">{job.officeNotes}</p>
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-medium text-gray-900">Voice instructions</p>
+                        <p className="mt-1 text-gray-700">
+                          {job.hasVoiceInstructions
+                            ? `Included${job.voiceInstructionsDuration ? ` · ${formatDuration(job.voiceInstructionsDuration)}` : ''}`
+                            : 'No voice instructions were provided.'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">Uploaded materials</p>
+                        <p className="mt-1 text-gray-700">Main file: {job.originalFilename || job.filename || 'Unknown file'}</p>
+                        <p className="mt-1 text-gray-700">
+                          {job.templateFilename ? `Template/reference: ${job.templateFilename}` : 'No template/reference file included.'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {retentionDeleted && (job.downloadURL || job.templateURL || job.voiceInstructionsURL) && (
                   <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm font-medium text-red-700">
