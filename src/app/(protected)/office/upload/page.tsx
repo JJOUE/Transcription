@@ -87,8 +87,10 @@ export default function OfficeUploadPage() {
   const [voiceInstructionBlob, setVoiceInstructionBlob] = useState<Blob | null>(null);
   const [voiceInstructionUrl, setVoiceInstructionUrl] = useState<string | null>(null);
   const [voiceInstructionDuration, setVoiceInstructionDuration] = useState(0);
+  const [isVoicePreviewPlaying, setIsVoicePreviewPlaying] = useState(false);
   const [isRecordingVoiceInstructions, setIsRecordingVoiceInstructions] = useState(false);
   const [microphoneError, setMicrophoneError] = useState('');
+  const voicePreviewAudioRef = useRef<HTMLAudioElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingStreamRef = useRef<MediaStream | null>(null);
   const recordingChunksRef = useRef<BlobPart[]>([]);
@@ -239,7 +241,41 @@ export default function OfficeUploadPage() {
     setVoiceInstructionBlob(null);
     setVoiceInstructionUrl(null);
     setVoiceInstructionDuration(0);
+    setIsVoicePreviewPlaying(false);
     setMicrophoneError('');
+  };
+
+  const seekVoicePreview = (seconds: number) => {
+    const audio = voicePreviewAudioRef.current;
+    if (!audio) return;
+
+    const duration = Number.isFinite(audio.duration) && audio.duration > 0
+      ? audio.duration
+      : voiceInstructionDuration;
+    audio.currentTime = Math.max(0, Math.min(audio.currentTime + seconds, duration || 0));
+  };
+
+  const toggleVoicePreviewPlayback = async () => {
+    const audio = voicePreviewAudioRef.current;
+    if (!audio) return;
+
+    if (audio.paused) {
+      try {
+        await audio.play();
+      } catch (error) {
+        console.error('Voice instructions preview playback failed:', error);
+      }
+    } else {
+      audio.pause();
+    }
+  };
+
+  const restartVoicePreview = () => {
+    const audio = voicePreviewAudioRef.current;
+    if (!audio) return;
+
+    audio.currentTime = 0;
+    setIsVoicePreviewPlaying(false);
   };
 
   const stopVoiceInstructionRecording = () => {
@@ -698,7 +734,53 @@ export default function OfficeUploadPage() {
                   {voiceInstructionUrl && (
                     <div className="mt-4 rounded-md border border-blue-100 bg-white p-3">
                       <p className="mb-2 text-sm font-medium text-[#003366]">Voice instructions recorded</p>
-                      <audio controls src={voiceInstructionUrl} className="w-full" />
+                      <audio
+                        ref={voicePreviewAudioRef}
+                        controls
+                        src={voiceInstructionUrl}
+                        className="w-full"
+                        onPlay={() => setIsVoicePreviewPlaying(true)}
+                        onPause={() => setIsVoicePreviewPlaying(false)}
+                        onEnded={() => setIsVoicePreviewPlaying(false)}
+                      />
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 border-blue-200 text-[#003366] hover:bg-blue-50"
+                          onClick={() => seekVoicePreview(-10)}
+                        >
+                          Back 10 seconds
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 border-blue-200 text-[#003366] hover:bg-blue-50"
+                          onClick={toggleVoicePreviewPlayback}
+                        >
+                          {isVoicePreviewPlaying ? 'Pause' : 'Play'}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 border-blue-200 text-[#003366] hover:bg-blue-50"
+                          onClick={() => seekVoicePreview(10)}
+                        >
+                          Forward 10 seconds
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 border-blue-200 text-[#003366] hover:bg-blue-50"
+                          onClick={restartVoicePreview}
+                        >
+                          Restart
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
