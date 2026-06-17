@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Archive, Search, Filter, Download, CheckCircle, XCircle, Eye, Edit, RefreshCw, Zap, RotateCcw, Upload } from 'lucide-react';
+import { Archive, Search, Filter, Download, CheckCircle, XCircle, Eye, Edit, RefreshCw, Zap, RotateCcw, Upload, Music } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -638,7 +638,7 @@ export function TranscriptionQueue() {
                           Keep File
                         </Button>
                       )}
-                      {isRetentionDeleted(item) && (item.downloadURL || item.templateURL) && (
+                      {isRetentionDeleted(item) && (item.downloadURL || item.templateURL || item.voiceInstructionsURL) && (
                         <span className="text-sm font-medium text-red-600">Files expired/deleted</span>
                       )}
                       {!isRetentionDeleted(item) && item.downloadURL && (
@@ -654,6 +654,14 @@ export function TranscriptionQueue() {
                           <a href={item.templateURL} target="_blank" rel="noopener noreferrer" className="flex items-center">
                             <Download className="h-4 w-4 mr-1" />
                             Template
+                          </a>
+                        </Button>
+                      )}
+                      {!isRetentionDeleted(item) && item.voiceInstructionsURL && (
+                        <Button variant="ghost" size="sm" className="text-indigo-600">
+                          <a href={item.voiceInstructionsURL} target="_blank" rel="noopener noreferrer" className="flex items-center">
+                            <Music className="h-4 w-4 mr-1" />
+                            Voice Instructions
                           </a>
                         </Button>
                       )}
@@ -823,7 +831,7 @@ export function TranscriptionQueue() {
                           Keep File
                         </Button>
                       )}
-                      {isRetentionDeleted(item) && (item.downloadURL || item.templateURL) && (
+                      {isRetentionDeleted(item) && (item.downloadURL || item.templateURL || item.voiceInstructionsURL) && (
                         <span className="text-sm font-medium text-red-600">Files expired/deleted</span>
                       )}
                       {!isRetentionDeleted(item) && item.downloadURL && (
@@ -839,6 +847,14 @@ export function TranscriptionQueue() {
                           <a href={item.templateURL} target="_blank" rel="noopener noreferrer" className="flex items-center">
                             <Download className="h-4 w-4 mr-1" />
                             Template
+                          </a>
+                        </Button>
+                      )}
+                      {!isRetentionDeleted(item) && item.voiceInstructionsURL && (
+                        <Button variant="ghost" size="sm" className="text-indigo-600">
+                          <a href={item.voiceInstructionsURL} target="_blank" rel="noopener noreferrer" className="flex items-center">
+                            <Music className="h-4 w-4 mr-1" />
+                            Voice Instructions
                           </a>
                         </Button>
                       )}
@@ -942,7 +958,7 @@ export function TranscriptionQueue() {
                   </p>
                 )}
 
-                {isRetentionDeleted(selectedJob) && (selectedJob.downloadURL || selectedJob.templateURL) && (
+                {isRetentionDeleted(selectedJob) && (selectedJob.downloadURL || selectedJob.templateURL || selectedJob.voiceInstructionsURL) && (
                   <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm font-medium text-red-700">
                     Files expired/deleted
                   </div>
@@ -954,6 +970,27 @@ export function TranscriptionQueue() {
                       src={selectedJob.downloadURL}
                       standalone={true}
                     />
+                  </div>
+                )}
+
+                {!isRetentionDeleted(selectedJob) && selectedJob.voiceInstructionsURL && (
+                  <div className="mb-4 rounded-lg border border-indigo-200 bg-indigo-50 p-3">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-indigo-900">🎙️ Voice Instructions</p>
+                        <p className="text-xs text-indigo-700">
+                          {selectedJob.voiceInstructionsFilename || 'Client-recorded voice instructions'}
+                          {selectedJob.voiceInstructionsDuration ? ` · ${formatDuration(selectedJob.voiceInstructionsDuration)}` : ''}
+                        </p>
+                      </div>
+                      <Button variant="outline" size="sm" className="text-indigo-700 border-indigo-300 hover:bg-indigo-100">
+                        <a href={selectedJob.voiceInstructionsURL} target="_blank" rel="noopener noreferrer" className="flex items-center">
+                          <Download className="h-4 w-4 mr-1" />
+                          Download
+                        </a>
+                      </Button>
+                    </div>
+                    <AudioPlayer src={selectedJob.voiceInstructionsURL} standalone={true} />
                   </div>
                 )}
 

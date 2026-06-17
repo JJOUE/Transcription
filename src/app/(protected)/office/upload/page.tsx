@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Upload, FileText, X, AlertCircle, FileUp } from 'lucide-react';
+import { Upload, FileText, X, AlertCircle, FileUp, Mic, Square, RotateCcw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -55,6 +55,7 @@ const OFFICE_SERVICE_TYPES: { value: OfficeServiceType; label: string; descripti
 const MAIN_FILE_ACCEPT = 'audio/*,video/*,.doc,.docx,.pdf,.txt,.jpg,.jpeg,.png,.heic';
 const DOCUMENT_EXTENSIONS = ['.doc', '.docx', '.pdf', '.txt'];
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.heic'];
+const MAX_VOICE_INSTRUCTIONS_SECONDS = 10 * 60;
 
 const getOfficeServiceLabel = (serviceType?: OfficeServiceType) =>
   OFFICE_SERVICE_TYPES.find(service => service.value === serviceType)?.label || 'Document Workspace';
@@ -83,6 +84,16 @@ export default function OfficeUploadPage() {
   const [templateFile, setTemplateFile] = useState<File | null>(null);
   const [rushDelivery, setRushDelivery] = useState(false);
   const [officeNotes, setOfficeNotes] = useState('');
+  const [voiceInstructionBlob, setVoiceInstructionBlob] = useState<Blob | null>(null);
+  const [voiceInstructionUrl, setVoiceInstructionUrl] = useState<string | null>(null);
+  const [voiceInstructionDuration, setVoiceInstructionDuration] = useState(0);
+  const [isRecordingVoiceInstructions, setIsRecordingVoiceInstructions] = useState(false);
+  const [microphoneError, setMicrophoneError] = useState('');
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingStreamRef = useRef<MediaStream | null>(null);
+  const recordingChunksRef = useRef<BlobPart[]>([]);
+  const recordingStartedAtRef = useRef<number | null>(null);
+  const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Pricing and wallet
   const [pricingSettings, setPricingSettings] = useState<PricingSettings | null>(null);
@@ -110,6 +121,18 @@ export default function OfficeUploadPage() {
     };
     loadPricing();
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (voiceInstructionUrl) {
+        URL.revokeObjectURL(voiceInstructionUrl);
+      }
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+      recordingStreamRef.current?.getTracks().forEach(track => track.stop());
+    };
+  }, [voiceInstructionUrl]);
 
   // Office studio uses human mode pricing for cost calculation
   const costPerMinute = pricingSettings?.payAsYouGo.human || 2.50;
@@ -209,6 +232,91 @@ export default function OfficeUploadPage() {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  const resetVoiceInstructionRecording = () => {
+    if (voiceInstructionUrl) {
+      URL.revokeObjectURL(voiceInstructionUrl);
+    }
+    setVoiceInstructionBlob(null);
+    setVoiceInstructionUrl(null);
+    setVoiceInstructionDuration(0);
+    setMicrophoneError('');
+  };
+
+  const stopVoiceInstructionRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+  };
+
+  const startVoiceInstructionRecording = async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setMicrophoneError('Voice recording is not available in this browser. You can still upload a file or type your instructions.');
+      return;
+    }
+
+    try {
+      resetVoiceInstructionRecording();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+
+      recordingChunksRef.current = [];
+      recordingStreamRef.current = stream;
+      mediaRecorderRef.current = recorder;
+      recordingStartedAtRef.current = Date.now();
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordingChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const recordedBlob = new Blob(recordingChunksRef.current, {
+          type: recorder.mimeType || 'audio/webm'
+        });
+        const duration = recordingStartedAtRef.current
+          ? Math.min((Date.now() - recordingStartedAtRef.current) / 1000, MAX_VOICE_INSTRUCTIONS_SECONDS)
+          : voiceInstructionDuration;
+
+        if (recordedBlob.size > 0) {
+          const objectUrl = URL.createObjectURL(recordedBlob);
+          setVoiceInstructionBlob(recordedBlob);
+          setVoiceInstructionUrl(objectUrl);
+          setVoiceInstructionDuration(duration);
+        }
+
+        setIsRecordingVoiceInstructions(false);
+        recordingStartedAtRef.current = null;
+        if (recordingIntervalRef.current) {
+          clearInterval(recordingIntervalRef.current);
+          recordingIntervalRef.current = null;
+        }
+        stream.getTracks().forEach(track => track.stop());
+        recordingStreamRef.current = null;
+      };
+
+      recorder.start();
+      setIsRecordingVoiceInstructions(true);
+      setMicrophoneError('');
+      recordingIntervalRef.current = setInterval(() => {
+        if (!recordingStartedAtRef.current) return;
+
+        const elapsed = (Date.now() - recordingStartedAtRef.current) / 1000;
+        setVoiceInstructionDuration(Math.min(elapsed, MAX_VOICE_INSTRUCTIONS_SECONDS));
+        if (elapsed >= MAX_VOICE_INSTRUCTIONS_SECONDS) {
+          stopVoiceInstructionRecording();
+        }
+      }, 500);
+    } catch (error) {
+      console.error('Microphone recording error:', error);
+      setIsRecordingVoiceInstructions(false);
+      setMicrophoneError('Microphone access was not allowed. You can still upload a file or type your instructions.');
+      recordingStreamRef.current?.getTracks().forEach(track => track.stop());
+      recordingStreamRef.current = null;
+    }
+  };
+
   const handleTemplateSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -229,6 +337,15 @@ export default function OfficeUploadPage() {
       toast({
         title: "No files selected",
         description: "Please upload at least one file to continue.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (isRecordingVoiceInstructions) {
+      toast({
+        title: "Recording in progress",
+        description: "Please stop the voice instructions recording before submitting your project.",
         variant: "destructive"
       });
       return;
@@ -256,6 +373,46 @@ export default function OfficeUploadPage() {
     setProcessingProgress({ current: 0, total: uploadedFiles.length, stage: 'Preparing files...' });
 
     try {
+      let uploadedVoiceInstructions: {
+        path: string;
+        url: string;
+        name: string;
+        duration: number;
+      } | null = null;
+
+      if (voiceInstructionBlob) {
+        setProcessingProgress(prev => ({
+          ...prev,
+          stage: 'Uploading voice instructions...'
+        }));
+
+        const storage = await import('firebase/storage');
+        const filename = `voice-instructions-${Date.now()}.webm`;
+        const path = generateFilePath(user.uid, `voice-instructions/${filename}`);
+        const ref = storage.ref(await import('@/lib/firebase/config').then(m => m.storage), path);
+        const uploadTask = storage.uploadBytesResumable(ref, voiceInstructionBlob, {
+          contentType: voiceInstructionBlob.type || 'audio/webm'
+        });
+
+        const url = await new Promise<string>((resolve, reject) => {
+          uploadTask.on('state_changed',
+            () => {},
+            (error) => reject(error),
+            async () => {
+              const downloadUrl = await storage.getDownloadURL(ref);
+              resolve(downloadUrl);
+            }
+          );
+        });
+
+        uploadedVoiceInstructions = {
+          path,
+          url,
+          name: filename,
+          duration: Math.round(voiceInstructionDuration)
+        };
+      }
+
       // Upload all files
       const uploadPromises = uploadedFiles.map(async (uploadFile, index) => {
         setProcessingProgress(prev => ({
@@ -320,7 +477,12 @@ export default function OfficeUploadPage() {
           // Office-specific fields
           officeServiceType,
           specialInstructions: formattingInstructions || undefined,
-          officeNotes: officeNotes || undefined
+          officeNotes: officeNotes || undefined,
+          hasVoiceInstructions: Boolean(uploadedVoiceInstructions),
+          voiceInstructionsPath: uploadedVoiceInstructions?.path,
+          voiceInstructionsURL: uploadedVoiceInstructions?.url,
+          voiceInstructionsFilename: uploadedVoiceInstructions?.name,
+          voiceInstructionsDuration: uploadedVoiceInstructions?.duration
         };
 
         // Add template if provided
@@ -378,6 +540,7 @@ export default function OfficeUploadPage() {
       });
 
       setUploadedFiles([]);
+      resetVoiceInstructionRecording();
       router.push('/dashboard');
     } catch (error) {
       console.error('Upload failed:', error);
@@ -446,6 +609,97 @@ export default function OfficeUploadPage() {
               <p className="text-xs text-gray-500 mt-2">
                 {OFFICE_SERVICE_TYPES.find(service => service.value === officeServiceType)?.description}
               </p>
+            </div>
+
+            {/* Voice Instructions */}
+            <div className="rounded-lg border border-blue-100 bg-blue-50/40 p-4">
+              <div className="flex items-start gap-3">
+                <div className="rounded-full bg-white p-2 text-[#003366]">
+                  <Mic className="h-5 w-5" />
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-base font-semibold text-[#003366]">Voice instructions</h2>
+                  <p className="mt-1 text-sm text-gray-600">
+                    Record a short message explaining what you need prepared. You can also type instructions below.
+                  </p>
+                  <p className="mt-2 text-xs text-gray-500">
+                    Do not include passwords, unnecessary personal details, or confidential information that is not needed for the project.
+                  </p>
+
+                  {microphoneError && (
+                    <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                      {microphoneError}
+                    </div>
+                  )}
+
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    {!isRecordingVoiceInstructions && !voiceInstructionBlob && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="border-[#003366] text-[#003366] hover:bg-blue-50"
+                        onClick={startVoiceInstructionRecording}
+                        disabled={isUploading}
+                      >
+                        <Mic className="mr-2 h-4 w-4" />
+                        Start Recording
+                      </Button>
+                    )}
+
+                    {isRecordingVoiceInstructions && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="border-red-300 text-red-700 hover:bg-red-50"
+                        onClick={stopVoiceInstructionRecording}
+                        disabled={isUploading}
+                      >
+                        <Square className="mr-2 h-4 w-4" />
+                        Stop Recording
+                      </Button>
+                    )}
+
+                    {voiceInstructionBlob && !isRecordingVoiceInstructions && (
+                      <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="border-[#003366] text-[#003366] hover:bg-blue-50"
+                          onClick={startVoiceInstructionRecording}
+                          disabled={isUploading}
+                        >
+                          <RotateCcw className="mr-2 h-4 w-4" />
+                          Re-record
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="border-red-300 text-red-700 hover:bg-red-50"
+                          onClick={resetVoiceInstructionRecording}
+                          disabled={isUploading}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Remove Recording
+                        </Button>
+                      </>
+                    )}
+
+                    {(isRecordingVoiceInstructions || voiceInstructionBlob) && (
+                      <span className="text-sm font-medium text-gray-700">
+                        {formatDuration(Math.round(voiceInstructionDuration))}
+                        {isRecordingVoiceInstructions ? ` / ${formatDuration(MAX_VOICE_INSTRUCTIONS_SECONDS)}` : ''}
+                      </span>
+                    )}
+                  </div>
+
+                  {voiceInstructionUrl && (
+                    <div className="mt-4 rounded-md border border-blue-100 bg-white p-3">
+                      <p className="mb-2 text-sm font-medium text-[#003366]">Voice instructions recorded</p>
+                      <audio controls src={voiceInstructionUrl} className="w-full" />
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Formatting Instructions */}
@@ -683,7 +937,7 @@ export default function OfficeUploadPage() {
         <div className="flex gap-3">
           <Button
             onClick={handleSubmit}
-            disabled={isUploading || uploadedFiles.length === 0 || hasInsufficientBalance}
+            disabled={isUploading || isRecordingVoiceInstructions || uploadedFiles.length === 0 || hasInsufficientBalance}
             className="flex-1 bg-[#003366] hover:bg-[#002244] text-white font-medium py-2"
           >
             {isUploading ? 'Uploading...' : `Upload ${uploadedFiles.length} File(s)`}

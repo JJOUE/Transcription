@@ -150,6 +150,11 @@ export const CreateTranscriptionJobSchema = z.object({
   templatePath: z.string().max(500).optional(),
   templateURL: z.string().url().max(1000).optional(),
   templateFilename: z.string().max(255).optional(),
+  hasVoiceInstructions: z.boolean().optional(),
+  voiceInstructionsPath: z.string().max(500).optional(),
+  voiceInstructionsURL: z.string().url().max(1000).optional(),
+  voiceInstructionsFilename: z.string().max(255).optional(),
+  voiceInstructionsDuration: z.number().min(0).max(3600).optional(),
   userId: z.string().optional(), // Will be overridden by authenticated user
 });
 

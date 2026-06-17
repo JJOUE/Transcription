@@ -642,6 +642,9 @@ export function UserDashboard() {
                           </div>
                           <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
                             <span>{getOfficeServiceLabel(job.officeServiceType)}</span>
+                            {job.hasVoiceInstructions && (
+                              <span className="text-indigo-700">Voice instructions included</span>
+                            )}
                             <span>{Math.ceil(job.duration / 60)} min</span>
                             <span>
                               {new Date(job.createdAt).toLocaleDateString()}

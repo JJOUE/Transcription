@@ -694,6 +694,12 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                     📋 Template
                   </span>
                 )}
+
+                {job.hasVoiceInstructions && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
+                    🎙️ Voice Instructions
+                  </span>
+                )}
                 
                 {job.multipleSpeakers && (
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
@@ -722,7 +728,7 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
         {/* Action Buttons Row */}
         <div className="flex flex-wrap gap-2">
           {/* Download Audio */}
-          {retentionDeleted && (job.downloadURL || job.templateURL) && (
+          {retentionDeleted && (job.downloadURL || job.templateURL || job.voiceInstructionsURL) && (
             <span className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md">
               Files expired/deleted
             </span>
@@ -750,6 +756,18 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
             >
               <Download className="h-4 w-4 mr-1" />
               Template
+            </Button>
+          )}
+
+          {!retentionDeleted && job.voiceInstructionsURL && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-indigo-600 border-indigo-300 hover:bg-indigo-50"
+              onClick={() => window.open(job.voiceInstructionsURL, '_blank')}
+            >
+              <Music className="h-4 w-4 mr-1" />
+              Voice Instructions
             </Button>
           )}
 
@@ -1098,7 +1116,7 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                   )}
                 </div>
 
-                {retentionDeleted && (job.downloadURL || job.templateURL) && (
+                {retentionDeleted && (job.downloadURL || job.templateURL || job.voiceInstructionsURL) && (
                   <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm font-medium text-red-700">
                     Files expired/deleted
                   </div>
@@ -1107,6 +1125,30 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                 {!retentionDeleted && job.downloadURL && (
                   <div className="mb-4 pt-2">
                     <AudioPlayer src={job.downloadURL} standalone={true} />
+                  </div>
+                )}
+
+                {!retentionDeleted && job.voiceInstructionsURL && (
+                  <div className="mb-4 rounded-lg border border-indigo-200 bg-indigo-50 p-3">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-indigo-900">🎙️ Voice Instructions</p>
+                        <p className="text-xs text-indigo-700">
+                          {job.voiceInstructionsFilename || 'Client-recorded voice instructions'}
+                          {job.voiceInstructionsDuration ? ` · ${formatDuration(job.voiceInstructionsDuration)}` : ''}
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-indigo-700 border-indigo-300 hover:bg-indigo-100"
+                        onClick={() => window.open(job.voiceInstructionsURL, '_blank')}
+                      >
+                        <Download className="h-4 w-4 mr-1" />
+                        Download
+                      </Button>
+                    </div>
+                    <AudioPlayer src={job.voiceInstructionsURL} standalone={true} />
                   </div>
                 )}
 

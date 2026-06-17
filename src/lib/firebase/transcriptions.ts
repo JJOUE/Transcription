@@ -84,6 +84,12 @@ export interface TranscriptionJob {
   templatePath?: string; // Path to template file in Storage
   templateURL?: string; // Download URL for template file
   templateFilename?: string; // Original template filename
+  // Client-recorded voice instructions for Document Workspace projects
+  hasVoiceInstructions?: boolean;
+  voiceInstructionsPath?: string;
+  voiceInstructionsURL?: string;
+  voiceInstructionsFilename?: string;
+  voiceInstructionsDuration?: number;
   // Admin-uploaded transcript file (served as-is to users)
   adminTranscriptPath?: string; // Storage path for admin-uploaded transcript
   adminTranscriptURL?: string; // Download URL for admin-uploaded transcript
