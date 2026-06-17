@@ -623,6 +623,9 @@ export default function OfficeUploadPage() {
                     Record a short message explaining what you need prepared. You can also type instructions below.
                   </p>
                   <p className="mt-2 text-xs text-gray-500">
+                    Voice recording works best in Safari on iPhone or Chrome on Android. If recording does not work, you can upload an audio file or type your instructions instead.
+                  </p>
+                  <p className="mt-2 text-xs text-gray-500">
                     Do not include passwords, unnecessary personal details, or confidential information that is not needed for the project.
                   </p>
 
