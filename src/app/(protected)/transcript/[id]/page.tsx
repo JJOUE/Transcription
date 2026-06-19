@@ -5963,16 +5963,18 @@ export default function TranscriptViewerPage() {
                               </>
                             )}
 
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setShowSearchPanel(true)}
-                              disabled={saving || !transcription.timestampedTranscript || transcription.timestampedTranscript.length === 0}
-                            >
-                              <Search className="h-4 w-4 mr-2" />
-                              Search
-                            </Button>
+                            {isEditing && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setShowSearchPanel(prev => !prev)}
+                                disabled={saving || !transcription.timestampedTranscript || transcription.timestampedTranscript.length === 0}
+                              >
+                                <Search className="h-4 w-4 mr-2" />
+                                Search & Replace
+                              </Button>
+                            )}
 
                             {!isEditing && !isRetentionDeleted(transcription) && !transcription.adminTranscriptURL && (
                               <div className="flex">
@@ -6002,6 +6004,93 @@ export default function TranscriptViewerPage() {
                             )}
                           </div>
                         </div>
+
+                        {isEditing && showSearchPanel && (
+                          <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50/70 p-3">
+                            <div className="mb-2 flex items-center justify-between gap-3">
+                              <h4 className="flex items-center gap-2 text-sm font-semibold text-[#003366]">
+                                <Search className="h-4 w-4" />
+                                Search & Replace
+                              </h4>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setShowSearchPanel(false);
+                                  setSearchMatches([]);
+                                }}
+                                className="rounded p-1 text-gray-500 hover:bg-white hover:text-gray-700"
+                                aria-label="Close Search and Replace"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+
+                            <div className="grid gap-2 lg:grid-cols-[1fr_1fr_auto] lg:items-center">
+                              <input
+                                id="sticky-search-input"
+                                type="text"
+                                placeholder="Search for..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    if (searchMatches.length > 0) {
+                                      navigateToMatch('next');
+                                    } else {
+                                      performSearch();
+                                    }
+                                  }
+                                }}
+                                className="w-full rounded-md border border-blue-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                              />
+                              <input
+                                type="text"
+                                placeholder="Replace with..."
+                                value={replaceQuery}
+                                onChange={(e) => setReplaceQuery(e.target.value)}
+                                className="w-full rounded-md border border-blue-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                              />
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Button type="button" size="sm" onClick={performSearch} className="bg-blue-600 text-white hover:bg-blue-700">
+                                  Find
+                                </Button>
+                                <Button type="button" size="sm" variant="outline" onClick={replaceNext} disabled={searchMatches.length === 0}>
+                                  Replace
+                                </Button>
+                                <Button type="button" size="sm" className="bg-orange-600 text-white hover:bg-orange-700" onClick={replaceAll}>
+                                  Replace All
+                                </Button>
+                              </div>
+                            </div>
+
+                            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-600">
+                              <label className="flex cursor-pointer items-center gap-1.5">
+                                <input
+                                  type="checkbox"
+                                  checked={caseSensitive}
+                                  onChange={(e) => setCaseSensitive(e.target.checked)}
+                                  className="rounded"
+                                />
+                                Case sensitive
+                              </label>
+
+                              {searchMatches.length > 0 && (
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">
+                                    {currentMatchIndex + 1} of {searchMatches.length} matches
+                                  </span>
+                                  <Button type="button" size="sm" variant="outline" className="h-7 px-2" onClick={() => navigateToMatch('prev')}>
+                                    Previous
+                                  </Button>
+                                  <Button type="button" size="sm" variant="outline" className="h-7 px-2" onClick={() => navigateToMatch('next')}>
+                                    Next
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {!isEditing && (
