@@ -107,7 +107,7 @@ const getTypeInfo = (type: string) => {
     case 'ai':
       return {
         title: 'AI Transcription Packages',
-        subtitle: 'Fast, automated transcription delivered within 60 minutes',
+        subtitle: 'Fast AI-generated transcripts for clear audio or video recordings',
         icon: Zap,
         label: 'AI Transcription'
       };
@@ -115,7 +115,7 @@ const getTypeInfo = (type: string) => {
     case 'hybrid':
       return {
         title: 'Hybrid Transcription Packages',
-        subtitle: 'AI transcription with human review - delivered in 3-5 business days',
+        subtitle: 'AI transcripts reviewed by a human for formatting, readability, and obvious errors',
         icon: Users,
         label: 'Hybrid (AI + Human)'
       };
@@ -123,17 +123,17 @@ const getTypeInfo = (type: string) => {
     case 'human':
       return {
         title: '100% Human Transcription Packages',
-        subtitle: 'Professional human transcription - delivered in 3-5 business days',
+        subtitle: 'Human-prepared transcripts for professional, legal, academic, and business use',
         icon: Check,
         label: '100% Human'
       };
 
     case 'dictation':
       return {
-        title: 'Document Preparation Services',
-        subtitle: 'Audio instructions for document preparation, copy typing, handwriting transcription, and document formatting',
+        title: 'Document Workspace Pricing',
+        subtitle: 'Document preparation from audio instructions, copy typing, handwriting transcription, and document formatting',
         icon: FileText,
-        label: 'Documents'
+        label: 'Document Workspace'
       };
 
     default:
@@ -191,7 +191,7 @@ const getTypeInfo = (type: string) => {
                 </TabsTrigger>
                 <TabsTrigger value="dictation" className="flex items-center justify-center">
                   <FileText className="h-4 w-4 mr-2" />
-                  Documents
+                  Document Workspace
                 </TabsTrigger>
               </TabsList>
 
@@ -207,11 +207,11 @@ const getTypeInfo = (type: string) => {
                       <CardContent className="p-10">
                         <div className="text-center mb-10">
                           <h3 className="text-3xl font-bold text-[#003366] mb-4">
-                            Document Preparation
+                            Document Workspace
                           </h3>
                           
                           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                            Need audio, notes, handwriting, scans, PDFs, or drafts turned into a clean document?
+                            Document preparation from audio instructions, notes, handwriting, scans, PDFs, or drafts.
                           </p>
                         </div>
                         
@@ -259,19 +259,19 @@ const getTypeInfo = (type: string) => {
 
             <div className="mt-8 p-6 bg-gray-50 rounded-2xl">
               <p className="text-sm uppercase tracking-[0.2em] text-[#72629E] mb-2">
-                Starting At
+                Starting at
               </p>
               
               <div className="text-3xl font-bold text-[#003366] mb-4">
-                CA$20+
+                CA$2.50
               </div>
               
   <div className="space-y-2 text-sm text-gray-600">
-    <p>General document preparation starting at CA$20</p>
-    <p>Complex formatting or custom document projects starting at CA$45</p>
-    <p>Projects based on audio instructions are quoted after review because pricing depends on the instructions, template, length, formatting, and final document required</p>
-    <p>Custom quote may apply for document, handwriting, scan, or copy typing projects</p>
-    <p>Custom quotes available for larger projects</p>
+    <p>Document Workspace: starting at CA$2.50 per finished page</p>
+    <p>Simple typed documents from clear audio instructions: starting at CA$2.50 per finished page</p>
+    <p>Copy typing: starting at CA$2.50 per page</p>
+    <p>Handwriting transcription: starting at CA$3.50 per page</p>
+    <p>Complex, long, legal, or heavily formatted documents: custom quote</p>
   </div>
 </div>
 
@@ -406,14 +406,14 @@ const getTypeInfo = (type: string) => {
             <Card className="border-0 shadow-lg">
               <CardContent className="p-8 text-center">
                 <h3 className="text-xl font-semibold text-[#003366] mb-4">
-                  AI Only
+                  AI Transcription
                 </h3>
                 <div className="text-3xl font-bold text-[#b29dd9] mb-1">
                   CA${(pricingSettings?.payAsYouGo.ai || 0.40).toFixed(2)}
                 </div>
-                <div className="text-gray-600">/minute</div>
+                <div className="text-gray-600">per audio minute</div>
                 <p className="text-sm text-gray-500 mt-4">
-                  Fast automated transcription
+                  Fast AI-generated transcript for clear recordings.
                 </p>
                 <p className="text-xs text-gray-400 mt-2">
                   No minimum commitment
@@ -424,14 +424,14 @@ const getTypeInfo = (type: string) => {
             <Card className="border-0 shadow-lg">
               <CardContent className="p-8 text-center">
                 <h3 className="text-xl font-semibold text-[#003366] mb-4">
-                  Hybrid
+                  Hybrid Review
                 </h3>
                 <div className="text-3xl font-bold text-[#b29dd9] mb-1">
                   CA${(pricingSettings?.payAsYouGo.hybrid || 1.50).toFixed(2)}
                 </div>
-                <div className="text-gray-600">/minute</div>
+                <div className="text-gray-600">per audio minute</div>
                 <p className="text-sm text-gray-500 mt-4">
-                  AI + Human review
+                  AI transcript reviewed by a human for formatting, readability, and obvious errors.
                 </p>
                 <p className="text-xs text-gray-400 mt-2">
                   Pay only for what you use
@@ -442,14 +442,14 @@ const getTypeInfo = (type: string) => {
             <Card className="border-0 shadow-lg">
               <CardContent className="p-8 text-center">
                 <h3 className="text-xl font-semibold text-[#003366] mb-4">
-                  100% Human
+                  Human Transcription
                 </h3>
                 <div className="text-3xl font-bold text-[#b29dd9] mb-1">
                   CA${(pricingSettings?.payAsYouGo.human || 2.50).toFixed(2)}
                 </div>
-                <div className="text-gray-600">/minute</div>
+                <div className="text-gray-600">per audio minute</div>
                 <p className="text-sm text-gray-500 mt-4">
-                  Professional human transcription
+                  Human-prepared transcript for professional, legal, academic, and business use.
                 </p>
                 <p className="text-xs text-gray-400 mt-2">
                   Highest review level
@@ -587,7 +587,7 @@ const getTypeInfo = (type: string) => {
                   <th className="p-4 text-center">AI</th>
                   <th className="p-4 text-center">Hybrid</th>
                   <th className="p-4 text-center">Human</th>
-                  <th className="p-4 text-center">Documents</th>
+                  <th className="p-4 text-center">Document Workspace</th>
                 </tr>
               </thead>
               <tbody>
@@ -637,7 +637,7 @@ const getTypeInfo = (type: string) => {
                       'N/A'}
                   </td>
                   <td className="p-4 text-center font-bold text-[#b29dd9]">
-                    CA$20+
+                    CA$2.50/page
                   </td>
                 </tr>
                 <tr className="border-b bg-gray-50">
@@ -645,7 +645,7 @@ const getTypeInfo = (type: string) => {
                   <td className="p-4 text-center">CA${(pricingSettings?.payAsYouGo.ai || 0.40).toFixed(2)}/min</td>
                   <td className="p-4 text-center">CA${(pricingSettings?.payAsYouGo.hybrid || 1.50).toFixed(2)}/min</td>
                   <td className="p-4 text-center">CA${(pricingSettings?.payAsYouGo.human || 2.50).toFixed(2)}/min</td>
-                  <td className="p-4 text-center">Custom Quote</td>
+                  <td className="p-4 text-center">Starting at CA$2.50/page</td>
                 </tr>
               </tbody>
             </table>

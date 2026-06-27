@@ -97,7 +97,7 @@ export function Footer() {
                     isLightFooter ? "hover:text-[#003366]" : "hover:text-white"
                   }`}
                 >
-                  Document Preparation
+                  Document Workspace Pricing
                 </Link>
               </li>
               <li>
