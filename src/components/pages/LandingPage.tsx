@@ -100,11 +100,18 @@ function LandingPage() {
                 Canadian Transcription & Document Preparation Services
               </h1>
               <p className="text-lg md:text-xl text-gray-300 mb-4 max-w-xl mx-auto lg:mx-0">
-                Turn audio, video, audio instructions, handwritten notes, scanned documents, and typed drafts into clean, organized documents.
+                Turn audio, video, handwritten notes, scanned documents, and typed drafts into clean transcripts and organized documents.
               </p>
-              <p className="text-base text-gray-200 mb-4 max-w-xl mx-auto lg:mx-0">
-                Canadian transcription, audio instructions for document preparation, copy typing, and document preparation for professionals.
-              </p>
+
+              <div className="max-w-xl mx-auto lg:mx-0 mb-8 rounded-3xl bg-white/10 p-5 text-left">
+                <p className="text-lg font-semibold text-white mb-3">
+                  More accurate transcripts. Less time waiting. Built-in editing tools ready when you need them.
+                </p>
+                <p className="text-base text-gray-200">
+                  Talk to Text Canada also offers typing services for everyday office needs, including copy typing, handwriting transcription, audio instructions for document preparation, and document preparation.
+                </p>
+              </div>
+
               <p className="text-base text-gray-200 mb-8 max-w-xl mx-auto lg:mx-0">
                 Upload your file, choose the service you need, and download a polished transcript, letter, note, report, memo, or editable document.
               </p>
@@ -116,7 +123,7 @@ function LandingPage() {
                 </div>
                 <div className="rounded-3xl bg-white/10 p-4">
                   <p className="text-sm uppercase tracking-[0.2em] text-[#b29dd9] mb-2">Step 2</p>
-                  <p className="font-semibold text-white">Choose transcription, document preparation from audio instructions, copy typing, or document preparation</p>
+                  <p className="font-semibold text-white">Choose transcription, copy typing, handwriting transcription, audio instructions, or document preparation</p>
                 </div>
                 <div className="rounded-3xl bg-white/10 p-4">
                   <p className="text-sm uppercase tracking-[0.2em] text-[#b29dd9] mb-2">Step 3</p>
@@ -145,9 +152,6 @@ function LandingPage() {
                 </Button>
               </div>
 
-              <p className="text-sm text-gray-200 mt-6 max-w-xl mx-auto lg:mx-0">
-                Services include transcription, document preparation from audio instructions, copy typing, handwriting transcription, document formatting, and document preparation.
-              </p>
             </div>
 
             {/* Mascot Image */}
