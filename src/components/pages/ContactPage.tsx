@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Mail, Phone, MapPin, Clock, MessageCircle } from 'lucide-react';
+import { Mail, Phone, MapPin, Clock, Linkedin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -266,24 +266,24 @@ function ContactPage() {
               <Card className="border border-[#b29dd9] shadow-lg">
                 <CardContent className="p-8">
                   <div className="flex items-start space-x-4">
-                    <div className="w-12 h-12 bg-[#25D366] rounded-lg flex items-center justify-center flex-shrink-0">
-                      <MessageCircle className="h-6 w-6 text-white" />
+                    <div className="w-12 h-12 bg-[#0A66C2] rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Linkedin className="h-6 w-6 text-white" />
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-[#003366] mb-2">
-                        WhatsApp Support
+                        LinkedIn
                       </h3>
                       <p className="text-gray-600 mb-4">
-                        Quick questions? Chat with us on WhatsApp for instant support.
+                        Connect with us on LinkedIn. Please use the secure client dashboard for file uploads.
                       </p>
                       <a
-                        href="https://wa.me/12894993536"
+                        href="https://www.linkedin.com/in/talktotext"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center px-6 py-3 bg-[#25D366] hover:bg-[#22c55e] text-white font-medium rounded-lg transition-colors"
+                        className="inline-flex items-center px-6 py-3 bg-[#0A66C2] hover:bg-[#084f96] text-white font-medium rounded-lg transition-colors"
                       >
-                        <MessageCircle className="h-5 w-5 mr-2" />
-                        Chat on WhatsApp
+                        <Linkedin className="h-5 w-5 mr-2" />
+                        Connect with us on LinkedIn
                       </a>
                     </div>
                   </div>
