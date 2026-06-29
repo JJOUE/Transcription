@@ -7,6 +7,7 @@ export type OfficeStatus = 'submitted' | 'assigned' | 'in_progress' | 'waiting_r
 export type OfficePriority = 'standard' | 'rush' | 'same_day';
 export type OfficeServiceType = 'dictation-cleanup' | 'copy-typing' | 'handwriting-transcription' | 'document-preparation';
 export type DeletionStatus = 'active' | 'archived' | 'pending' | 'deleted' | 'error' | 'held';
+export type DeletionRequestStatus = 'requested' | 'reviewing' | 'processed' | 'declined';
 
 export interface TranscriptSegment {
   start: number; // Start time in seconds
@@ -53,6 +54,11 @@ export interface TranscriptionJob {
   retentionHoldAt?: Timestamp;
   filesDeletedAt?: Timestamp;
   deletionStatus?: DeletionStatus;
+  deletionRequested?: boolean;
+  deletionRequestedAt?: Timestamp;
+  deletionRequestedBy?: string;
+  deletionRequestStatus?: DeletionRequestStatus;
+  deletionRequestNote?: string;
   isArchived?: boolean; // Soft archive for hiding jobs from active admin work queues
   archivedAt?: Timestamp;
   archivedBy?: string;
@@ -261,6 +267,38 @@ export const releaseRetentionHold = async (id: string): Promise<void> => {
     deletionStatus: 'active',
     updatedAt: Timestamp.now()
   });
+};
+
+export const requestFileDeletion = async (
+  id: string,
+  requestedBy: string,
+  deletionRequestNote?: string
+): Promise<void> => {
+  const docRef = doc(db, TRANSCRIPTIONS_COLLECTION, id);
+  const docSnap = await getDoc(docRef);
+
+  if (!docSnap.exists()) {
+    throw new Error('Project not found.');
+  }
+
+  const job = docSnap.data() as TranscriptionJob;
+  if (job.userId !== requestedBy) {
+    throw new Error('You do not have permission to request deletion for this project.');
+  }
+
+  const updateData: Partial<TranscriptionJob> = {
+    deletionRequested: true,
+    deletionRequestedAt: Timestamp.now(),
+    deletionRequestedBy: requestedBy,
+    deletionRequestStatus: 'requested',
+    updatedAt: Timestamp.now()
+  };
+
+  if (deletionRequestNote?.trim()) {
+    updateData.deletionRequestNote = deletionRequestNote.trim();
+  }
+
+  await updateDoc(docRef, updateData);
 };
 
 export const approveTranscriptionReview = async (id: string): Promise<void> => {

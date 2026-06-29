@@ -11,7 +11,7 @@ import { Footer } from '@/components/layout/Footer';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useAuth } from '@/contexts/AuthContext';
-import { getTranscriptionById, TranscriptionJob } from '@/lib/firebase/transcriptions';
+import { getTranscriptionById, requestFileDeletion, TranscriptionJob } from '@/lib/firebase/transcriptions';
 import { formatDuration } from '@/lib/utils';
 import { formatRetentionLabel, isRetentionDeleted, toRetentionDate } from '@/lib/utils/retention';
 
@@ -49,6 +49,8 @@ export default function DocumentWorkspaceProjectPage() {
   const [project, setProject] = useState<TranscriptionJob | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [requestingFileDeletion, setRequestingFileDeletion] = useState(false);
+  const [deletionRequestMessage, setDeletionRequestMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const loadProject = async () => {
@@ -86,6 +88,37 @@ export default function DocumentWorkspaceProjectPage() {
   const submittedDate = project ? formatDate(project.createdAt) : null;
   const dueDate = project ? formatDate(project.officeDueDate) : null;
   const completedDocumentAvailable = Boolean(project?.officeCompletedDocumentURL && !retentionDeleted);
+
+  const handleRequestFileDeletion = async () => {
+    if (!project?.id || !user?.uid) return;
+    if (project.deletionRequested) return;
+
+    const confirmed = window.confirm(
+      "Are you sure you want to request deletion of this project's files? Talk to Text Canada will review the request and process it according to the file retention policy."
+    );
+
+    if (!confirmed) return;
+
+    setRequestingFileDeletion(true);
+    setDeletionRequestMessage(null);
+    try {
+      await requestFileDeletion(project.id, user.uid);
+      setProject(prev => prev ? {
+        ...prev,
+        deletionRequested: true,
+        deletionRequestedBy: user.uid,
+        deletionRequestStatus: 'requested'
+      } : prev);
+      setDeletionRequestMessage(
+        'Your deletion request has been received. Talk to Text Canada will review and process it according to the file retention policy.'
+      );
+    } catch (requestError) {
+      console.error('File deletion request error:', requestError);
+      setDeletionRequestMessage('Unable to submit the deletion request. Please try again.');
+    } finally {
+      setRequestingFileDeletion(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -298,6 +331,37 @@ export default function DocumentWorkspaceProjectPage() {
                   <p className="text-sm text-gray-600">
                     Your completed document is not ready yet. It will appear here when it has been uploaded by Talk to Text Canada.
                   </p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-[#003366]">File deletion request</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {project.deletionRequested ? (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-800">
+                    File deletion has been requested.
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-sm text-gray-600">
+                      Request deletion of uploaded and completed files for admin review. Files are not deleted automatically from this request.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full border-red-300 text-red-700 hover:bg-red-50"
+                      onClick={handleRequestFileDeletion}
+                      disabled={requestingFileDeletion}
+                    >
+                      {requestingFileDeletion ? 'Submitting request...' : 'Request File Deletion'}
+                    </Button>
+                  </>
+                )}
+                {deletionRequestMessage && (
+                  <p className="text-sm text-gray-700">{deletionRequestMessage}</p>
                 )}
               </CardContent>
             </Card>

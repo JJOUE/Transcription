@@ -335,13 +335,16 @@ export function TranscriptionQueue() {
     // - Failed AI/Hybrid jobs that might need retry
     // - Stuck processing jobs (processing status but no speechmaticsJobId)
     // - Document Workspace jobs (all non-completed statuses)
+    // - Client file deletion requests
     const isStuckProcessing = item.status === 'processing' && !item.speechmaticsJobId;
+    const hasDeletionRequest = item.deletionRequested && item.deletionRequestStatus !== 'processed';
     const needsAdminAction = (item.type === 'office' && !['complete', 'cancelled'].includes(item.status)) ||
                             (item.mode === 'human' && !['complete', 'cancelled'].includes(item.status)) ||
                             (item.mode === 'hybrid' && ['pending-review', 'under-review'].includes(item.status)) ||
                             (item.mode === 'ai' && item.status === 'failed') ||
                             (item.mode === 'hybrid' && item.status === 'failed') ||
-                            isStuckProcessing;
+                            isStuckProcessing ||
+                            hasDeletionRequest;
 
     return matchesSearch && matchesStatus && matchesJobType && needsAdminAction;
   }).sort((a, b) => {
@@ -360,12 +363,14 @@ export function TranscriptionQueue() {
   // Calculate stats only for jobs that need admin action
   const adminActionItems = queueItems.filter(item => {
     if (item.isArchived) return false;
+    const hasDeletionRequest = item.deletionRequested && item.deletionRequestStatus !== 'processed';
 
     return (item.type === 'office' && !['complete', 'cancelled'].includes(item.status)) ||
            (item.mode === 'human' && !['complete', 'cancelled'].includes(item.status)) || 
            (item.mode === 'hybrid' && ['pending-review', 'under-review'].includes(item.status)) ||
            (item.mode === 'ai' && item.status === 'failed') ||
-           (item.mode === 'hybrid' && item.status === 'failed');
+           (item.mode === 'hybrid' && item.status === 'failed') ||
+           hasDeletionRequest;
   });
 
   const stats = {
@@ -499,6 +504,11 @@ export function TranscriptionQueue() {
                       <div className="flex items-center space-x-3 mb-2">
                         <h3 className="font-medium text-[#003366]">{item.originalFilename || item.filename || 'Unknown file'}</h3>
                         <StatusBadge status={item.status} />
+                        {item.deletionRequested && item.deletionRequestStatus !== 'processed' && (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-300">
+                            File deletion requested
+                          </span>
+                        )}
                         {/* Add-on indicators */}
                         {item.rushDelivery && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
@@ -520,6 +530,9 @@ export function TranscriptionQueue() {
                           <span className={isRetentionDeleted(item) ? 'font-medium text-red-600' : 'text-gray-500'}>
                             {formatRetentionLabel(item)}
                           </span>
+                        )}
+                        {item.deletionRequested && item.deletionRequestStatus !== 'processed' && (
+                          <span className="font-medium text-red-700">Client deletion request</span>
                         )}
                       </div>
                     </div>
@@ -668,6 +681,15 @@ export function TranscriptionQueue() {
                     </div>
                   </div>
 
+                  {item.deletionRequested && item.deletionRequestStatus !== 'processed' && (
+                    <div className="mt-3 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                      <p className="font-semibold">Client requested file deletion.</p>
+                      <p className="mt-1">
+                        Review before deleting any Storage files. This request does not delete files automatically.
+                      </p>
+                    </div>
+                  )}
+
                   {/* Show AI transcript for hybrid review */}
                   {item.status === 'pending-review' && (item.transcript || item.transcriptStoragePath) && (
                     <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
@@ -727,6 +749,11 @@ export function TranscriptionQueue() {
                       <div className="flex items-center space-x-3 mb-2">
                         <h3 className="font-medium text-[#003366]">{item.originalFilename || item.filename || 'Unknown file'}</h3>
                         <StatusBadge status={item.status} />
+                        {item.deletionRequested && item.deletionRequestStatus !== 'processed' && (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-300">
+                            File deletion requested
+                          </span>
+                        )}
                         <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-[#b29dd9] text-white border border-[#9d87c7]">
                           🏢 Document Workspace
                         </span>
@@ -746,6 +773,9 @@ export function TranscriptionQueue() {
                           <span className={isRetentionDeleted(item) ? 'font-medium text-red-600' : 'text-gray-500'}>
                             {formatRetentionLabel(item)}
                           </span>
+                        )}
+                        {item.deletionRequested && item.deletionRequestStatus !== 'processed' && (
+                          <span className="font-medium text-red-700">Client deletion request</span>
                         )}
                       </div>
                     </div>
@@ -861,6 +891,15 @@ export function TranscriptionQueue() {
                     </div>
                   </div>
 
+                  {item.deletionRequested && item.deletionRequestStatus !== 'processed' && (
+                    <div className="mt-3 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                      <p className="font-semibold">Client requested file deletion.</p>
+                      <p className="mt-1">
+                        Review before deleting any Storage files. This request does not delete files automatically.
+                      </p>
+                    </div>
+                  )}
+
                   {/* Office-specific metadata display */}
                   <div className="mt-3 rounded border border-[#b29dd9] bg-[#f8f5fc] p-3">
                     <h4 className="mb-2 text-sm font-medium text-[#003366]">Client Instructions</h4>
@@ -940,6 +979,14 @@ export function TranscriptionQueue() {
                 <p className="text-sm text-gray-600">
                   <strong>User:</strong> <span className="break-words">{userEmails[selectedJob.userId] || 'Loading...'}</span>
                 </p>
+                {selectedJob.deletionRequested && selectedJob.deletionRequestStatus !== 'processed' && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                    <p className="font-semibold">Client requested file deletion.</p>
+                    <p className="mt-1">
+                      Review before deleting any Storage files. This request does not delete files automatically.
+                    </p>
+                  </div>
+                )}
                 {selectedJob.type === 'office' ? (
                   <p className="text-sm text-gray-600">
                     <strong>Service:</strong> {getOfficeServiceLabel(selectedJob.officeServiceType)}

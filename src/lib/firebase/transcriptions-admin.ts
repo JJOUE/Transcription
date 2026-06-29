@@ -7,6 +7,7 @@ export type TranscriptionMode = 'ai' | 'hybrid' | 'human';
 export type TranscriptionDomain = 'general' | 'medical' | 'legal';
 export type OfficeServiceType = 'dictation-cleanup' | 'copy-typing' | 'handwriting-transcription' | 'document-preparation';
 export type DeletionStatus = 'active' | 'archived' | 'pending' | 'deleted' | 'error' | 'held';
+export type DeletionRequestStatus = 'requested' | 'reviewing' | 'processed' | 'declined';
 
 export interface TranscriptSegment {
   start: number; // Start time in seconds
@@ -47,6 +48,11 @@ export interface TranscriptionJob {
   retentionHoldAt?: FirebaseFirestore.Timestamp;
   filesDeletedAt?: FirebaseFirestore.Timestamp;
   deletionStatus?: DeletionStatus;
+  deletionRequested?: boolean;
+  deletionRequestedAt?: FirebaseFirestore.Timestamp;
+  deletionRequestedBy?: string;
+  deletionRequestStatus?: DeletionRequestStatus;
+  deletionRequestNote?: string;
   isArchived?: boolean; // Soft archive for hiding jobs from active admin work queues
   archivedAt?: FirebaseFirestore.Timestamp;
   archivedBy?: string;

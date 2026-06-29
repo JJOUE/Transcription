@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
-import { getTranscriptionById, updateTranscriptionStatus, TranscriptionJob, TranscriptSegment } from '@/lib/firebase/transcriptions';
+import { getTranscriptionById, requestFileDeletion, updateTranscriptionStatus, TranscriptionJob, TranscriptSegment } from '@/lib/firebase/transcriptions';
 import { Timestamp } from 'firebase/firestore';
 import { formatTime, formatDuration } from '@/lib/utils';
 import { AudioPlayer, AudioPlayerRef } from '@/components/ui/AudioPlayer';
@@ -244,6 +244,7 @@ export default function TranscriptViewerPage() {
   const [transcription, setTranscription] = useState<TranscriptionJob | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [requestingFileDeletion, setRequestingFileDeletion] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const [editedTranscript, setEditedTranscript] = useState('');
@@ -521,6 +522,44 @@ export default function TranscriptViewerPage() {
       setSpeakerOrder(speakers);
     }
   }, [transcription?.timestampedTranscript, speakerOrder.length]);
+
+  const handleRequestFileDeletion = async () => {
+    if (!transcription?.id || !user?.uid) return;
+    if (transcription.deletionRequested) return;
+
+    const confirmed = window.confirm(
+      "Are you sure you want to request deletion of this project's files? Talk to Text Canada will review the request and process it according to the file retention policy."
+    );
+
+    if (!confirmed) return;
+
+    setRequestingFileDeletion(true);
+    try {
+      await requestFileDeletion(transcription.id, user.uid);
+      const now = Timestamp.now();
+      setTranscription(prev => prev ? {
+        ...prev,
+        deletionRequested: true,
+        deletionRequestedAt: now,
+        deletionRequestedBy: user.uid,
+        deletionRequestStatus: 'requested',
+        updatedAt: now
+      } : prev);
+      toast({
+        title: 'Deletion request received',
+        description: 'Your deletion request has been received. Talk to Text Canada will review and process it according to the file retention policy.'
+      });
+    } catch (requestError) {
+      console.error('File deletion request error:', requestError);
+      toast({
+        title: 'Request failed',
+        description: 'Unable to submit the deletion request. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setRequestingFileDeletion(false);
+    }
+  };
 
   const mergeSpeakers = (sourceSpeaker: string, targetSpeaker: string) => {
     if (!transcription || !transcription.timestampedTranscript) return;
@@ -5209,6 +5248,22 @@ export default function TranscriptViewerPage() {
                   <p className="rounded-md bg-blue-50 p-3 text-xs leading-relaxed text-blue-900">
                     Download completed files before the deletion date. Archived files remain available until the 90-day retention period ends.
                   </p>
+                  {transcription.deletionRequested ? (
+                    <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs font-medium text-amber-800">
+                      File deletion has been requested.
+                    </p>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full border-red-300 text-red-700 hover:bg-red-50"
+                      onClick={handleRequestFileDeletion}
+                      disabled={requestingFileDeletion}
+                    >
+                      {requestingFileDeletion ? 'Submitting request...' : 'Request File Deletion'}
+                    </Button>
+                  )}
                 </div>
 
               </CardContent>

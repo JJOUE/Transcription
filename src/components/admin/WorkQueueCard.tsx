@@ -65,6 +65,7 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
   const retentionLabel = formatRetentionLabel(job);
   const retentionDeleted = isRetentionDeleted(job);
   const retentionHeld = job.retentionHold || job.deletionStatus === 'held';
+  const deletionRequested = job.deletionRequested && job.deletionRequestStatus !== 'processed';
   
   // Document Workspace management state
   const [assignedTypistInput, setAssignedTypistInput] = useState(job.assignedTypistName || '');
@@ -605,6 +606,14 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                 {job.originalFilename || job.filename || 'Unknown file'}
               </span>
               <StatusBadge status={job.status} />
+              {deletionRequested && (
+                <span
+                  className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-300"
+                  title="Client requested file deletion"
+                >
+                  FILE DELETION REQUESTED
+                </span>
+              )}
             </div>
 
             <div className="space-y-2"> 
@@ -720,10 +729,25 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                     {retentionLabel}
                   </span>
                 )}
+
+                {deletionRequested && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-red-100 text-red-800 font-medium">
+                    Client deletion request
+                  </span>
+                )}
               </div>
             </div>
           </div>
         </div>
+
+        {deletionRequested && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+            <p className="font-semibold">Client requested file deletion.</p>
+            <p className="mt-1">
+              Review before deleting any Storage files. This request does not delete files automatically.
+            </p>
+          </div>
+        )}
 
         {job.type === 'office' && (
           <div className="mt-4 rounded-lg border border-[#b29dd9] bg-[#f8f5fc] p-4">
@@ -1102,6 +1126,14 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                 <p className="text-sm text-gray-600">
                   <strong>User:</strong> <span className="break-words">{userEmail || 'Unknown'}</span>
                 </p>
+                {deletionRequested && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                    <p className="font-semibold">Client requested file deletion.</p>
+                    <p className="mt-1">
+                      Review before deleting any Storage files. This request does not delete files automatically.
+                    </p>
+                  </div>
+                )}
                 <p className="text-sm text-gray-600">
                   <strong>Duration:</strong> {formatDuration(job.duration || 0)}
                 </p>

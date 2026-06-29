@@ -112,16 +112,34 @@ export default function AdminPage() {
       );
 
       const snapshot = await getDocs(allJobsQuery);
-      const allJobs = snapshot.docs.map(docSnap => ({
-        id: docSnap.id,
-        ...docSnap.data()
-      } as TranscriptionJob));
+      const deletionRequestsQuery = query(
+        transcriptionsRef,
+        where('deletionRequested', '==', true)
+      );
+      const deletionRequestsSnapshot = await getDocs(deletionRequestsQuery);
+
+      const jobsById = new Map<string, TranscriptionJob>();
+      snapshot.docs.forEach(docSnap => {
+        jobsById.set(docSnap.id, {
+          id: docSnap.id,
+          ...docSnap.data()
+        } as TranscriptionJob);
+      });
+      deletionRequestsSnapshot.docs.forEach(docSnap => {
+        jobsById.set(docSnap.id, {
+          id: docSnap.id,
+          ...docSnap.data()
+        } as TranscriptionJob);
+      });
+
+      const allJobs = Array.from(jobsById.values());
 
       // Filter for jobs needing admin action (matches queue page logic)
       const actionableJobs = allJobs.filter(job => {
         if (job.isArchived) return false;
 
         const isStuckProcessing = job.status === 'processing' && !job.speechmaticsJobId;
+        const hasDeletionRequest = job.deletionRequested && job.deletionRequestStatus !== 'processed';
         return (
           // Document Workspace jobs (except completed/cancelled)
           (job.type === 'office' && !['complete', 'cancelled'].includes(job.status)) ||
@@ -132,7 +150,9 @@ export default function AdminPage() {
           // Failed jobs that might need retry
           ((job.mode === 'ai' || job.mode === 'hybrid') && job.status === 'failed') ||
           // Stuck processing jobs
-          isStuckProcessing
+          isStuckProcessing ||
+          // Client file deletion requests
+          hasDeletionRequest
         );
       });
 
