@@ -25,19 +25,27 @@ function ContactPage() {
     setIsSubmitting(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to send message');
+      }
+
       toast({
         title: "Message sent successfully!",
         description: "We'll get back to you within 24 hours.",
       });
-      
+
       setFormData({ name: '', email: '', subject: '', message: '' });
     } catch (error) {
       toast({
         title: "Error sending message",
-        description: "Please try again or contact us directly.",
+        description: error instanceof Error ? error.message : "Please try again or contact us directly.",
         variant: "destructive",
       });
     } finally {
