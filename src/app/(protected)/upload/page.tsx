@@ -951,6 +951,11 @@ export default function UploadPage() {
                 <p className="text-gray-600 mb-4">
                   Supports MP3, WAV, MP4, MOV, and other audio/video formats
                 </p>
+                <p className="mx-auto mb-4 max-w-2xl text-sm text-gray-500">
+                  Large files are accepted. Upload time depends on your file size and internet connection.
+                  For best results, we recommend splitting recordings longer than 2 hours into smaller parts.
+                  If you need help with a long file, contact us before uploading.
+                </p>
                 <input
                   type="file"
                   multiple
