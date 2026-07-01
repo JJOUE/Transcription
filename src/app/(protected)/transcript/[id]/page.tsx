@@ -24,8 +24,6 @@ import {
   Globe,
   Search,
   X,
-  ChevronDown,
-  ChevronUp,
   Replace,
   Eye,
   EyeOff
@@ -1803,7 +1801,7 @@ export default function TranscriptViewerPage() {
     setShowLightGrammarReview(false);
 
     toast({
-      title: 'Light Grammar Pass preview ready',
+      title: 'Formatting & Punctuation Pass preview ready',
       description: preview.changeCount > 0
         ? `${preview.changeCount} proposed change(s) across ${preview.segmentCount} segment(s).`
         : 'No mechanical formatting changes found.',
@@ -1861,7 +1859,7 @@ export default function TranscriptViewerPage() {
     if (!lightGrammarPreview) {
       toast({
         title: 'Preview required',
-        description: 'Preview the Light Grammar Pass before applying it.',
+        description: 'Preview the Formatting & Punctuation Pass before applying it.',
         variant: 'destructive'
       });
       return;
@@ -1872,7 +1870,7 @@ export default function TranscriptViewerPage() {
     if (acceptedChanges.length === 0) {
       toast({
         title: 'No changes to apply',
-        description: 'Accept at least one Light Grammar Pass change before applying.',
+        description: 'Accept at least one Formatting & Punctuation Pass change before applying.',
       });
       return;
     }
@@ -2435,7 +2433,7 @@ export default function TranscriptViewerPage() {
       }
 
       // Enter in search box - Find next
-      if (e.key === 'Enter' && showSearchPanel && document.activeElement?.id === 'search-input') {
+      if (e.key === 'Enter' && showSearchPanel && document.activeElement?.id === 'sticky-search-input') {
         e.preventDefault();
         if (e.shiftKey) {
           navigateToMatch('prev');
@@ -3758,138 +3756,6 @@ export default function TranscriptViewerPage() {
                 </p>
               </div>
 
-              {/* Search and Replace Panel */}
-              {showSearchPanel && (
-                <div className="bg-white border-2 border-blue-400 rounded-lg p-4 mb-4 shadow-lg">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                      <Search className="h-4 w-4 text-blue-600" />
-                      Search & Replace
-                    </h4>
-                    <button
-                      onClick={() => {
-                        setShowSearchPanel(false);
-                        setSearchMatches([]);
-                      }}
-                      className="text-gray-400 hover:text-gray-600"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-
-                  <div className="space-y-3">
-                    {/* Search input */}
-                    <div className="flex items-center gap-2">
-                      <input
-                        id="search-input"
-                        type="text"
-                        placeholder="Search for..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            if (searchMatches.length > 0) {
-                              navigateToMatch('next');
-                            } else {
-                              performSearch();
-                            }
-                          }
-                        }}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                      <Button
-                        onClick={performSearch}
-                        size="sm"
-                        className="bg-blue-600 text-white hover:bg-blue-700"
-                      >
-                        Find All
-                      </Button>
-                      <Button
-                        onClick={() => navigateToMatch('next')}
-                        size="sm"
-                        variant="outline"
-                        disabled={searchMatches.length === 0}
-                        className="border-blue-300"
-                      >
-                        Find Next
-                      </Button>
-                    </div>
-
-                    {/* Replace input */}
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        placeholder="Replace with..."
-                        value={replaceQuery}
-                        onChange={(e) => setReplaceQuery(e.target.value)}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                      <Button
-                        onClick={replaceNext}
-                        size="sm"
-                        variant="outline"
-                        disabled={searchMatches.length === 0}
-                      >
-                        Replace
-                      </Button>
-                      <Button
-                        onClick={replaceAll}
-                        size="sm"
-                        className="bg-orange-600 text-white hover:bg-orange-700"
-                      >
-                        Replace All
-                      </Button>
-                    </div>
-
-                    {/* Search options and navigation */}
-                    <div className="flex items-center justify-between text-xs">
-                      <label className="flex items-center gap-1.5 text-gray-600 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={caseSensitive}
-                          onChange={(e) => setCaseSensitive(e.target.checked)}
-                          className="rounded"
-                        />
-                        Case sensitive
-                      </label>
-
-                      {searchMatches.length > 0 && (
-                        <div className="flex items-center gap-3">
-                          <span className="text-gray-600 font-medium">
-                            {currentMatchIndex + 1} of {searchMatches.length} matches
-                          </span>
-                          <div className="flex gap-1">
-                            <button
-                              onClick={() => navigateToMatch('prev')}
-                              className="p-1 hover:bg-gray-100 rounded border border-gray-300"
-                              title="Previous match (Shift+Enter)"
-                            >
-                              <ChevronUp className="h-4 w-4 text-gray-600" />
-                            </button>
-                            <button
-                              onClick={() => navigateToMatch('next')}
-                              className="p-1 hover:bg-gray-100 rounded border border-gray-300"
-                              title="Next match (Enter)"
-                            >
-                              <ChevronDown className="h-4 w-4 text-gray-600" />
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Keyboard shortcuts hint */}
-                    <div className="text-xs text-gray-500 italic border-t pt-2">
-                      💡 Shortcuts: <kbd className="px-1 py-0.5 bg-gray-100 border rounded">Ctrl+F</kbd> to open,
-                      <kbd className="px-1 py-0.5 bg-gray-100 border rounded ml-1">Enter</kbd> next match,
-                      <kbd className="px-1 py-0.5 bg-gray-100 border rounded ml-1">Shift+Enter</kbd> previous,
-                      <kbd className="px-1 py-0.5 bg-gray-100 border rounded ml-1">Esc</kbd> to close
-                    </div>
-                  </div>
-                </div>
-              )}
-
               <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900">
                 Editing mode is on. Click inside a paragraph to edit.
               </div>
@@ -4827,7 +4693,7 @@ export default function TranscriptViewerPage() {
             <div className="mx-auto flex h-full max-w-6xl flex-col rounded-lg bg-white shadow-xl">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 p-4">
                 <div>
-                  <h2 className="text-xl font-semibold text-[#003366]">Light Grammar Pass Review</h2>
+                  <h2 className="text-xl font-semibold text-[#003366]">Formatting & Punctuation Pass Review</h2>
                   <p className="text-sm text-gray-600">
                     {lightGrammarPreview.changeCount} proposed change{lightGrammarPreview.changeCount === 1 ? '' : 's'} across {lightGrammarPreview.segmentCount} segment{lightGrammarPreview.segmentCount === 1 ? '' : 's'}.
                   </p>
@@ -4913,121 +4779,6 @@ export default function TranscriptViewerPage() {
                             size="sm"
                             variant={change.status === 'skipped' ? 'default' : 'outline'}
                             onClick={() => updateLightGrammarChangeStatus(change.id, 'skipped')}
-                            disabled={saving}
-                          >
-                            Skip this change
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="grid gap-3 md:grid-cols-2">
-                        <div className="rounded-md border border-red-100 bg-white p-3">
-                          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-red-700">Before</p>
-                          <p className="whitespace-pre-wrap text-sm text-gray-700">{change.before}</p>
-                        </div>
-                        <div className="rounded-md border border-green-100 bg-white p-3">
-                          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-green-700">After</p>
-                          <p className="whitespace-pre-wrap text-sm text-gray-900">{change.after}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showFormattingReview && formattingPreview && (
-          <div className="fixed inset-0 z-50 bg-black/40 px-4 py-6">
-            <div className="mx-auto flex h-full max-w-6xl flex-col rounded-lg bg-white shadow-xl">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 p-4">
-                <div>
-                  <h2 className="text-xl font-semibold text-[#003366]">Formatting Tools Review</h2>
-                  <p className="text-sm text-gray-600">
-                    {formattingPreview.changeCount} proposed change{formattingPreview.changeCount === 1 ? '' : 's'} across {formattingPreview.segmentCount} segment{formattingPreview.segmentCount === 1 ? '' : 's'}.
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {pendingFormattingCount} pending · {acceptedFormattingCount} accepted · {skippedFormattingCount} skipped
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={acceptAllFormattingChanges}
-                    disabled={saving || pendingFormattingCount === 0}
-                  >
-                    Accept All Changes
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={undoFormattingDecision}
-                    disabled={saving || formattingDecisionHistory.length === 0}
-                  >
-                    Undo
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="bg-green-600 text-white hover:bg-green-700"
-                    onClick={applyAcceptedFormattingChanges}
-                    disabled={saving || acceptedFormattingCount === 0}
-                  >
-                    Apply Accepted Changes
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={clearFormattingPreview}
-                    disabled={saving}
-                  >
-                    Cancel / Clear Preview
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setShowFormattingReview(false)}
-                    disabled={saving}
-                  >
-                    Close Review
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-4">
-                <div className="space-y-4">
-                  {formattingPreview.changes.map((change) => (
-                    <div
-                      key={change.id}
-                      className="rounded-lg border border-gray-200 bg-gray-50 p-4"
-                    >
-                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                        <div>
-                          <h3 className="font-semibold text-[#003366]">{change.label}</h3>
-                          <p className="text-xs uppercase tracking-wide text-gray-500">
-                            Status: {change.status}
-                          </p>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant={change.status === 'accepted' ? 'default' : 'outline'}
-                            onClick={() => updateFormattingChangeStatus(change.id, 'accepted')}
-                            disabled={saving}
-                          >
-                            Accept this change
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant={change.status === 'skipped' ? 'default' : 'outline'}
-                            onClick={() => updateFormattingChangeStatus(change.id, 'skipped')}
                             disabled={saving}
                           >
                             Skip this change
@@ -5166,18 +4917,6 @@ export default function TranscriptViewerPage() {
               </div>
             )}
 
-            {/* Search button - always visible in edit mode */}
-            {isEditing && (
-              <Button
-                onClick={() => setShowSearchPanel(!showSearchPanel)}
-                size="sm"
-                variant="outline"
-                className="border-blue-300 text-blue-700 hover:bg-blue-50 ml-auto"
-              >
-                <Search className="h-4 w-4 mr-1" />
-                Search & Replace
-              </Button>
-            )}
           </div>
         </div>
 
@@ -5402,7 +5141,7 @@ export default function TranscriptViewerPage() {
 
                 <section className="space-y-3 border-t pt-4">
                   <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-                    Light Grammar Pass
+                    Formatting & Punctuation Pass
                   </h3>
                   <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
                     {!isEditing && (
@@ -5411,7 +5150,7 @@ export default function TranscriptViewerPage() {
                       </p>
                     )}
                     <p className="text-xs text-gray-600">
-                      Fixes spacing, punctuation spacing, sentence capitalization, and simple comma placement. This does not rewrite, summarize, paraphrase, or remove transcript wording.
+                      Fixes spacing, punctuation, capitalization, and transcript markers without changing the speaker's words.
                     </p>
 
                     {lightGrammarPreview && (
@@ -5445,7 +5184,7 @@ export default function TranscriptViewerPage() {
                         onClick={previewLightGrammarPass}
                         disabled={saving || !isEditing || (!transcription.timestampedTranscript?.length && !transcription.transcript)}
                       >
-                        Preview Light Grammar Pass
+                        Preview Formatting & Punctuation Pass
                       </Button>
                       <Button
                         type="button"
@@ -5551,87 +5290,6 @@ export default function TranscriptViewerPage() {
                         className="w-full justify-start"
                         onClick={clearCleanupPreview}
                         disabled={saving || !isEditing || !cleanupPreview}
-                      >
-                        Cancel / Clear Preview
-                      </Button>
-                    </div>
-                  </div>
-                </section>
-
-                <section className="space-y-3 border-t pt-4">
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-                    Formatting Tools
-                  </h3>
-                  <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
-                    {!isEditing && (
-                      <p className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
-                        Click Edit Transcript before using transcript-changing tools.
-                      </p>
-                    )}
-                    <p className="text-xs text-gray-600">
-                      Optional formatting changes apply only after you preview and accept them. They do not rewrite, summarize, or change transcript wording.
-                    </p>
-
-                    <label className="flex items-start gap-2 text-sm text-gray-700">
-                      <input
-                        type="checkbox"
-                        checked={formattingOptions.useEmDashForEllipses}
-                        onChange={() => toggleFormattingOption('useEmDashForEllipses')}
-                        className="mt-0.5 rounded border-gray-300"
-                        disabled={saving || !isEditing}
-                      />
-                      <span>Use em dash for ellipses/trail-offs</span>
-                    </label>
-
-                    {formattingPreview && (
-                      <div className="space-y-2 rounded-md border border-blue-200 bg-white p-3">
-                        <div className="text-sm font-medium text-[#003366]">
-                          {formattingPreview.changeCount} proposed change{formattingPreview.changeCount === 1 ? '' : 's'}
-                        </div>
-                        <p className="text-xs text-gray-600">
-                          Across {formattingPreview.segmentCount} segment{formattingPreview.segmentCount === 1 ? '' : 's'}.
-                        </p>
-                        {formattingPreview.examples.length > 0 && (
-                          <div className="space-y-2">
-                            {formattingPreview.examples.map((example) => (
-                              <div key={example.label} className="space-y-1 text-xs">
-                                <p className="font-medium text-gray-700">{example.label}</p>
-                                <p className="text-gray-500 line-through">{example.before}</p>
-                                <p className="text-gray-800">{example.after}</p>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="space-y-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="w-full justify-start"
-                        onClick={previewSelectedFormatting}
-                        disabled={saving || !isEditing || !hasSelectedFormattingOptions || (!transcription.timestampedTranscript?.length && !transcription.transcript)}
-                      >
-                        Preview Selected Formatting
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="w-full justify-start bg-green-600 text-white hover:bg-green-700"
-                        onClick={() => setShowFormattingReview(true)}
-                        disabled={saving || !isEditing || !formattingPreview || formattingPreview.changeCount === 0}
-                      >
-                        Review All Changes
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="w-full justify-start"
-                        onClick={clearFormattingPreview}
-                        disabled={saving || !isEditing || !formattingPreview}
                       >
                         Cancel / Clear Preview
                       </Button>
