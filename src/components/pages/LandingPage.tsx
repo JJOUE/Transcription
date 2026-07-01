@@ -110,6 +110,34 @@ function LandingPage() {
                 Turn audio, video, handwritten notes, scanned documents, and typed drafts into clean transcripts and organized documents.
               </p>
 
+              <div className="max-w-xl mx-auto lg:mx-0 mb-6 rounded-3xl border border-white/20 bg-white/15 p-5 text-left shadow-lg backdrop-blur-sm">
+                <p className="text-xl font-semibold text-white mb-2">
+                  Open your free account and try AI transcription for free.
+                </p>
+                <p className="text-base text-gray-100 mb-5">
+                  Your first 60 minutes of AI transcription are free and include access to the built-in transcript editor. No credit card required.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button asChild className="bg-[#b29dd9] hover:bg-[#9d87c7] text-white">
+                    <Link href="/signup">Create Free Account</Link>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="border-white !bg-white !text-[#003366] hover:!bg-gray-50 hover:!text-[#003366]"
+                  >
+                    <Link href="/pricing">View Pricing</Link>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    className="text-white hover:bg-white/10 hover:text-white"
+                  >
+                    <Link href="/contact">Ask a Question</Link>
+                  </Button>
+                </div>
+              </div>
+
               <div className="max-w-xl mx-auto lg:mx-0 mb-8 rounded-3xl bg-white/10 p-5 text-left">
                 <p className="text-lg font-semibold text-white mb-3">
                   More accurate transcripts. Less time waiting. Built-in editing tools ready when you need them.
@@ -235,8 +263,8 @@ function LandingPage() {
                 </h2>
                 <p className="text-gray-700 mb-6">
                   You can view pricing, ask a question, or create a secure account when you are ready.
-                  Creating an account is free, and your first 60 minutes of audio are free. If you are
-                  not sure which service fits your file, contact Talk to Text Canada before submitting a project.
+                  If you are not sure which service fits your file, contact Talk to Text Canada before
+                  submitting a project.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <Button asChild variant="outline" className="border-[#003366] text-[#003366] hover:bg-[#f0ebf8]">
