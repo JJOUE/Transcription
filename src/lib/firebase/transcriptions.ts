@@ -8,6 +8,14 @@ export type OfficePriority = 'standard' | 'rush' | 'same_day';
 export type OfficeServiceType = 'dictation-cleanup' | 'copy-typing' | 'handwriting-transcription' | 'document-preparation';
 export type DeletionStatus = 'active' | 'archived' | 'pending' | 'deleted' | 'error' | 'held';
 export type DeletionRequestStatus = 'requested' | 'reviewing' | 'processed' | 'declined';
+export type TerminologyIssueType = 'legal-council-counsel' | 'medical-project-term-review';
+
+export interface TerminologyIssue {
+  type: TerminologyIssueType;
+  message: string;
+  segmentIndex?: number;
+  term?: string;
+}
 
 export interface TranscriptSegment {
   start: number; // Start time in seconds
@@ -36,6 +44,7 @@ export interface TranscriptionJob {
   projectDictionaryTerms?: string[]; // Project-only names/terms supplied at upload time
   transcript?: string;
   timestampedTranscript?: TranscriptSegment[]; // New field for timestamped data
+  terminologyIssues?: TerminologyIssue[]; // Safe post-transcription terminology review flags
   timestampFrequency?: 30 | 60 | 300 | 'none'; // Transcript display/export timestamp preference
   transcriptStoragePath?: string; // Path to transcript in Storage (for large files)
   speechmaticsJobId?: string; // Speechmatics job ID for tracking

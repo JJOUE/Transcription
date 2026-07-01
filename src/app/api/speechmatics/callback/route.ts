@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { cleanupTerminologySegments } from '@/lib/utils/terminology-cleanup';
 
 type SpeechmaticsFormToken = {
   content?: string;
@@ -309,13 +310,31 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        console.log(`[Speechmatics Webhook] Created ${timestampedSegments.length} timestamped segments for job ${jobId}`);
+        const terminologyCleanup = cleanupTerminologySegments(timestampedSegments, {
+          domain: jobData.domain || 'general',
+          projectDictionaryTerms: Array.isArray(jobData.projectDictionaryTerms) ? jobData.projectDictionaryTerms : [],
+        });
+        const cleanedTimestampedSegments = terminologyCleanup.segments;
+
+        if (terminologyCleanup.correctionCount > 0 || terminologyCleanup.issues.length > 0) {
+          console.log('[Speechmatics Webhook] Terminology cleanup summary:', {
+            corrections: terminologyCleanup.correctionCount,
+            reviewIssues: terminologyCleanup.issues.length,
+            domain: jobData.domain || 'general',
+          });
+        }
+
+        console.log(`[Speechmatics Webhook] Created ${cleanedTimestampedSegments.length} timestamped segments for job ${jobId}`);
 
         // Extract plain text transcript from segments
-        const plainTextTranscript = timestampedSegments.map(seg => seg.text).join(' ');
+        const plainTextTranscript = cleanedTimestampedSegments.map(seg => seg.text).join(' ');
 
         // Calculate the approximate size of the data
-        const dataSize = JSON.stringify({ transcript: transcriptData, timestampedTranscript: timestampedSegments }).length;
+        const dataSize = JSON.stringify({
+          transcript: transcriptData,
+          timestampedTranscript: cleanedTimestampedSegments,
+          terminologyIssues: terminologyCleanup.issues
+        }).length;
         const maxFirestoreSize = 900000; // 900KB to leave buffer under 1MB limit
 
         console.log(`[Speechmatics Webhook] Transcript data size: ${dataSize} bytes`);
@@ -333,7 +352,8 @@ export async function POST(request: NextRequest) {
 
           await transcriptFile.save(JSON.stringify({
             transcript: plainTextTranscript,
-            timestampedTranscript: timestampedSegments
+            timestampedTranscript: cleanedTimestampedSegments,
+            terminologyIssues: terminologyCleanup.issues
           }), {
             contentType: 'application/json',
             metadata: {
@@ -353,8 +373,9 @@ export async function POST(request: NextRequest) {
           await jobDoc.ref.update({
             status: finalStatus,
             transcriptStoragePath: transcriptPath,
-            segmentCount: timestampedSegments.length,
+            segmentCount: cleanedTimestampedSegments.length,
             transcriptLength: plainTextTranscript.length,
+            terminologyIssues: terminologyCleanup.issues,
             completedAt: FieldValue.serverTimestamp(),
             updatedAt: FieldValue.serverTimestamp()
           });
@@ -370,7 +391,8 @@ export async function POST(request: NextRequest) {
           await jobDoc.ref.update({
             status: finalStatus,
             transcript: plainTextTranscript,
-            timestampedTranscript: timestampedSegments,
+            timestampedTranscript: cleanedTimestampedSegments,
+            terminologyIssues: terminologyCleanup.issues,
             completedAt: FieldValue.serverTimestamp(),
             updatedAt: FieldValue.serverTimestamp()
           });

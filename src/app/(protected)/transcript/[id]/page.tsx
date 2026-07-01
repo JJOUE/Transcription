@@ -5347,6 +5347,27 @@ export default function TranscriptViewerPage() {
                   </section>
                 )}
 
+                {transcription.terminologyIssues && transcription.terminologyIssues.length > 0 && (
+                  <section className="space-y-3 border-t pt-4">
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                      Possible Terminology Issues
+                    </h3>
+                    <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                      <p className="text-xs text-amber-800">
+                        These terms may need review. They are flagged without blocking editing or download.
+                      </p>
+                      <ul className="space-y-2 text-xs text-amber-900">
+                        {transcription.terminologyIssues.slice(0, 8).map((issue, index) => (
+                          <li key={`${issue.type}-${issue.segmentIndex ?? issue.term ?? index}`}>
+                            {issue.message}
+                            {issue.term ? ` (${issue.term})` : ''}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </section>
+                )}
+
                 <section className="space-y-3 border-t pt-4">
                   <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
                     Timestamp Tools

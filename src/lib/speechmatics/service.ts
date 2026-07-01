@@ -1,6 +1,7 @@
 import axios from 'axios';
 import FormData from 'form-data';
 import { TranscriptionJob, TranscriptionStatus, updateTranscriptionStatusAdmin, getTranscriptionByIdAdmin, TranscriptSegment } from '../firebase/transcriptions-admin';
+import { cleanupTerminologySegments } from '../utils/terminology-cleanup';
 
 export interface SpeechmaticsAdditionalVocabEntry {
   content: string;
@@ -26,6 +27,7 @@ export interface SpeechmaticsResult {
   success: boolean;
   transcript?: string;
   timestampedTranscript?: TranscriptSegment[]; // New field for timestamped data
+  terminologyIssues?: ReturnType<typeof cleanupTerminologySegments>['issues'];
   duration?: number;
   speakers?: number;
   confidence?: number;
@@ -68,11 +70,32 @@ const MEDICAL_VOCABULARY = [
   { content: "glucose" },
   { content: "insulin" },
   { content: "diabetes mellitus" },
+  { content: "type 1 diabetes", sounds_like: ["type one diabetes"] },
+  { content: "type 2 diabetes", sounds_like: ["type two diabetes"] },
   { content: "hyperglycemia" },
   { content: "hypoglycemia" },
   { content: "pneumonia" },
   { content: "bronchitis" },
   { content: "asthma" },
+  { content: "chronic obstructive pulmonary disease", sounds_like: ["COPD"] },
+  { content: "multiple sclerosis", sounds_like: ["MS"] },
+  { content: "Parkinson's disease", sounds_like: ["Parkinsons disease"] },
+  { content: "Alzheimer's disease", sounds_like: ["Alzheimers disease"] },
+  { content: "Crohn's disease", sounds_like: ["Crohns disease"] },
+  { content: "ulcerative colitis" },
+  { content: "rheumatoid arthritis" },
+  { content: "osteoarthritis" },
+  { content: "osteoporosis" },
+  { content: "fibromyalgia" },
+  { content: "migraine" },
+  { content: "epilepsy" },
+  { content: "stroke" },
+  { content: "transient ischemic attack", sounds_like: ["TIA"] },
+  { content: "coronary artery disease" },
+  { content: "congestive heart failure" },
+  { content: "chronic kidney disease" },
+  { content: "hypothyroidism" },
+  { content: "hyperthyroidism" },
   { content: "emphysema" },
   { content: "fibrosis" },
   { content: "pneumothorax" },
@@ -155,9 +178,19 @@ const LEGAL_VOCABULARY = [
   { content: "legal counsel", sounds_like: ["legal council"] },
   { content: "opposing counsel", sounds_like: ["opposing council"] },
   { content: "duty counsel", sounds_like: ["duty council"] },
+  { content: "counsel for the claimant", sounds_like: ["council for the claimant"] },
   { content: "counsel for the applicant", sounds_like: ["council for the applicant"] },
+  { content: "counsel for the appellant", sounds_like: ["council for the appellant"] },
+  { content: "counsel for the defendant", sounds_like: ["council for the defendant"] },
+  { content: "counsel for the plaintiff", sounds_like: ["council for the plaintiff"] },
   { content: "counsel for the respondent", sounds_like: ["council for the respondent"] },
   { content: "counsel's submissions", sounds_like: ["council's submissions"] },
+  { content: "claimant's counsel", sounds_like: ["claimant's council"] },
+  { content: "respondent's counsel", sounds_like: ["respondent's council"] },
+  { content: "applicant's counsel", sounds_like: ["applicant's council"] },
+  { content: "appellant's counsel", sounds_like: ["appellant's council"] },
+  { content: "defendant's counsel", sounds_like: ["defendant's council"] },
+  { content: "plaintiff's counsel", sounds_like: ["plaintiff's council"] },
   { content: "deposition" },
   { content: "interrogatory" },
   { content: "subpoena" },
@@ -871,7 +904,7 @@ export class SpeechmaticsService {
       console.log(`[Speechmatics] Created job and uploaded file: ${jobId}`);
 
       // Wait for completion (job starts automatically after upload)
-      const result = await this.waitForCompletion(jobId);
+      const result = await this.waitForCompletion(jobId, config);
       
       if (result.success) {
         console.log(`[Speechmatics] Successfully completed transcription for job: ${jobId}`);
@@ -953,7 +986,7 @@ export class SpeechmaticsService {
             console.log(`[Speechmatics] Fallback job created: ${fallbackJobId}`);
 
             // Wait for completion with standard model
-            const fallbackResult = await this.waitForCompletion(fallbackJobId);
+            const fallbackResult = await this.waitForCompletion(fallbackJobId, config);
 
             if (fallbackResult.success) {
               console.log(`[Speechmatics] Successfully completed fallback transcription for job: ${fallbackJobId}`);
@@ -1029,6 +1062,7 @@ export class SpeechmaticsService {
         await updateTranscriptionStatusAdmin(transcriptionJobId, finalStatus, {
           transcript: result.transcript,
           timestampedTranscript: result.timestampedTranscript || testTimestamps,
+          terminologyIssues: result.terminologyIssues || [],
           duration: result.duration || 0
         });
 
@@ -1055,7 +1089,7 @@ export class SpeechmaticsService {
   /**
    * Wait for Speechmatics job completion
    */
-  private async waitForCompletion(jobId: string): Promise<SpeechmaticsResult> {
+  private async waitForCompletion(jobId: string, config: SpeechmaticsConfig = {}): Promise<SpeechmaticsResult> {
     const maxAttempts = 120; // 10 minutes max (5s intervals) - increased for longer files
     let attempts = 0;
     let jobStatus = 'running';
@@ -1099,7 +1133,7 @@ export class SpeechmaticsService {
     }
 
     if (jobStatus === 'done') {
-      return await this.getTranscriptResult(jobId);
+          return await this.getTranscriptResult(jobId, config);
     } else {
       await this.cleanupJob(jobId);
       return {
@@ -1113,7 +1147,7 @@ export class SpeechmaticsService {
   /**
    * Get transcript result from completed job
    */
-  private async getTranscriptResult(jobId: string): Promise<SpeechmaticsResult> {
+  private async getTranscriptResult(jobId: string, config: SpeechmaticsConfig = {}): Promise<SpeechmaticsResult> {
     try {
       const transcriptResponse = await axios.get(
         `${this.apiUrl}/jobs/${jobId}/transcript`,
@@ -1217,7 +1251,22 @@ export class SpeechmaticsService {
           timestampedSegments.push(segment);
         }
       }
-      console.log(`[Speechmatics] Created ${timestampedSegments.length} timestamped segments`);
+      const terminologyCleanup = cleanupTerminologySegments(timestampedSegments, {
+        domain: config.domain,
+        projectDictionaryTerms: config.additionalVocab?.map((entry) => entry.content),
+      });
+      const cleanedTimestampedSegments = terminologyCleanup.segments;
+
+      if (terminologyCleanup.correctionCount > 0 || terminologyCleanup.issues.length > 0) {
+        console.log('[Speechmatics] Terminology cleanup summary:', {
+          corrections: terminologyCleanup.correctionCount,
+          reviewIssues: terminologyCleanup.issues.length,
+          domain: config.domain || 'general',
+        });
+      }
+
+      const cleanedTranscriptText = cleanedTimestampedSegments.map(segment => segment.text).join(' ');
+      console.log(`[Speechmatics] Created ${cleanedTimestampedSegments.length} timestamped segments`);
 
       // Extract metadata
       const duration = data.job?.duration || 0;
@@ -1225,8 +1274,8 @@ export class SpeechmaticsService {
 
       // Calculate average confidence if available
       let confidence = 0;
-      if (timestampedSegments.length > 0) {
-        const confidenceScores = timestampedSegments
+      if (cleanedTimestampedSegments.length > 0) {
+        const confidenceScores = cleanedTimestampedSegments
           .map(segment => segment.confidence || 0)
           .filter(score => score > 0);
 
@@ -1239,8 +1288,9 @@ export class SpeechmaticsService {
 
       return {
         success: true,
-        transcript: transcriptText,
-        timestampedTranscript: timestampedSegments,
+        transcript: cleanedTranscriptText || transcriptText,
+        timestampedTranscript: cleanedTimestampedSegments,
+        terminologyIssues: terminologyCleanup.issues,
         duration,
         speakers,
         confidence,
