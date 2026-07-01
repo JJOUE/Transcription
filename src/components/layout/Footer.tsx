@@ -148,6 +148,16 @@ export function Footer() {
               </li>
               <li>
                 <Link
+                  href="/confidentiality"
+                  className={`transition-colors ${
+                    isLightFooter ? "hover:text-[#003366]" : "hover:text-white"
+                  }`}
+                >
+                  Confidentiality
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/terms"
                   className={`transition-colors ${
                     isLightFooter ? "hover:text-[#003366]" : "hover:text-white"
