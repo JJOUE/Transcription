@@ -423,6 +423,9 @@ function LandingPage() {
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               Secure, confidential, and designed for practical transcription and document preparation.
             </p>
+            <p className="text-base text-gray-600 max-w-2xl mx-auto mt-4">
+              Client confidentiality requirements are respected, including confidentiality agreements where applicable.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
