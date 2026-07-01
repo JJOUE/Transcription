@@ -76,6 +76,13 @@ const serviceChooserCards = [
   },
 ];
 
+const signupSteps = [
+  'Create your secure account for free.',
+  'Upload your file or instructions.',
+  'Track your project from your dashboard.',
+  'Download your completed transcript or document when ready.',
+];
+
 function LandingPage() {
   return (
     <div className="min-h-screen bg-white">
@@ -210,6 +217,62 @@ function LandingPage() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Visitor Pathway Section */}
+      <section className="bg-[#f7f4fb] py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
+            <Card className="border border-[#e5dff2] shadow-sm">
+              <CardContent className="p-8 md:p-10 h-full">
+                <p className="text-sm font-semibold text-[#72629E] uppercase tracking-wide mb-3">
+                  Take your time
+                </p>
+                <h2 className="text-3xl font-bold text-[#003366] mb-4">
+                  Not ready to upload yet?
+                </h2>
+                <p className="text-gray-700 mb-6">
+                  You can view pricing, ask a question, or create a secure account when you are ready.
+                  Creating an account is free, and your first 60 minutes of audio are free. If you are
+                  not sure which service fits your file, contact Talk to Text Canada before submitting a project.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <Button asChild variant="outline" className="border-[#003366] text-[#003366] hover:bg-[#f0ebf8]">
+                    <Link href="/pricing">View Pricing</Link>
+                  </Button>
+                  <Button asChild variant="outline" className="border-[#003366] text-[#003366] hover:bg-[#f0ebf8]">
+                    <Link href="/contact">Ask a Question</Link>
+                  </Button>
+                  <Button asChild className="bg-[#003366] hover:bg-[#002244] text-white">
+                    <Link href="/signup">Create Free Account</Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-[#e5dff2] shadow-sm">
+              <CardContent className="p-8 md:p-10 h-full">
+                <h2 className="text-3xl font-bold text-[#003366] mb-4">
+                  What happens after signup?
+                </h2>
+                <p className="text-gray-700 mb-6">
+                  Creating an account lets you upload and manage your projects securely. There is no
+                  obligation to continue until you choose a service or submit a project.
+                </p>
+                <ol className="space-y-4">
+                  {signupSteps.map((step, index) => (
+                    <li key={step} className="flex gap-3">
+                      <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#003366] text-sm font-semibold text-white">
+                        {index + 1}
+                      </span>
+                      <span className="pt-1 text-gray-700">{step}</span>
+                    </li>
+                  ))}
+                </ol>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
