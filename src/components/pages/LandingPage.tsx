@@ -140,7 +140,7 @@ function LandingPage() {
 
               <div className="max-w-xl mx-auto lg:mx-0 mb-8 rounded-3xl bg-white/10 p-5 text-left">
                 <p className="text-lg font-semibold text-white mb-3">
-                  More accurate transcripts. Less time waiting. Built-in editing tools ready when you need them.
+                  More accurate transcripts. Less time waiting. Built-in transcript editing tools for AI transcription projects.
                 </p>
                 <p className="text-base text-gray-200">
                   Talk to Text Canada also offers typing services for everyday office needs, including copy typing, handwriting transcription, audio instructions for document preparation, and document preparation.
@@ -148,7 +148,7 @@ function LandingPage() {
               </div>
 
               <p className="text-base text-gray-200 mb-8 max-w-xl mx-auto lg:mx-0">
-                Upload your file, choose the service you need, and download a polished transcript, letter, note, report, memo, or editable document.
+                Upload your file, choose the service you need, and download a polished transcript, letter, note, report, memo, or completed document.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto lg:mx-0 mb-10 text-left">
@@ -162,7 +162,7 @@ function LandingPage() {
                 </div>
                 <div className="rounded-3xl bg-white/10 p-4">
                   <p className="text-sm uppercase tracking-[0.2em] text-[#b29dd9] mb-2">Step 3</p>
-                  <p className="font-semibold text-white">Download a clean transcript or editable document</p>
+                  <p className="font-semibold text-white">Download a clean transcript or completed document</p>
                 </div>
               </div>
 
@@ -371,12 +371,12 @@ function LandingPage() {
                 </div>
                 <h3 className="text-xl font-semibold text-[#003366] mb-4">Copy Typing</h3>
                 <p className="text-gray-600 mb-6">
-                  Scanned documents, PDFs, images, and typed drafts recreated as clean editable documents.
+                  Scanned documents, PDFs, images, and typed drafts recreated as clean document files.
                 </p>
                 <ul className="text-sm text-gray-600 space-y-2">
                   <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />PDFs and scanned pages</li>
                   <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Clean formatting</li>
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Editable final files</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Downloadable final files</li>
                 </ul>
 
                 <Button asChild className="mt-6 w-full bg-[#003366] hover:bg-[#002244] text-white">
@@ -480,7 +480,7 @@ function LandingPage() {
               Document Workspace — Audio Instructions, Notes, Scans and Drafts
             </h2>
             <p className="text-lg text-gray-700 mb-8 max-w-2xl mx-auto">
-              Upload audio instructions, notes, scanned documents, handwritten pages, audio, video, or typed drafts. We help turn them into clean, editable documents you can review, save, and download. If you only need audio or video converted into text, use AI Transcription instead.
+              Submit files, notes, handwriting, or audio instructions, then download the completed document from your secure dashboard. If you only need audio or video converted into text, use AI Transcription instead.
             </p>
             <Button
               asChild
