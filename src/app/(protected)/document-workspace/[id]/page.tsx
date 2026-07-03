@@ -87,7 +87,10 @@ export default function DocumentWorkspaceProjectPage() {
   const retentionDeleted = project ? isRetentionDeleted(project) : false;
   const submittedDate = project ? formatDate(project.createdAt) : null;
   const dueDate = project ? formatDate(project.officeDueDate) : null;
-  const completedDocumentAvailable = Boolean(project?.officeCompletedDocumentURL && !retentionDeleted);
+  const completedDocumentDownloadHref = project?.officeCompletedDocumentPath
+    ? `/api/document-workspace/${project.id}/completed-document`
+    : project?.officeCompletedDocumentURL;
+  const completedDocumentAvailable = Boolean(completedDocumentDownloadHref && !retentionDeleted);
 
   const handleRequestFileDeletion = async () => {
     if (!project?.id || !user?.uid) return;
@@ -317,10 +320,12 @@ export default function DocumentWorkspaceProjectPage() {
                     </div>
                     <Button asChild className="w-full bg-[#003366] hover:bg-[#002244]">
                       <a
-                        href={project.officeCompletedDocumentURL}
+                        href={completedDocumentDownloadHref}
                         download={project.officeCompletedFilename || 'completed-document'}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        {...(!project.officeCompletedDocumentPath ? {
+                          target: '_blank',
+                          rel: 'noopener noreferrer',
+                        } : {})}
                       >
                         <Download className="h-4 w-4 mr-2" />
                         Download Completed Document
