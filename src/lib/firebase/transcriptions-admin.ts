@@ -39,6 +39,11 @@ export interface TranscriptionJob {
   language?: string; // Transcription language (e.g., 'en', 'fr')
   duration: number; // in seconds (exact duration)
   creditsUsed: number;
+  paymentStatus?: string; // Payment marker such as admin-comped for internal jobs
+  billingType?: string; // Billing source marker such as internal-admin
+  adminBypass?: boolean; // True when admin/internal work bypassed payment
+  adminBypassBy?: string; // Admin uid/email that created the internal job
+  adminBypassAt?: FirebaseFirestore.Timestamp; // When the internal billing bypass was applied
   specialInstructions?: string;
   projectDictionaryTerms?: string[]; // Project-only names/terms supplied at upload time
   transcript?: string;

@@ -116,6 +116,7 @@ export default function UploadPage() {
   } = useWallet();
   const { toast } = useToast();
   const router = useRouter();
+  const isAdminInternalUser = userData?.role === 'admin';
 
   useEffect(() => {
     const loadClientDictionary = async () => {
@@ -284,9 +285,9 @@ export default function UploadPage() {
   );
 
   // Extract from balanceCheck (already calculated with FREE TRIAL priority)
-  const freeTrialMinutesUsed = balanceCheck.freeTrialMinutes;
-  const packageMinutesUsed = balanceCheck.packageMinutes;
-  const walletMinutesUsed = totalBillingMinutes - freeTrialMinutesUsed - packageMinutesUsed;
+  const freeTrialMinutesUsed = isAdminInternalUser ? 0 : balanceCheck.freeTrialMinutes;
+  const packageMinutesUsed = isAdminInternalUser ? 0 : balanceCheck.packageMinutes;
+  const walletMinutesUsed = isAdminInternalUser ? 0 : totalBillingMinutes - freeTrialMinutesUsed - packageMinutesUsed;
 
   // Calculate add-on costs (only if NOT using package or free trial for those minutes)
   let addOnCostPerMinute = 0;
@@ -300,12 +301,12 @@ export default function UploadPage() {
   }
 
   // Add-ons only apply to wallet minutes (not free trial or package)
-  const addOnCost = walletMinutesUsed * addOnCostPerMinute;
+  const addOnCost = isAdminInternalUser ? 0 : walletMinutesUsed * addOnCostPerMinute;
 
   // Total cost from balanceCheck + add-ons
-  const totalCost = balanceCheck.totalCost + addOnCost;
-  const walletAmountNeeded = balanceCheck.walletNeeded + addOnCost;
-  const hasInsufficientBalance = walletAmountNeeded > walletBalance;
+  const totalCost = isAdminInternalUser ? 0 : balanceCheck.totalCost + addOnCost;
+  const walletAmountNeeded = isAdminInternalUser ? 0 : balanceCheck.walletNeeded + addOnCost;
+  const hasInsufficientBalance = !isAdminInternalUser && walletAmountNeeded > walletBalance;
 
   // Function to get accurate duration from audio/video files
   const getMediaDuration = (file: File): Promise<number> => {
@@ -562,7 +563,7 @@ export default function UploadPage() {
           }
         }
 
-        const costForFile = (billingMinutes * costPerMinute) + fileAddOnCost;
+        const costForFile = isAdminInternalUser ? 0 : (billingMinutes * costPerMinute) + fileAddOnCost;
         
         // Set initial status based on transcription mode
         let initialStatus: 'processing' | 'pending-transcription';
@@ -652,7 +653,7 @@ export default function UploadPage() {
         });
 
         // Deduct from wallet balance
-        if (billingMinutes > 0) {
+        if (!isAdminInternalUser && billingMinutes > 0) {
           const deductionResult = await deductForTranscription(
             transcriptionMode as TranscriptionMode,
             billingMinutes,
@@ -1700,6 +1701,22 @@ export default function UploadPage() {
                   </div>
                 )}
 
+                {isAdminInternalUser && (
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-slate-700">
+                        Internal admin processing
+                      </span>
+                      <span className="text-sm font-bold text-slate-800">
+                        No Stripe or wallet charge
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-600">
+                      Jobs submitted from an admin account are marked as admin-comped.
+                    </p>
+                  </div>
+                )}
+
                 {/* Payment Method Section */}
                 {activePackage && packageMinutesUsed > 0 && (
                   <>
@@ -1820,7 +1837,7 @@ export default function UploadPage() {
                   </div>
                 )}
 
-                {hasInsufficientBalance && (
+                {!isAdminInternalUser && hasInsufficientBalance && (
                   <div className="p-6 bg-red-50 border border-red-200 rounded-lg mt-4">
                     <div className="flex items-start">
                       <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 mr-3" />

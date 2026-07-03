@@ -66,6 +66,7 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
   const retentionDeleted = isRetentionDeleted(job);
   const retentionHeld = job.retentionHold || job.deletionStatus === 'held';
   const deletionRequested = job.deletionRequested && job.deletionRequestStatus !== 'processed';
+  const isInternalAdminJob = job.adminBypass || job.paymentStatus === 'admin-comped' || job.billingType === 'internal-admin';
   
   // Document Workspace management state
   const [assignedTypistInput, setAssignedTypistInput] = useState(job.assignedTypistName || '');
@@ -614,6 +615,14 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                   FILE DELETION REQUESTED
                 </span>
               )}
+              {isInternalAdminJob && (
+                <span
+                  className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-300"
+                  title="Internal admin job with payment bypass"
+                >
+                  ADMIN COMPED
+                </span>
+              )}
             </div>
 
             <div className="space-y-2"> 
@@ -721,6 +730,12 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                 </span>
 
                 <CreditDisplay amount={job.creditsUsed || 0} size="sm" />
+
+                {isInternalAdminJob && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-800 font-medium">
+                    Internal admin job
+                  </span>
+                )}
 
                 {retentionLabel && (
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full ${

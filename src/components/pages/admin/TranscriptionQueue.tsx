@@ -45,6 +45,9 @@ const getOfficeServiceLabel = (serviceType?: string) => {
   }
 };
 
+const isInternalAdminJob = (job: TranscriptionJob) =>
+  job.adminBypass || job.paymentStatus === 'admin-comped' || job.billingType === 'internal-admin';
+
 export function TranscriptionQueue() {
   const { user, userData } = useAuth();
   const { refundCredits } = useCredits();
@@ -509,6 +512,11 @@ export function TranscriptionQueue() {
                             File deletion requested
                           </span>
                         )}
+                        {isInternalAdminJob(item) && (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-300">
+                            Admin Comped
+                          </span>
+                        )}
                         {/* Add-on indicators */}
                         {item.rushDelivery && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
@@ -526,6 +534,9 @@ export function TranscriptionQueue() {
                         <span>{item.mode === 'ai' ? 'AI' : item.mode === 'human' ? 'Human' : item.mode === 'hybrid' ? 'Hybrid' : item.mode}</span>
                         <span>{formatDuration(item.duration || 0)}</span>
                         <CreditDisplay amount={item.creditsUsed || 0} size="sm" />
+                        {isInternalAdminJob(item) && (
+                          <span className="font-medium text-slate-700">Internal admin job</span>
+                        )}
                         {formatRetentionLabel(item) && (
                           <span className={isRetentionDeleted(item) ? 'font-medium text-red-600' : 'text-gray-500'}>
                             {formatRetentionLabel(item)}
@@ -754,6 +765,11 @@ export function TranscriptionQueue() {
                             File deletion requested
                           </span>
                         )}
+                        {isInternalAdminJob(item) && (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-300">
+                            Admin Comped
+                          </span>
+                        )}
                         <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-[#b29dd9] text-white border border-[#9d87c7]">
                           🏢 Document Workspace
                         </span>
@@ -769,6 +785,9 @@ export function TranscriptionQueue() {
                         <span>{getOfficeServiceLabel(item.officeServiceType)}</span>
                         <span>{formatDuration(item.duration || 0)}</span>
                         <CreditDisplay amount={item.creditsUsed || 0} size="sm" />
+                        {isInternalAdminJob(item) && (
+                          <span className="font-medium text-slate-700">Internal admin job</span>
+                        )}
                         {formatRetentionLabel(item) && (
                           <span className={isRetentionDeleted(item) ? 'font-medium text-red-600' : 'text-gray-500'}>
                             {formatRetentionLabel(item)}

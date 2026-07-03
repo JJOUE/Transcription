@@ -33,10 +33,10 @@ service cloud.firestore {
       // Users can read their own profile, admins can read all profiles
       allow read: if isOwnerOrAdmin(userId);
 
-      // Users can create their own profile during signup
+      // Users can create their own non-admin profile during signup
       allow create: if isSignedIn() && isOwner(userId) &&
                        request.resource.data.keys().hasAll(['email', 'role', 'createdAt']) &&
-                       request.resource.data.role in ['user', 'admin'] &&
+                       request.resource.data.role == 'user' &&
                        request.resource.data.email == request.auth.token.email;
 
       // Users can update their own profile (except role), admins can update anyone's profile

@@ -3,6 +3,7 @@ import { db } from './config';
 
 export type TranscriptionStatus = 'processing' | 'pending-review' | 'pending-transcription' | 'complete' | 'failed';
 export type TranscriptionMode = 'ai' | 'hybrid' | 'human';
+export type TranscriptionDomain = 'general' | 'medical' | 'legal';
 export type OfficeStatus = 'submitted' | 'assigned' | 'in_progress' | 'waiting_review' | 'completed' | 'delivered';
 export type OfficePriority = 'standard' | 'rush' | 'same_day';
 export type OfficeServiceType = 'dictation-cleanup' | 'copy-typing' | 'handwriting-transcription' | 'document-preparation';
@@ -35,11 +36,16 @@ export interface TranscriptionJob {
   status: TranscriptionStatus;
   type?: 'transcription' | 'office';
   mode: TranscriptionMode;
-  domain?: string; // Transcription domain (general, medical, legal, technical)
+  domain?: TranscriptionDomain; // Transcription domain (general, medical, legal)
   language?: string; // Transcription language (e.g., 'en', 'fr')
   duration: number; // in seconds (exact duration)
   minutesFromSubscription?: number; // Minutes covered by subscription (if any)
   creditsUsed: number; // Credits used for minutes not covered by subscription
+  paymentStatus?: string; // Payment marker such as admin-comped for internal jobs
+  billingType?: string; // Billing source marker such as internal-admin
+  adminBypass?: boolean; // True when admin/internal work bypassed payment
+  adminBypassBy?: string; // Admin uid/email that created the internal job
+  adminBypassAt?: Timestamp; // When the internal billing bypass was applied
   specialInstructions?: string;
   projectDictionaryTerms?: string[]; // Project-only names/terms supplied at upload time
   transcript?: string;

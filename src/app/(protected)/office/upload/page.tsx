@@ -110,6 +110,7 @@ export default function OfficeUploadPage() {
   } = useWallet();
   const { toast } = useToast();
   const router = useRouter();
+  const isAdminInternalUser = userData?.role === 'admin';
 
   // Load pricing settings
   useEffect(() => {
@@ -142,17 +143,17 @@ export default function OfficeUploadPage() {
   // Calculate total cost
   const totalDuration = uploadedFiles.reduce((sum, f) => sum + f.duration, 0);
   const hasDocumentSourceFiles = uploadedFiles.some(f => !f.isMedia);
-  const totalCost = (totalDuration / 60) * costPerMinute;
-  const rushCost = rushDelivery ? Math.ceil(totalDuration / 60) * 0.50 : 0; // $0.50 per minute for rush
+  const totalCost = isAdminInternalUser ? 0 : (totalDuration / 60) * costPerMinute;
+  const rushCost = !isAdminInternalUser && rushDelivery ? Math.ceil(totalDuration / 60) * 0.50 : 0; // $0.50 per minute for rush
   const totalWithRush = totalCost + rushCost;
 
   // Calculate billing against packages and wallet
   const activePackage = packages.find(p => p.active);
   const packageMinutes = activePackage ? activePackage.minutesRemaining : 0;
   const billingMinutes = Math.ceil(totalDuration / 60);
-  const minutesFromWallet = Math.max(0, billingMinutes - packageMinutes);
+  const minutesFromWallet = isAdminInternalUser ? 0 : Math.max(0, billingMinutes - packageMinutes);
   const walletAmountNeeded = minutesFromWallet * costPerMinute;
-  const hasInsufficientBalance = walletAmountNeeded > walletBalance;
+  const hasInsufficientBalance = !isAdminInternalUser && walletAmountNeeded > walletBalance;
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -508,7 +509,7 @@ export default function OfficeUploadPage() {
           type: 'office',
           mode: 'human',
           duration: uploadFile.duration,
-          creditsUsed: Math.round(((uploadFile.duration / 60) * costPerMinute) * 100),
+          creditsUsed: isAdminInternalUser ? 0 : Math.round(((uploadFile.duration / 60) * costPerMinute) * 100),
           rushDelivery,
           // Office-specific fields
           officeServiceType,
@@ -553,7 +554,7 @@ export default function OfficeUploadPage() {
 
         // Deduct using the existing human-mode wallet flow used for Document Workspace pricing.
         const fileBillingMinutes = getBillingMinutes(uploadFile.duration);
-        if (fileBillingMinutes > 0) {
+        if (!isAdminInternalUser && fileBillingMinutes > 0) {
           const deductionResult = await deductForTranscription(
             'human',
             fileBillingMinutes,
@@ -981,7 +982,13 @@ export default function OfficeUploadPage() {
                 </div>
               )}
 
-              {hasInsufficientBalance && (
+              {isAdminInternalUser && (
+                <div className="mt-4 p-3 bg-slate-50 border border-slate-200 rounded text-slate-700 text-sm">
+                  <span className="font-medium">Internal admin processing:</span> this project will be marked admin-comped and will not charge Stripe or wallet balance.
+                </div>
+              )}
+
+              {!isAdminInternalUser && hasInsufficientBalance && (
                 <div className="mt-4 flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
                   <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
                   <span>

@@ -78,9 +78,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const userDoc = await adminDb.collection('users').doc(userId).get();
+    const userData = userDoc.data();
+    const isAdminUser = userData?.role === 'admin';
+
     // Create the transcription job with server timestamp
     const jobData = {
       ...validatedBody,
+      ...(isAdminUser && {
+        creditsUsed: 0,
+        addOnCost: 0,
+        hasPackage: false,
+        paymentStatus: 'admin-comped',
+        billingType: 'internal-admin',
+        adminBypass: true,
+        adminBypassBy: userData?.email || userId,
+        adminBypassAt: FieldValue.serverTimestamp(),
+      }),
       userId, // Ensure userId is from authenticated user
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp()
@@ -89,9 +103,6 @@ export async function POST(request: NextRequest) {
     const docRef = await adminDb.collection('transcriptions').add(jobData);
 
     console.log(`[API] Created transcription job ${docRef.id} for user ${userId}`);
-
-    const userDoc = await adminDb.collection('users').doc(userId).get();
-    const userData = userDoc.data();
 
     if (validatedBody.type === 'office') {
       await sendDocumentWorkspaceNotification({
