@@ -91,6 +91,9 @@ export default function DocumentWorkspaceProjectPage() {
     ? `/api/document-workspace/${project.id}/completed-document`
     : project?.officeCompletedDocumentURL;
   const completedDocumentAvailable = Boolean(completedDocumentDownloadHref && !retentionDeleted);
+  const voiceInstructionsHref = project?.voiceInstructionsPath
+    ? `/api/document-workspace/${project.id}/voice-instructions`
+    : project?.voiceInstructionsURL;
 
   const handleRequestFileDeletion = async () => {
     if (!project?.id || !user?.uid) return;
@@ -271,7 +274,7 @@ export default function DocumentWorkspaceProjectPage() {
                   </div>
                 )}
 
-                {project.hasVoiceInstructions && project.voiceInstructionsURL && (
+                {project.hasVoiceInstructions && voiceInstructionsHref && (
                   <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-4">
                     <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex items-start gap-3">
@@ -286,14 +289,20 @@ export default function DocumentWorkspaceProjectPage() {
                       </div>
                       {!retentionDeleted && (
                         <Button variant="outline" size="sm" asChild className="border-indigo-300 text-indigo-700">
-                          <a href={project.voiceInstructionsURL} target="_blank" rel="noopener noreferrer">
+                          <a
+                            href={voiceInstructionsHref}
+                            {...(!project.voiceInstructionsPath ? {
+                              target: '_blank',
+                              rel: 'noopener noreferrer',
+                            } : {})}
+                          >
                             <Download className="h-4 w-4 mr-1" />
                             Download
                           </a>
                         </Button>
                       )}
                     </div>
-                    {!retentionDeleted && <audio controls src={project.voiceInstructionsURL} className="w-full" />}
+                    {!retentionDeleted && <audio controls src={voiceInstructionsHref} className="w-full" />}
                   </div>
                 )}
               </CardContent>
