@@ -17,23 +17,26 @@ service firebase.storage {
              firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // User uploads - organized by userId (transcriptions folder)
-    match /transcriptions/{userId}/{fileName} {
-      // Allow public read for all files (shared transcript check happens in Firestore)
-      // This allows audio playback on shared transcripts without authentication
-      // Security is enforced at the Firestore level for transcript metadata
-      allow read: if true;
+    // User project files - organized by userId (transcriptions folder)
+    match /transcriptions/{userId}/{allPaths=**} {
+      // Project files are private to the owner and admins.
+      allow read: if isSignedIn() && (isOwner(userId) || isAdmin());
 
       // Users can upload their own files
       allow create: if isSignedIn() && isOwner(userId) &&
                        // File size limit: 1GB
                        request.resource.size < 1024 * 1024 * 1024 &&
-                       // Allowed file types for audio/video
+                       // Allowed file types for transcription and Document Workspace uploads
                        (request.resource.contentType.matches('audio/.*') ||
                        request.resource.contentType.matches('video/.*') ||
+                       request.resource.contentType.matches('image/.*') ||
                        request.resource.contentType in [
                          'audio/mpeg', 'audio/wav', 'audio/mp4', 'audio/m4a',
-                         'video/mp4', 'video/avi', 'video/mov'
+                         'video/mp4', 'video/avi', 'video/mov',
+                         'application/pdf',
+                         'application/msword',
+                         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                         'text/plain'
                        ]);
 
       // Users can update/replace their own files, admins can update any file
@@ -67,10 +70,11 @@ service firebase.storage {
       allow delete: if isSignedIn() && (isOwner(userId) || isAdmin());
     }
 
-    // Transcription outputs/results - organized by userId
-    match /transcripts/{userId}/{fileName} {
-      // Allow public read for transcript data (shared transcript check happens in Firestore)
-      allow read: if true;
+    // Transcription outputs/results
+    match /transcripts/{userId}/{allPaths=**} {
+      // Transcript output files are private to the owner and admins.
+      // Existing generated transcript paths may use job IDs here; app access goes through authenticated API routes.
+      allow read: if isSignedIn() && (isOwner(userId) || isAdmin());
 
       // System/admins can create transcript files
       allow create: if isSignedIn() && (isOwner(userId) || isAdmin());
