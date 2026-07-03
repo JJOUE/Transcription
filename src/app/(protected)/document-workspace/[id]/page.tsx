@@ -94,6 +94,9 @@ export default function DocumentWorkspaceProjectPage() {
   const voiceInstructionsHref = project?.voiceInstructionsPath
     ? `/api/document-workspace/${project.id}/voice-instructions`
     : project?.voiceInstructionsURL;
+  const templateDownloadHref = project?.templatePath
+    ? `/api/document-workspace/${project.id}/template`
+    : project?.templateURL;
 
   const handleRequestFileDeletion = async () => {
     if (!project?.id || !user?.uid) return;
@@ -241,7 +244,7 @@ export default function DocumentWorkspaceProjectPage() {
                   </div>
                 </div>
 
-                {project.templateURL && (
+                {templateDownloadHref && (
                   <div className="rounded-lg border border-purple-200 bg-purple-50 p-4">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
@@ -250,7 +253,13 @@ export default function DocumentWorkspaceProjectPage() {
                       </div>
                       {!retentionDeleted && (
                         <Button variant="outline" size="sm" asChild className="border-purple-300 text-purple-700">
-                          <a href={project.templateURL} target="_blank" rel="noopener noreferrer">
+                          <a
+                            href={templateDownloadHref}
+                            {...(!project.templatePath ? {
+                              target: '_blank',
+                              rel: 'noopener noreferrer',
+                            } : {})}
+                          >
                             <Download className="h-4 w-4 mr-1" />
                             Download
                           </a>
