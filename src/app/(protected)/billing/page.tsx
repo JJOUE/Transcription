@@ -274,19 +274,19 @@ export default function BillingPage() {
 
         {/* Account Summary */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* FREE TRIAL Card - Only show if trial is active */}
+          {/* AI FREE TRIAL Card - Only show if trial is active */}
           {freeTrialActive && freeTrialMinutes > 0 && (
             <Card className="border-2 border-green-500 shadow-lg bg-gradient-to-br from-green-50 to-emerald-50">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-green-700">
-                  🎉 Free Trial
+                  🎉 Free AI Trial
                 </CardTitle>
                 <Star className="h-4 w-4 text-green-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-700">{freeTrialMinutes} minutes</div>
+                <div className="text-2xl font-bold text-green-700">{freeTrialMinutes} AI minutes</div>
                 <p className="text-xs text-gray-600 mt-1">
-                  Used: {freeTrialUsed} of {freeTrialTotal} minutes
+                  Used: {freeTrialUsed} of {freeTrialTotal} AI minutes
                 </p>
                 <div className="w-full bg-green-200 rounded-full h-2 mt-2">
                   <div

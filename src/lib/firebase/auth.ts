@@ -31,7 +31,7 @@ export interface UserData {
   walletBalance?: number;
   totalSpent?: number;
 
-  // Free Trial system - Universal 60 minutes for new users
+  // Free Trial system - 60 AI transcription minutes for new users
   freeTrialMinutes?: number;           // Remaining free trial minutes
   freeTrialMinutesTotal?: number;      // Total free trial minutes granted (60)
   freeTrialMinutesUsed?: number;       // Minutes used from free trial
@@ -72,7 +72,7 @@ export const signUp = async (email: string, password: string, name?: string) => 
       lastLogin: serverTimestamp(),
       walletBalance: 0,
       totalSpent: 0,
-      // Free Trial - 60 universal minutes for all new users
+      // Free Trial - 60 AI transcription minutes for all new users
       freeTrialMinutes: 60,
       freeTrialMinutesTotal: 60,
       freeTrialMinutesUsed: 0,

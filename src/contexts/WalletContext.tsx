@@ -307,8 +307,10 @@ export function WalletProvider({ children }: WalletProviderProps) {
     let walletNeeded = 0;
     let totalCost = 0;
 
-    // PRIORITY 1: Use free trial minutes first (universal - works for any mode)
-    if (freeTrialActive && freeTrialMinutes > 0) {
+    const canUseFreeTrial = mode === 'ai';
+
+    // PRIORITY 1: Use free trial minutes first for AI transcription only
+    if (canUseFreeTrial && freeTrialActive && freeTrialMinutes > 0) {
       freeTrialMinutesUsed = Math.min(remainingMinutes, freeTrialMinutes);
       remainingMinutes -= freeTrialMinutesUsed;
       // Free trial is FREE - no cost
@@ -382,8 +384,10 @@ export function WalletProvider({ children }: WalletProviderProps) {
         let walletUsed = 0;
         const updatedPackages = [...currentPackages];
 
-        // PRIORITY 1: Use free trial minutes first (universal - works for ANY mode)
-        if (currentFreeTrialActive && currentFreeTrial > 0) {
+        const canUseFreeTrial = mode === 'ai';
+
+        // PRIORITY 1: Use free trial minutes first for AI transcription only
+        if (canUseFreeTrial && currentFreeTrialActive && currentFreeTrial > 0) {
           freeTrialMinutesUsed = Math.min(remainingMinutes, currentFreeTrial);
           remainingMinutes -= freeTrialMinutesUsed;
           // Free trial is FREE - no cost added to totalCostDeducted
@@ -441,13 +445,24 @@ export function WalletProvider({ children }: WalletProviderProps) {
         // Update user document
         transaction.update(userRef, updates);
 
+        if (freeTrialMinutesUsed > 0) {
+          const jobRef = doc(db, 'transcriptions', jobId);
+          transaction.update(jobRef, {
+            paymentStatus: 'free-trial',
+            billingType: 'ai-free-trial',
+            freeTrialMinutesUsed,
+            creditsUsed: Math.round(walletUsed * 100),
+            updatedAt: serverTimestamp()
+          });
+        }
+
         // Record transaction
         const transactionRef = doc(collection(db, 'transactions'));
         transaction.set(transactionRef, {
           userId: user.uid,
           type: 'transcription',
           amount: -totalCostDeducted,
-          description: `${MODE_PRICING[mode].name}: ${minutes} minutes${freeTrialMinutesUsed > 0 ? ` (${freeTrialMinutesUsed} FREE trial minutes used)` : ''}`,
+          description: `${MODE_PRICING[mode].name}: ${minutes} minutes${freeTrialMinutesUsed > 0 ? ` (${freeTrialMinutesUsed} free AI trial minutes used)` : ''}`,
           jobId,
           freeTrialMinutesUsed,
           packageMinutesUsed,

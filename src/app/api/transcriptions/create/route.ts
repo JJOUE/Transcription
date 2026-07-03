@@ -81,6 +81,17 @@ export async function POST(request: NextRequest) {
     const userDoc = await adminDb.collection('users').doc(userId).get();
     const userData = userDoc.data();
     const isAdminUser = userData?.role === 'admin';
+    const requestedFreeTrialBilling =
+      validatedBody.paymentStatus === 'free-trial' ||
+      validatedBody.billingType === 'ai-free-trial' ||
+      (validatedBody.freeTrialMinutesUsed || 0) > 0;
+
+    if (!isAdminUser && requestedFreeTrialBilling && validatedBody.mode !== 'ai') {
+      return NextResponse.json(
+        { error: 'Free trial minutes can only be applied to AI transcription jobs' },
+        { status: 400 }
+      );
+    }
 
     // Create the transcription job with server timestamp
     const jobData = {

@@ -174,10 +174,10 @@ export function UserDashboard() {
                     <span className="text-4xl">🎉</span>
                     <div>
                       <h3 className="text-2xl font-bold text-white">
-                        Free Trial Active!
+                        Free AI Trial Active!
                       </h3>
                       <p className="text-sm text-white/80 mt-1">
-                        Use your free minutes for ANY transcription mode or add-ons
+                        Your first 60 minutes of AI transcription are free.
                       </p>
                     </div>
                   </div>
@@ -186,7 +186,7 @@ export function UserDashboard() {
                     <div className="bg-white/10 backdrop-blur rounded-lg p-4 border border-white/20">
                       <p className="text-sm text-white/70 mb-1">Remaining</p>
                       <p className="text-3xl font-bold text-white">{freeTrialMinutes}</p>
-                      <p className="text-xs text-green-400 font-semibold">FREE minutes</p>
+                      <p className="text-xs text-green-400 font-semibold">FREE AI minutes</p>
                     </div>
                     <div className="bg-white/10 backdrop-blur rounded-lg p-4 border border-white/20">
                       <p className="text-sm text-white/70 mb-1">Used</p>
@@ -195,7 +195,7 @@ export function UserDashboard() {
                     </div>
                     <div className="bg-white/10 backdrop-blur rounded-lg p-4 border border-white/20">
                       <p className="text-sm text-white/70 mb-1">Savings</p>
-                      <p className="text-3xl font-bold text-green-400">CA${(freeTrialMinutes * 2.5).toFixed(0)}</p>
+                      <p className="text-3xl font-bold text-green-400">CA${(freeTrialMinutes * 0.4).toFixed(0)}</p>
                       <p className="text-xs text-white/60">value available</p>
                     </div>
                   </div>
@@ -216,7 +216,7 @@ export function UserDashboard() {
                   <div className="mt-4">
                     <Link href="/upload">
                       <Button className="bg-white hover:bg-gray-100 text-[#003366] font-semibold shadow-md">
-                        Start Free Transcription →
+                        Start Free AI Transcription →
                       </Button>
                     </Link>
                   </div>
@@ -343,7 +343,7 @@ export function UserDashboard() {
                   <div className="space-y-0.5 mt-1">
                     {freeTrialActive && freeTrialMinutes > 0 && (
                       <p className="text-xs text-green-600 font-semibold">
-                        🎉 + {freeTrialMinutes} FREE trial minutes
+                        🎉 + {freeTrialMinutes} FREE AI transcription minutes
                       </p>
                     )}
                     {totalPackageMinutes > 0 && (

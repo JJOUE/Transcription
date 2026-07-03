@@ -146,6 +146,9 @@ export const CreateTranscriptionJobSchema = z.object({
   speakerCount: z.number().int().min(2).max(20).optional(),
   addOnCost: z.number().min(0).optional(),
   hasPackage: z.boolean().optional(),
+  paymentStatus: z.string().max(50).optional(),
+  billingType: z.string().max(50).optional(),
+  freeTrialMinutesUsed: z.number().min(0).max(1440).optional(),
   // Template file for human transcription
   templatePath: z.string().max(500).optional(),
   templateURL: z.string().url().max(1000).optional(),

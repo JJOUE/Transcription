@@ -1681,21 +1681,21 @@ export default function UploadPage() {
                   </p>
                 )}
 
-                {/* FREE TRIAL Section - Shows first if using free trial */}
+                {/* FREE TRIAL Section - Shows first if using AI free trial */}
                 {freeTrialMinutesUsed > 0 && (
                   <div className="p-4 bg-green-50 border-2 border-green-500 rounded-lg mb-3">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-2xl">🎉</span>
-                      <span className="text-sm font-bold text-green-700 uppercase tracking-wide">FREE TRIAL</span>
+                      <span className="text-sm font-bold text-green-700 uppercase tracking-wide">FREE AI TRIAL</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-green-700 font-medium">Using FREE trial minutes:</span>
+                      <span className="text-sm text-green-700 font-medium">Using free AI transcription minutes:</span>
                       <span className="text-lg font-bold text-green-800">
-                        {freeTrialMinutesUsed} minutes FREE
+                        {freeTrialMinutesUsed} AI minutes FREE
                       </span>
                     </div>
                     <div className="text-xs text-gray-600 mt-2 flex justify-between items-center">
-                      <span>After this: {freeTrialMinutes - freeTrialMinutesUsed} FREE minutes remain</span>
+                      <span>After this: {freeTrialMinutes - freeTrialMinutesUsed} free AI minutes remain</span>
                       <span className="font-semibold text-green-700">CA$0.00</span>
                     </div>
                   </div>
@@ -1797,10 +1797,10 @@ export default function UploadPage() {
                   <div className="pt-2 space-y-2">
                     {/* Show current balances */}
                     <div className="text-sm space-y-1">
-                      {/* Free Trial Balance */}
+                      {/* Free AI Trial Balance */}
                       {freeTrialActive && freeTrialMinutes > 0 && (
                         <div className="flex justify-between items-center bg-green-50 p-2 rounded border border-green-200">
-                          <span className="text-green-700 font-medium">🎉 Free Trial Balance:</span>
+                          <span className="text-green-700 font-medium">🎉 Free AI Trial Balance:</span>
                           <span className="text-green-800 font-bold">{freeTrialMinutes} minutes</span>
                         </div>
                       )}
