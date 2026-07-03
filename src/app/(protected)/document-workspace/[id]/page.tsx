@@ -91,6 +91,9 @@ export default function DocumentWorkspaceProjectPage() {
     ? `/api/document-workspace/${project.id}/completed-document`
     : project?.officeCompletedDocumentURL;
   const completedDocumentAvailable = Boolean(completedDocumentDownloadHref && !retentionDeleted);
+  const sourceFileDownloadHref = project?.filePath
+    ? `/api/document-workspace/${project.id}/source-file`
+    : project?.downloadURL;
   const voiceInstructionsHref = project?.voiceInstructionsPath
     ? `/api/document-workspace/${project.id}/voice-instructions`
     : project?.voiceInstructionsURL;
@@ -233,9 +236,15 @@ export default function DocumentWorkspaceProjectPage() {
                         <p className="text-sm text-gray-600 break-words">{project.originalFilename || project.filename}</p>
                       </div>
                     </div>
-                    {!retentionDeleted && project.downloadURL && (
+                    {!retentionDeleted && sourceFileDownloadHref && (
                       <Button variant="outline" size="sm" asChild className="border-[#003366] text-[#003366]">
-                        <a href={project.downloadURL} target="_blank" rel="noopener noreferrer">
+                        <a
+                          href={sourceFileDownloadHref}
+                          {...(!project.filePath ? {
+                            target: '_blank',
+                            rel: 'noopener noreferrer',
+                          } : {})}
+                        >
                           <ExternalLink className="h-4 w-4 mr-1" />
                           Open
                         </a>
