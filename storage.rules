@@ -99,11 +99,6 @@ service firebase.storage {
       allow delete: if isSignedIn();
     }
 
-    // Demo users - broader access for testing
-    match /{allPaths=**} {
-      allow read, write: if isSignedIn() && request.auth.token.email in ['user@demo.com', 'admin@demo.com'];
-    }
-
     // Admin access to everything
     match /{allPaths=**} {
       allow read, write: if isAdmin();

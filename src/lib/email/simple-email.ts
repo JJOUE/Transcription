@@ -1,6 +1,11 @@
 /**
  * Contact form submission email — sends to Jennifer, reply-to the sender
  */
+const getContactEmailConfig = () => ({
+  from: process.env.CONTACT_FROM_EMAIL || 'Talk to Text Canada <onboarding@resend.dev>',
+  to: process.env.CONTACT_TO_EMAIL || 'jennifer@talktotext.ca',
+});
+
 export async function sendContactMessage(
   name: string,
   email: string,
@@ -8,6 +13,7 @@ export async function sendContactMessage(
   message: string
 ): Promise<{ ok: boolean; error?: string }> {
   const RESEND_API_KEY = process.env.RESEND_API_KEY;
+  const emailConfig = getContactEmailConfig();
 
   if (!RESEND_API_KEY) {
     console.log('[Email] Resend API key not configured, skipping contact email');
@@ -35,8 +41,8 @@ Submitted: ${new Date().toLocaleString()}
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Talk To Text Contact <onboarding@resend.dev>',
-        to: 'jennifer@talktotext.ca',
+        from: emailConfig.from,
+        to: emailConfig.to,
         subject: `Contact Form: ${subject}`,
         text,
         reply_to: email,
@@ -69,6 +75,7 @@ export async function sendSimpleNotification(
   try {
     // Using Resend API (simple and reliable)
     const RESEND_API_KEY = process.env.RESEND_API_KEY;
+    const emailConfig = getContactEmailConfig();
 
     if (!RESEND_API_KEY) {
       console.log('[Email] Resend API key not configured, skipping email');
@@ -95,8 +102,8 @@ Please process this transcription.
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Talk To Text Notifications <onboarding@resend.dev>',
-        to: 'jennifer@talktotext.ca',
+        from: emailConfig.from,
+        to: emailConfig.to,
         subject,
         text,
         reply_to: userEmail,
@@ -147,6 +154,7 @@ export async function sendDocumentWorkspaceNotification(
 ): Promise<void> {
   try {
     const RESEND_API_KEY = process.env.RESEND_API_KEY;
+    const emailConfig = getContactEmailConfig();
 
     if (!RESEND_API_KEY) {
       console.log('[Email] Resend API key not configured, skipping Document Workspace notification');
@@ -184,8 +192,8 @@ Do not reply with confidential file contents. Review uploaded materials inside t
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Talk To Text Notifications <onboarding@resend.dev>',
-        to: 'jennifer@talktotext.ca',
+        from: emailConfig.from,
+        to: emailConfig.to,
         subject: 'New Document Workspace project received',
         text,
         reply_to: notification.clientEmail,

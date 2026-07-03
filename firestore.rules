@@ -222,11 +222,8 @@ service cloud.firestore {
       // Only admins can read events
       allow read: if isAdmin();
 
-      // System can create events (from webhooks)
-      allow create: if true; // Webhooks authenticated via Stripe signature
-
-      // System can update events (mark as processed)
-      allow update: if true;
+      // Server Admin SDK handles webhook writes and bypasses client rules.
+      allow create, update: if false;
 
       // Only admins can delete events
       allow delete: if isAdmin();
@@ -252,9 +249,9 @@ service cloud.firestore {
 
     // Webhook events collection (idempotency tracking)
     match /_webhook_events/{eventId} {
-      // System can create and read for idempotency checks
-      allow create: if true; // Webhooks authenticated via Stripe signature
-      allow read: if true; // For idempotency checks
+      // Server Admin SDK handles webhook idempotency and bypasses client rules.
+      allow create, update: if false;
+      allow read: if isAdmin();
 
       // Only admins can delete
       allow delete: if isAdmin();
@@ -262,8 +259,8 @@ service cloud.firestore {
 
     // Failed payments collection (for admin review)
     match /failed_payments/{paymentId} {
-      // System can create
-      allow create: if true; // Webhooks authenticated via Stripe signature
+      // Server Admin SDK records failed payments and bypasses client rules.
+      allow create, update: if false;
 
       // Only admins can read/delete
       allow read, delete: if isAdmin();

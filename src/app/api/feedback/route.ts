@@ -45,6 +45,8 @@ export async function POST(request: Request) {
     }
 
     const resendApiKey = process.env.RESEND_API_KEY;
+    const fromEmail = process.env.CONTACT_FROM_EMAIL || 'Talk to Text Canada <onboarding@resend.dev>';
+    const toEmail = process.env.CONTACT_TO_EMAIL || 'jennifer@talktotext.ca';
 
     if (!resendApiKey) {
       return NextResponse.json(
@@ -78,8 +80,8 @@ Do not include confidential, legal, medical, case-specific, or personal informat
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Talk To Text Feedback <onboarding@resend.dev>',
-        to: 'jennifer@talktotext.ca',
+        from: fromEmail,
+        to: toEmail,
         subject,
         text,
         reply_to: feedback.email,

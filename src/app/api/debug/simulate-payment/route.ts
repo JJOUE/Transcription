@@ -1,5 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { adminAuth, adminDb } from '@/lib/firebase/admin';
+
+async function requireDebugPaymentAccess(request: NextRequest): Promise<NextResponse | null> {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
+  const token = request.cookies.get('auth-token')?.value;
+  if (!token) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+  }
+
+  try {
+    const decodedToken = await adminAuth.verifyIdToken(token);
+    const adminDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
+
+    if (!adminDoc.exists || adminDoc.data()?.role !== 'admin') {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
+    return null;
+  } catch (error) {
+    console.error('[Simulate Payment] Access check failed:', error);
+    return NextResponse.json({ error: 'Invalid authentication token' }, { status: 401 });
+  }
+}
 
 /**
  * Simulates a Stripe webhook to test the complete payment flow
@@ -7,6 +33,9 @@ import crypto from 'crypto';
  */
 export async function POST(request: NextRequest) {
   try {
+    const accessResponse = await requireDebugPaymentAccess(request);
+    if (accessResponse) return accessResponse;
+
     const body = await request.json();
     const {
       userId,
@@ -194,6 +223,9 @@ export async function POST(request: NextRequest) {
 
 // GET endpoint to provide instructions
 export async function GET(request: NextRequest) {
+  const accessResponse = await requireDebugPaymentAccess(request);
+  if (accessResponse) return accessResponse;
+
   const host = request.headers.get('host');
   const protocol = request.headers.get('x-forwarded-proto') || 'https';
 

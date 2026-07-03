@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
   const token = request.cookies.get('auth-token');
+  const pathname = request.nextUrl.pathname;
   const isAuthPage = request.nextUrl.pathname.startsWith('/signin') || 
                      request.nextUrl.pathname.startsWith('/signup');
   const protectedRoutePrefixes = [
@@ -21,9 +22,10 @@ export function middleware(request: NextRequest) {
     request.nextUrl.pathname === prefix ||
     request.nextUrl.pathname.startsWith(`${prefix}/`)
   );
+  const isDocumentWorkspaceProjectRoute = pathname.startsWith('/document-workspace/');
 
   // Redirect to signin if accessing protected route without token
-  if (isProtectedRoute && !token) {
+  if ((isProtectedRoute || isDocumentWorkspaceProjectRoute) && !token) {
     return NextResponse.redirect(new URL('/signin', request.url));
   }
 
@@ -41,6 +43,7 @@ export const config = {
     '/billing/:path*',
     '/dashboard/:path*',
     '/debug-packages/:path*',
+    '/document-workspace/:path*',
     '/office/:path*',
     '/profile/:path*',
     '/test-transcription/:path*',
