@@ -57,7 +57,7 @@ interface SpeechmaticsTranscript {
 
 type TranscriptData = string | SpeechmaticsTranscript | unknown;
 type TimestampFrequency = 30 | 60 | 300 | 'none';
-type ExportFormat = 'pdf' | 'docx' | 'docx-speaker-tab' | 'docx-speaker-space' | 'srt' | 'vtt';
+type ExportFormat = 'pdf' | 'docx' | 'docx-speaker-tab' | 'docx-speaker-space' | 'txt' | 'srt' | 'vtt';
 type SplitSpeakerApplyScope = 'single-segment' | 'forward-in-block';
 
 type CleanupOptionKey =
@@ -1113,7 +1113,7 @@ export default function TranscriptViewerPage() {
           });
         } else {
           console.log('[Save] Saving to Firestore...');
-          await updateTranscriptionStatus(transcription.id!, 'complete', {
+          await updateTranscriptionStatus(transcription.id!, transcription.status, {
             timestampedTranscript: draftTimestampedTranscript,
             transcript: draftPlainTranscript,
             timestampFrequency
@@ -1145,7 +1145,7 @@ export default function TranscriptViewerPage() {
       } else if (!draftTimestampedTranscript && draftPlainTranscript.trim()) {
         console.log('[Save] Saving legacy plain text...');
         // Legacy plain text editing (fallback)
-        await updateTranscriptionStatus(transcription.id!, 'complete', {
+        await updateTranscriptionStatus(transcription.id!, transcription.status, {
           transcript: draftPlainTranscript.trim(),
           timestampFrequency
         });
@@ -1322,6 +1322,21 @@ export default function TranscriptViewerPage() {
 
   const exportTranscript = async (format: ExportFormat, draftForExport = getDraftTranscriptForExport()) => {
     if (!transcription) return;
+
+    if (format === 'txt') {
+      const blob = new Blob([draftForExport.plainTranscript], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const baseName = transcription.originalFilename?.replace(/\.[^.]+$/, '') || 'transcript';
+      link.href = url;
+      link.download = `${baseName}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast({ title: 'Download started', description: 'Transcript downloaded as TXT' });
+      return;
+    }
 
     if (format === 'srt' || format === 'vtt') {
       exportSubtitles(format, draftForExport);
@@ -4911,6 +4926,7 @@ export default function TranscriptViewerPage() {
                   <option value="docx">DOCX</option>
                   <option value="docx-speaker-tab">DOCX - Speaker + Tab / Hanging Indent</option>
                   <option value="docx-speaker-space">DOCX - Speaker + Space</option>
+                  <option value="txt">TXT</option>
                   <option value="srt">SRT</option>
                   <option value="vtt">VTT</option>
                 </select>
@@ -5615,7 +5631,7 @@ export default function TranscriptViewerPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                {transcription.status !== 'complete' && !transcription.transcript ? (
+                {transcription.status !== 'complete' && !transcription.transcript && userData?.role !== 'admin' ? (
                   <div className="text-center py-12">
                     <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -5657,7 +5673,7 @@ export default function TranscriptViewerPage() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => setIsEditing(true)}
-                                disabled={saving || transcription.status !== 'complete'}
+                                disabled={saving || (transcription.status !== 'complete' && userData?.role !== 'admin')}
                               >
                                 <Edit3 className="h-4 w-4 mr-2" />
                                 Edit Transcript
@@ -5731,6 +5747,7 @@ export default function TranscriptViewerPage() {
                                   <option value="docx">DOCX</option>
                                   <option value="docx-speaker-tab">DOCX - Speaker + Tab / Hanging Indent</option>
                                   <option value="docx-speaker-space">DOCX - Speaker + Space</option>
+                                  <option value="txt">TXT</option>
                                   <option value="srt">SRT</option>
                                   <option value="vtt">VTT</option>
                                 </select>

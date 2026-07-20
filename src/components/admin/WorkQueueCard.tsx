@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useRef } from 'react';
-import { Archive, Download, CheckCircle, XCircle, Edit, Eye, Music, Upload, RotateCcw, Zap } from 'lucide-react';
+import Link from 'next/link';
+import { Archive, Download, CheckCircle, XCircle, Edit, Eye, FilePenLine, Music, Upload, RotateCcw, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -875,6 +876,15 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
             </>
           )}
 
+          {job.type !== 'office' && job.id && (
+            <Button asChild size="sm" className="bg-[#003366] text-white hover:bg-[#004080]">
+              <Link href={`/transcript/${job.id}`}>
+                <FilePenLine className="h-4 w-4 mr-1" />
+                Open Transcript Editor
+              </Link>
+            </Button>
+          )}
+
           {/* Hybrid jobs: pending-review or under-review */}
           {job.type !== 'office' && (job.status === 'pending-review' || job.status === 'under-review') && (
             <>
@@ -928,6 +938,17 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                 onChange={handleFileUpload}
                 className="hidden"
               />
+              {(job.transcript || job.transcriptStoragePath) && (
+                <Button
+                  size="sm"
+                  className="bg-green-600 text-white hover:bg-green-700"
+                  onClick={handleApprove}
+                  disabled={isLoading}
+                >
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                  Mark Complete
+                </Button>
+              )}
             </>
           )}
 
@@ -1349,6 +1370,14 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                 >
                   Close
                 </Button>
+                {job.type !== 'office' && job.id && (
+                  <Button asChild variant="outline" className="w-full border-[#003366] text-[#003366] hover:bg-blue-50 sm:w-auto">
+                    <Link href={`/transcript/${job.id}`}>
+                      <FilePenLine className="h-4 w-4 mr-2" />
+                      Open Full Editor
+                    </Link>
+                  </Button>
+                )}
                 {job.type !== 'office' && (job.status === 'pending-review' || job.status === 'under-review') && (
                   <Button
                     onClick={handleApprove}

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Archive, Search, Filter, Download, CheckCircle, XCircle, Eye, Edit, RefreshCw, Zap, RotateCcw, Upload, Music } from 'lucide-react';
+import Link from 'next/link';
+import { Archive, Search, Filter, Download, CheckCircle, XCircle, Eye, Edit, FilePenLine, RefreshCw, Zap, RotateCcw, Upload, Music } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -549,6 +550,14 @@ export function TranscriptionQueue() {
                     </div>
                     
                     <div className="flex items-center space-x-2">
+                      {item.id && (
+                        <Button asChild variant="ghost" size="sm" className="text-[#003366]">
+                          <Link href={`/transcript/${item.id}`}>
+                            <FilePenLine className="h-4 w-4 mr-1" />
+                            Open Transcript Editor
+                          </Link>
+                        </Button>
+                      )}
                       {item.status === 'pending-review' && (
                         <>
                           <Button
@@ -580,18 +589,32 @@ export function TranscriptionQueue() {
                         </>
                       )}
                       {item.status === 'pending-transcription' && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="text-blue-600"
-                          onClick={() => {
-                            setSelectedJob(item);
-                            setTranscript('');
-                          }}
-                        >
-                          <Edit className="h-4 w-4 mr-1" />
-                          Transcribe
-                        </Button>
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-blue-600"
+                            onClick={() => {
+                              setSelectedJob(item);
+                              setTranscript('');
+                            }}
+                          >
+                            <Edit className="h-4 w-4 mr-1" />
+                            Quick Entry
+                          </Button>
+                          {(item.transcript || item.transcriptStoragePath) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-green-600"
+                              onClick={() => item.id && handleAction(item.id, 'approve-review')}
+                              disabled={isLoading}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Mark Complete
+                            </Button>
+                          )}
+                        </>
                       )}
                       {item.status === 'failed' &&
                        (item.mode === 'ai' || item.mode === 'hybrid') && (
@@ -1168,6 +1191,14 @@ export function TranscriptionQueue() {
                 >
                   Cancel
                 </Button>
+                {selectedJob.type !== 'office' && selectedJob.id && (
+                  <Button asChild variant="outline" className="w-full border-[#003366] text-[#003366] hover:bg-blue-50 sm:w-auto">
+                    <Link href={`/transcript/${selectedJob.id}`}>
+                      <FilePenLine className="h-4 w-4 mr-2" />
+                      Open Full Editor
+                    </Link>
+                  </Button>
+                )}
                 {selectedJob.retentionHold || selectedJob.deletionStatus === 'held' ? (
                   <Button
                     variant="outline"
