@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`[API] Created transcription job ${docRef.id} for user ${userId}`);
 
-    if (validatedBody.type === 'office') {
+    if (!isAdminUser && validatedBody.type === 'office') {
       await sendDocumentWorkspaceNotification({
         jobId: docRef.id,
         clientName: userData?.name,
@@ -127,16 +127,16 @@ export async function POST(request: NextRequest) {
         hasTemplate: Boolean(validatedBody.templateURL || validatedBody.templateFilename),
         rushDelivery: validatedBody.rushDelivery,
       });
-    } else if (validatedBody.mode === 'human' || validatedBody.mode === 'hybrid') {
-      if (userData?.email) {
-        // Send simple email to Jennifer
-        await sendSimpleNotification(
-          validatedBody.originalFilename,
-          validatedBody.mode,
-          userData.email,
-          validatedBody.duration / 60 // Convert seconds to minutes
-        );
-      }
+    } else if (!isAdminUser) {
+      await sendSimpleNotification({
+        jobId: docRef.id,
+        clientName: userData?.name,
+        clientEmail: userData?.email || decodedToken.email,
+        mode: validatedBody.mode,
+        originalFilename: validatedBody.originalFilename,
+        durationMinutes: validatedBody.duration / 60,
+        rushDelivery: validatedBody.rushDelivery,
+      });
     }
 
     return NextResponse.json({

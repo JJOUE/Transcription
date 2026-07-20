@@ -63,36 +63,56 @@ Submitted: ${new Date().toLocaleString()}
   }
 }
 
+interface TranscriptionSubmissionNotificationInput {
+  jobId: string;
+  clientName?: string;
+  clientEmail?: string;
+  mode: 'ai' | 'human' | 'hybrid';
+  originalFilename: string;
+  durationMinutes?: number;
+  rushDelivery?: boolean;
+}
+
 /**
- * Simple email notification for human/hybrid transcriptions
+ * Safe business notification for a client transcription submission.
  */
 export async function sendSimpleNotification(
-  fileName: string,
-  mode: 'human' | 'hybrid',
-  userEmail: string,
-  duration: number // in minutes
+  notification: TranscriptionSubmissionNotificationInput
 ): Promise<void> {
   try {
-    // Using Resend API (simple and reliable)
     const RESEND_API_KEY = process.env.RESEND_API_KEY;
     const emailConfig = getContactEmailConfig();
 
     if (!RESEND_API_KEY) {
-      console.log('[Email] Resend API key not configured, skipping email');
+      console.warn('[Email] Resend API key not configured, skipping transcription notification');
       return;
     }
 
-    const subject = `New ${mode === 'human' ? 'Human' : 'Hybrid'} Transcription - ${fileName}`;
+    const serviceLabel = notification.mode === 'ai'
+      ? 'AI Transcription'
+      : notification.mode === 'hybrid'
+        ? 'Hybrid Review'
+        : 'Human Transcription';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://talktotext.ca';
+    const adminQueueUrl = `${appUrl.replace(/\/$/, '')}/admin`;
+    const subject = `New ${serviceLabel} project received`;
 
     const text = `
-New ${mode === 'human' ? 'Human' : 'Hybrid'} transcription request:
+New client transcription project received
 
-File: ${fileName}
-Duration: ${Math.round(duration)} minutes
-Customer: ${userEmail}
+Client name: ${notification.clientName || 'Not available'}
+Client email: ${notification.clientEmail || 'Not available'}
+Job/project ID: ${notification.jobId}
+Service type: ${serviceLabel}
+Original filename: ${notification.originalFilename}
+Duration: ${notification.durationMinutes == null ? 'Not available' : `${Math.round(notification.durationMinutes)} minutes`}
+Rush requested: ${notification.rushDelivery ? 'Yes' : 'No'}
 Submitted: ${new Date().toLocaleString()}
 
-Please process this transcription.
+Open the admin dashboard/job queue:
+${adminQueueUrl}
+
+Review uploaded materials inside the secure admin dashboard. No client files are attached to this email.
 `;
 
     const response = await fetch('https://api.resend.com/emails', {
@@ -106,18 +126,17 @@ Please process this transcription.
         to: emailConfig.to,
         subject,
         text,
-        reply_to: userEmail,
+        ...(notification.clientEmail ? { reply_to: notification.clientEmail } : {}),
       }),
     });
 
     if (response.ok) {
-      console.log('[Email] Notification sent to Jennifer');
+      console.log('[Email] Transcription submission notification sent');
     } else {
-      console.log('[Email] Failed to send:', await response.text());
+      console.error('[Email] Failed to send transcription notification:', await response.text());
     }
   } catch (error) {
-    console.log('[Email] Error:', error);
-    // Don't throw - just log and continue
+    console.error('[Email] Transcription notification error:', error);
   }
 }
 
