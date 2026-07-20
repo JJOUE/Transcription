@@ -26,7 +26,9 @@ import {
   X,
   Replace,
   Eye,
-  EyeOff
+  EyeOff,
+  Trash2,
+  Undo2
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -275,6 +277,15 @@ export default function TranscriptViewerPage() {
   const [showSpeakerLabels, setShowSpeakerLabels] = useState(true);
   const [mergeSourceSpeaker, setMergeSourceSpeaker] = useState<string>('');
   const [mergeTargetSpeaker, setMergeTargetSpeaker] = useState<string>('');
+  const [removeSpeakerSelection, setRemoveSpeakerSelection] = useState('');
+  const [removeSpeakerCandidate, setRemoveSpeakerCandidate] = useState<string | null>(null);
+  const [speakerRemovalUndo, setSpeakerRemovalUndo] = useState<{
+    speakerId: string;
+    displayName: string;
+    deletedSegmentIndexes: Set<number>;
+    editedSegments: Record<number, string>;
+    editedParagraphBlocks: Record<string, string>;
+  } | null>(null);
   const [draggedSpeaker, setDraggedSpeaker] = useState<string | null>(null);
   const [isEditingSpeakerSegments, setIsEditingSpeakerSegments] = useState(false);
   const [highlightedSpeakers, setHighlightedSpeakers] = useState<Set<string>>(new Set());
@@ -1043,6 +1054,68 @@ export default function TranscriptViewerPage() {
     });
   };
 
+  const confirmRemoveSpeaker = () => {
+    if (!removeSpeakerCandidate || !transcription?.timestampedTranscript) return;
+
+    const speakerId = removeSpeakerCandidate;
+    const matchingSegmentIndexes = transcription.timestampedTranscript
+      .map((segment, segmentIndex) => segment.speaker === speakerId ? segmentIndex : -1)
+      .filter(segmentIndex => segmentIndex >= 0 && !deletedSegmentIndexes.has(segmentIndex));
+
+    if (matchingSegmentIndexes.length === 0) {
+      setRemoveSpeakerCandidate(null);
+      setRemoveSpeakerSelection('');
+      return;
+    }
+
+    const materializedEditedSegments = { ...editedSegments };
+    buildEditableParagraphBlocks().forEach((block) => {
+      const paragraphText = editedParagraphBlocks[block.id];
+      if (paragraphText === undefined) return;
+
+      const distributedText = distributeParagraphTextAcrossSegments(paragraphText, block.segmentIndices);
+      Object.entries(distributedText).forEach(([segmentIndex, text]) => {
+        materializedEditedSegments[Number(segmentIndex)] = text;
+      });
+    });
+
+    setSpeakerRemovalUndo({
+      speakerId,
+      displayName: getFormattedSpeakerDisplayName(speakerId),
+      deletedSegmentIndexes: new Set(deletedSegmentIndexes),
+      editedSegments: { ...editedSegments },
+      editedParagraphBlocks: { ...editedParagraphBlocks }
+    });
+    setEditedSegments(materializedEditedSegments);
+    setEditedParagraphBlocks({});
+    setDeletedSegmentIndexes(prev => {
+      const next = new Set(prev);
+      matchingSegmentIndexes.forEach(segmentIndex => next.add(segmentIndex));
+      return next;
+    });
+    setRemoveSpeakerCandidate(null);
+    setRemoveSpeakerSelection('');
+
+    toast({
+      title: 'Speaker removed from draft',
+      description: `${getFormattedSpeakerDisplayName(speakerId)} was removed from the editable transcript. Use Save Transcript to make this permanent.`
+    });
+  };
+
+  const undoRemoveSpeaker = () => {
+    if (!speakerRemovalUndo) return;
+
+    setDeletedSegmentIndexes(new Set(speakerRemovalUndo.deletedSegmentIndexes));
+    setEditedSegments({ ...speakerRemovalUndo.editedSegments });
+    setEditedParagraphBlocks({ ...speakerRemovalUndo.editedParagraphBlocks });
+    setSpeakerRemovalUndo(null);
+
+    toast({
+      title: 'Speaker removal undone',
+      description: `${speakerRemovalUndo.displayName} was restored to the editable transcript.`
+    });
+  };
+
   const discardTranscriptChanges = () => {
     setIsEditing(false);
     setIsEditingSpeakerSegments(false);
@@ -1059,6 +1132,9 @@ export default function TranscriptViewerPage() {
     setSplitSpeakerNameDrafts({});
     setSplitSpeakerApplyScopes({});
     setParagraphDeleteCandidate(null);
+    setRemoveSpeakerSelection('');
+    setRemoveSpeakerCandidate(null);
+    setSpeakerRemovalUndo(null);
     setEditedTranscript(transcription?.transcript || '');
     clearLightGrammarPreview();
     clearCleanupPreview();
@@ -1131,6 +1207,7 @@ export default function TranscriptViewerPage() {
         setEditedSegments({});
         setEditedParagraphBlocks({});
         setDeletedSegmentIndexes(new Set());
+        setSpeakerRemovalUndo(null);
         setSpeakerSegmentsDirty(false);
         setParagraphSpeakerSelections({});
         setParagraphSpeakerNameDrafts({});
@@ -4588,6 +4665,41 @@ export default function TranscriptViewerPage() {
           </div>
         )}
 
+        {removeSpeakerCandidate && (
+          <div className="fixed inset-0 z-[65] bg-black/40 px-4 py-6">
+            <div className="mx-auto mt-24 max-w-lg rounded-lg bg-white p-5 shadow-xl">
+              <h2 className="text-lg font-semibold text-red-700">Remove this speaker?</h2>
+              <p className="mt-2 text-sm text-gray-700">
+                You are about to remove all transcript text for {getFormattedSpeakerDisplayName(removeSpeakerCandidate)} from the editable transcript. This is useful for interpreted transcripts, but should only be done if you are sure. Continue?
+              </p>
+              <p className="mt-2 text-xs text-gray-500">
+                The source audio or video is not deleted. This change remains unsaved until you use Save Transcript.
+              </p>
+              <div className="mt-5 flex flex-wrap justify-end gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setRemoveSpeakerCandidate(null)}
+                  disabled={saving}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="bg-red-600 text-white hover:bg-red-700"
+                  onClick={confirmRemoveSpeaker}
+                  disabled={saving}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Remove Speaker
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {showCleanupReview && cleanupPreview && (
           <div className="fixed inset-0 z-50 bg-black/40 px-4 py-6">
             <div className="mx-auto flex h-full max-w-6xl flex-col rounded-lg bg-white shadow-xl">
@@ -5321,6 +5433,53 @@ export default function TranscriptViewerPage() {
                     <span className="text-xs text-gray-500">
                       {speakerCount} speaker{speakerCount === 1 ? '' : 's'}
                     </span>
+                  </div>
+
+                  <div className="space-y-2 rounded-lg border border-red-200 bg-red-50/50 p-3">
+                    <p className="text-sm font-medium text-red-800">Remove Speaker</p>
+                    <p className="text-xs text-gray-600">
+                      For interpreted transcripts, you can remove the original-language speaker and keep the interpreter’s English version. Review carefully before saving.
+                    </p>
+                    <select
+                      value={removeSpeakerSelection}
+                      onChange={(event) => setRemoveSpeakerSelection(event.target.value)}
+                      disabled={!isEditing || saving || orderedSpeakers.length === 0}
+                      className="w-full rounded-md border border-red-200 bg-white px-3 py-2 text-sm"
+                    >
+                      <option value="">Select speaker</option>
+                      {orderedSpeakers.map((speaker) => (
+                        <option key={`remove-speaker-${speaker}`} value={speaker}>
+                          {getFormattedSpeakerDisplayName(speaker)} ({speaker})
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-center border-red-300 text-red-700 hover:bg-red-100"
+                      onClick={() => setRemoveSpeakerCandidate(removeSpeakerSelection)}
+                      disabled={!isEditing || saving || !removeSpeakerSelection}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Remove Speaker
+                    </Button>
+                    {speakerRemovalUndo && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-center"
+                        onClick={undoRemoveSpeaker}
+                        disabled={saving}
+                      >
+                        <Undo2 className="h-4 w-4 mr-2" />
+                        Undo Remove {speakerRemovalUndo.displayName}
+                      </Button>
+                    )}
+                    {!isEditing && (
+                      <p className="text-xs text-gray-500">Click Edit Transcript before removing a speaker.</p>
+                    )}
                   </div>
 
                   {speakerCount > 0 ? (
