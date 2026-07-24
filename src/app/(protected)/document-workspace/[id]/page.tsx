@@ -45,7 +45,7 @@ export default function DocumentWorkspaceProjectPage() {
   const params = useParams();
   const router = useRouter();
   const id = params?.id as string;
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
   const [project, setProject] = useState<TranscriptionJob | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +66,7 @@ export default function DocumentWorkspaceProjectPage() {
           return;
         }
 
-        if (projectData.userId !== user.uid) {
+        if (projectData.userId !== user.uid && userData?.role !== 'admin') {
           setError('You do not have permission to view this Document Workspace project.');
           return;
         }
@@ -81,7 +81,7 @@ export default function DocumentWorkspaceProjectPage() {
     };
 
     loadProject();
-  }, [id, user]);
+  }, [id, user, userData?.role]);
 
   const retentionLabel = project ? formatRetentionLabel(project) : null;
   const retentionDeleted = project ? isRetentionDeleted(project) : false;

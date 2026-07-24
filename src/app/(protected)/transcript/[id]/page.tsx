@@ -28,7 +28,8 @@ import {
   Eye,
   EyeOff,
   Trash2,
-  Undo2
+  Undo2,
+  Upload
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -253,6 +254,7 @@ export default function TranscriptViewerPage() {
   const [deletedSegmentIndexes, setDeletedSegmentIndexes] = useState<Set<number>>(new Set());
   const [speakerSegmentsDirty, setSpeakerSegmentsDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingFinishedTranscript, setUploadingFinishedTranscript] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>('pdf');
   const [timestampFrequency, setTimestampFrequency] = useState<TimestampFrequency>(60); // 30s, 60s, 5min (300s), or no display timestamps
   const [speakerNames, setSpeakerNames] = useState<Record<string, string>>({});
@@ -295,6 +297,7 @@ export default function TranscriptViewerPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const transcriptContainerRef = useRef<HTMLDivElement>(null);
+  const finishedTranscriptInputRef = useRef<HTMLInputElement>(null);
 
   // Search and replace state
   const [showSearchPanel, setShowSearchPanel] = useState(false);
@@ -1394,6 +1397,64 @@ export default function TranscriptViewerPage() {
         return 'DOCX - Speaker + Space';
       default:
         return format.toUpperCase();
+    }
+  };
+
+  const uploadFinishedTranscript = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !transcription?.id || userData?.role !== 'admin') return;
+
+    const allowedExtensions = ['.docx', '.pdf', '.txt', '.srt', '.vtt'];
+    const extension = file.name.includes('.') ? `.${file.name.split('.').pop()?.toLowerCase()}` : '';
+    if (!allowedExtensions.includes(extension)) {
+      toast({
+        title: 'Unsupported file type',
+        description: 'Upload a DOCX, PDF, TXT, SRT, or VTT finished transcript.',
+        variant: 'destructive'
+      });
+      event.target.value = '';
+      return;
+    }
+
+    try {
+      setUploadingFinishedTranscript(true);
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`/api/transcripts/${transcription.id}/finished-transcript`, {
+        method: 'POST',
+        body: formData
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to upload finished transcript');
+      }
+
+      setTranscription(prev => prev ? {
+        ...prev,
+        finishedTranscriptPath: result.path,
+        finishedTranscriptFilename: result.filename,
+        finishedTranscriptUploadedAt: Timestamp.now(),
+        finishedTranscriptUploadedBy: user?.uid || '',
+        finishedTranscriptContentType: result.contentType,
+        finishedTranscriptSize: result.size
+      } : null);
+
+      toast({
+        title: 'Finished transcript uploaded',
+        description: `${result.filename} is now available to the client through protected download access.`
+      });
+    } catch (uploadError) {
+      console.error('[Finished Transcript] Upload failed:', uploadError);
+      toast({
+        title: 'Upload failed',
+        description: uploadError instanceof Error ? uploadError.message : 'Unable to upload the finished transcript.',
+        variant: 'destructive'
+      });
+    } finally {
+      setUploadingFinishedTranscript(false);
+      event.target.value = '';
     }
   };
 
@@ -4966,6 +5027,64 @@ export default function TranscriptViewerPage() {
             </div>
           </div>
         </div>
+
+        {(transcription.finishedTranscriptPath || userData?.role === 'admin') && (
+          <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="font-semibold text-green-900">
+                  {transcription.finishedTranscriptPath ? 'Finished transcript ready' : 'Finished transcript delivery'}
+                </h2>
+                {transcription.finishedTranscriptPath ? (
+                  <div className="mt-1 space-y-1 text-sm text-green-800">
+                    <p>{transcription.finishedTranscriptFilename || 'Finished transcript'}</p>
+                    {transcription.finishedTranscriptUploadedAt && (
+                      <p className="text-xs text-green-700">
+                        Uploaded {formatDate(transcription.finishedTranscriptUploadedAt)}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="mt-1 text-sm text-green-800">
+                    Upload the polished transcript when it is ready for client download.
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {transcription.finishedTranscriptPath && !isRetentionDeleted(transcription) && (
+                  <Button asChild size="sm" className="bg-[#003366] text-white hover:bg-[#004080]">
+                    <a href={`/api/transcripts/${transcription.id}/finished-transcript`}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Download Finished Transcript
+                    </a>
+                  </Button>
+                )}
+                {userData?.role === 'admin' && !isRetentionDeleted(transcription) && (
+                  <>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="border-green-400 bg-white text-green-800 hover:bg-green-100"
+                      onClick={() => finishedTranscriptInputRef.current?.click()}
+                      disabled={uploadingFinishedTranscript}
+                    >
+                      {uploadingFinishedTranscript ? <LoadingSpinner size="sm" className="mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
+                      {transcription.finishedTranscriptPath ? 'Replace Finished Transcript' : 'Upload Finished Transcript'}
+                    </Button>
+                    <input
+                      ref={finishedTranscriptInputRef}
+                      type="file"
+                      accept=".docx,.pdf,.txt,.srt,.vtt"
+                      onChange={uploadFinishedTranscript}
+                      className="hidden"
+                    />
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Sticky Action Toolbar - top-16 to sit below the h-16 sticky header */}
         <div className="sticky top-16 z-40 -mx-4 px-4 py-3 bg-gray-50/95 backdrop-blur-sm border-b border-gray-200/80 mb-6">

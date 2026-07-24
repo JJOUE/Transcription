@@ -29,7 +29,6 @@ import {
 import { formatDuration } from '@/lib/utils';
 import { formatRetentionLabel, isRetentionDeleted } from '@/lib/utils/retention';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { doc, updateDoc, getFirestore, Timestamp } from 'firebase/firestore';
 
 interface WorkQueueCardProps {
   job: TranscriptionJob;
@@ -82,13 +81,13 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
     if (!file || !job.id) return;
 
     const fileName = file.name.toLowerCase();
-    const validExtensions = ['.docx', '.doc', '.txt', '.pdf', '.rtf'];
+    const validExtensions = ['.docx', '.txt', '.pdf', '.srt', '.vtt'];
     const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
 
     if (!hasValidExtension) {
       toast({
         title: "Invalid file type",
-        description: "Please upload a document file (.docx, .doc, .txt, .pdf, .rtf)",
+        description: "Please upload a finished transcript (.docx, .pdf, .txt, .srt, .vtt)",
         variant: "destructive",
       });
       return;
@@ -96,25 +95,16 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
 
     setUploadingFile(true);
     try {
-      // Upload file directly to Firebase Storage
-      const storage = getStorage();
-      const storagePath = `transcriptions/${job.userId}/${job.id}/admin-transcript/${file.name}`;
-      const storageRef = ref(storage, storagePath);
-
-      await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(storageRef);
-
-      // Update Firestore document with admin transcript info and mark as complete
-      const db = getFirestore();
-      const jobRef = doc(db, 'transcriptions', job.id);
-      await updateDoc(jobRef, {
-        adminTranscriptPath: storagePath,
-        adminTranscriptURL: downloadURL,
-        adminTranscriptFilename: file.name,
-        status: 'complete',
-        completedAt: Timestamp.now(),
-        updatedAt: Timestamp.now()
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await fetch(`/api/transcripts/${job.id}/finished-transcript`, {
+        method: 'POST',
+        body: formData
       });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to upload transcript file');
+      }
 
       toast({
         title: "Transcript Uploaded",
@@ -126,7 +116,7 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
       console.error('File upload error:', error);
       toast({
         title: "Upload failed",
-        description: "Failed to upload transcript file. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to upload transcript file. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -487,13 +477,13 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
     if (!file || !job.id) return;
 
     const fileName = file.name.toLowerCase();
-    const validExtensions = ['.docx', '.doc', '.pdf', '.txt'];
+    const validExtensions = ['.docx', '.pdf', '.txt'];
     const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
 
     if (!hasValidExtension) {
       toast({
         title: "Invalid file type",
-        description: "Please upload a document file (.docx, .doc, .pdf, .txt)",
+        description: "Please upload a document file (.docx, .pdf, .txt)",
         variant: "destructive",
       });
       return;
@@ -907,6 +897,23 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                 <CheckCircle className="h-4 w-4 mr-1" />
                 Approve
               </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-green-600 border-green-300 hover:bg-green-50"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingFile}
+              >
+                <Upload className="h-4 w-4 mr-1" />
+                {uploadingFile ? 'Uploading...' : 'Upload Finished Transcript'}
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".txt,.docx,.pdf,.srt,.vtt"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
             </>
           )}
 
@@ -934,7 +941,7 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".txt,.docx,.doc,.pdf,.rtf"
+                accept=".txt,.docx,.pdf,.srt,.vtt"
                 onChange={handleFileUpload}
                 className="hidden"
               />

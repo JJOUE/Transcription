@@ -590,6 +590,11 @@ export function UserDashboard() {
                                 <span className="text-[#003366] font-medium">
                                   CA${((job.creditsUsed || 0) / 100).toFixed(2)}
                                 </span>
+                                {job.finishedTranscriptPath && !isRetentionDeleted(job) && (
+                                  <span className="font-semibold text-green-700">
+                                    Finished transcript ready
+                                  </span>
+                                )}
                                 {formatRetentionLabel(job) && (
                                   <span className={isRetentionDeleted(job) ? 'text-red-600 font-medium' : 'text-gray-500'}>
                                     {formatRetentionLabel(job)}
@@ -639,6 +644,11 @@ export function UserDashboard() {
                               {job.originalFilename}
                             </h3>
                             <StatusBadge status={job.status} />
+                            {job.status === 'complete' && (job.officeCompletedDocumentPath || job.officeCompletedDocumentURL) && !isRetentionDeleted(job) && (
+                              <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-semibold text-green-700">
+                                Completed work ready
+                              </span>
+                            )}
                           </div>
                           <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
                             <span>{getOfficeServiceLabel(job.officeServiceType)}</span>
@@ -667,20 +677,24 @@ export function UserDashboard() {
                               Open Project
                             </Link>
                           </Button>
-                          {isRetentionDeleted(job) && job.officeCompletedDocumentURL && (
+                          {isRetentionDeleted(job) && (job.officeCompletedDocumentPath || job.officeCompletedDocumentURL) && (
                             <span className="text-sm font-medium text-red-600">Files expired/deleted</span>
                           )}
-                          {!isRetentionDeleted(job) && job.officeCompletedDocumentURL && (
+                          {!isRetentionDeleted(job) && (job.officeCompletedDocumentPath || job.officeCompletedDocumentURL) && (
                             <Button
                               size="sm"
                               asChild
                               className="bg-green-50 border border-green-300 text-green-700 hover:bg-green-100 shadow-sm"
                             >
                               <a 
-                                href={job.officeCompletedDocumentURL}
+                                href={job.officeCompletedDocumentPath
+                                  ? `/api/document-workspace/${job.id}/completed-document`
+                                  : job.officeCompletedDocumentURL}
                                 download={job.officeCompletedFilename || 'completed-document'}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                                {...(!job.officeCompletedDocumentPath ? {
+                                  target: '_blank',
+                                  rel: 'noopener noreferrer',
+                                } : {})}
                               >
                                 📥 Download
                               </a>

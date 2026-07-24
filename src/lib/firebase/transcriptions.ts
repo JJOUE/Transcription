@@ -116,6 +116,13 @@ export interface TranscriptionJob {
   adminTranscriptPath?: string; // Storage path for admin-uploaded transcript
   adminTranscriptURL?: string; // Download URL for admin-uploaded transcript
   adminTranscriptFilename?: string; // Original filename of admin-uploaded transcript
+  // Admin-uploaded polished transcript served through authenticated download access
+  finishedTranscriptPath?: string;
+  finishedTranscriptFilename?: string;
+  finishedTranscriptUploadedAt?: Timestamp;
+  finishedTranscriptUploadedBy?: string;
+  finishedTranscriptContentType?: string;
+  finishedTranscriptSize?: number;
   // Document Workspace specific fields
   assignedTypist?: string; // UID of assigned typist
   assignedTypistName?: string; // Name of assigned typist
@@ -422,6 +429,7 @@ export const updateOfficeStatus = async (
 
   // Mark as completed when delivered
   if (officeStatus === 'delivered') {
+    updateData.status = 'complete';
     updateData.completedAt = Timestamp.now();
   }
 

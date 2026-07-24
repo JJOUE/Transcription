@@ -65,7 +65,7 @@ export async function GET(
       );
     }
 
-    const expectedPrefix = `transcriptions/${job.userId}/`;
+    const expectedPrefix = `transcriptions/${job.userId}/${id}/completed-document/`;
     if (!documentPath.startsWith(expectedPrefix)) {
       console.error('[Document Workspace Download] Stored path failed ownership check', {
         jobId: id,

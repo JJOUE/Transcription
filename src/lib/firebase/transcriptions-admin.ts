@@ -50,6 +50,12 @@ export interface TranscriptionJob {
   transcript?: string;
   timestampedTranscript?: TranscriptSegment[]; // New field for timestamped data
   terminologyIssues?: TerminologyIssue[]; // Safe post-transcription terminology review flags
+  finishedTranscriptPath?: string;
+  finishedTranscriptFilename?: string;
+  finishedTranscriptUploadedAt?: FirebaseFirestore.Timestamp;
+  finishedTranscriptUploadedBy?: string;
+  finishedTranscriptContentType?: string;
+  finishedTranscriptSize?: number;
   createdAt: FirebaseFirestore.Timestamp;
   updatedAt: FirebaseFirestore.Timestamp;
   completedAt?: FirebaseFirestore.Timestamp;
