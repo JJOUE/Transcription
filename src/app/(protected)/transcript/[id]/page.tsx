@@ -2,7 +2,15 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { generateTemplateData, exportTranscriptPDF, exportTranscriptDOCX } from '@/lib/utils/transcriptTemplate';
+import {
+  DEFAULT_TRANSCRIPT_STYLE_ID,
+  TRANSCRIPT_STYLE_PRESETS,
+  type TranscriptStyleId,
+  exportTranscriptDOCX,
+  exportTranscriptPDF,
+  formatTranscriptSegmentsForStyle,
+  generateTemplateData,
+} from '@/lib/utils/transcriptTemplate';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
@@ -256,6 +264,7 @@ export default function TranscriptViewerPage() {
   const [saving, setSaving] = useState(false);
   const [uploadingFinishedTranscript, setUploadingFinishedTranscript] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>('pdf');
+  const [selectedTranscriptStyle, setSelectedTranscriptStyle] = useState<TranscriptStyleId>(DEFAULT_TRANSCRIPT_STYLE_ID);
   const [timestampFrequency, setTimestampFrequency] = useState<TimestampFrequency>(60); // 30s, 60s, 5min (300s), or no display timestamps
   const [speakerNames, setSpeakerNames] = useState<Record<string, string>>({});
   const [sidebarSpeakerNameDrafts, setSidebarSpeakerNameDrafts] = useState<Record<string, string>>({});
@@ -1464,7 +1473,12 @@ export default function TranscriptViewerPage() {
     if (!transcription) return;
 
     if (format === 'txt') {
-      const blob = new Blob([draftForExport.plainTranscript], { type: 'text/plain;charset=utf-8' });
+      const styledText = formatTranscriptSegmentsForStyle(
+        draftForExport.timestampedTranscript,
+        selectedTranscriptStyle,
+        getFormattedSpeakerDisplayName
+      ) || draftForExport.plainTranscript;
+      const blob = new Blob([styledText], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       const baseName = transcription.originalFilename?.replace(/\.[^.]+$/, '') || 'transcript';
@@ -1496,18 +1510,20 @@ export default function TranscriptViewerPage() {
           timestampFrequency,
           speakerNames,
           getSpeakerColor,
-          getSpeakerDisplayName: getFormattedSpeakerDisplayName
+          getSpeakerDisplayName: getFormattedSpeakerDisplayName,
+          transcriptStyleId: selectedTranscriptStyle,
         });
       } else if (format === 'docx' || format === 'docx-speaker-tab' || format === 'docx-speaker-space') {
         await exportTranscriptDOCX(templateData, {
           timestampFrequency,
           speakerNames,
           getSpeakerDisplayName: getFormattedSpeakerDisplayName,
+          transcriptStyleId: selectedTranscriptStyle,
           speakerLabelLayout: format === 'docx-speaker-tab'
             ? 'tab-hanging'
             : format === 'docx-speaker-space'
             ? 'space-inline'
-            : 'separate-line'
+            : undefined
         });
       }
 
@@ -5237,6 +5253,68 @@ export default function TranscriptViewerPage() {
 
           </div>
         </div>
+
+        {!transcription.adminTranscriptURL && !isRetentionDeleted(transcription) && (
+          <Card className="mb-6 border border-gray-200 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg text-[#003366]">Transcript Style</CardTitle>
+              <p className="text-sm text-gray-600">
+                Choose the page style used for DOCX and PDF exports. TXT uses the closest practical speaker structure.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                {TRANSCRIPT_STYLE_PRESETS.map(style => {
+                  const selected = selectedTranscriptStyle === style.id;
+                  const firstLabel = style.questionAnswerMode ? 'Q' : 'SPEAKER 1';
+                  const secondLabel = style.questionAnswerMode ? 'A' : 'SPEAKER 2';
+                  const sampleLineHeight = Math.max(1.15, style.lineSpacing / 240);
+                  const sampleGap = Math.max(4, style.paragraphSpacingAfter / 45);
+
+                  return (
+                    <button
+                      key={style.id}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => setSelectedTranscriptStyle(style.id)}
+                      className={`min-w-0 rounded-md border p-3 text-left transition-colors ${
+                        selected
+                          ? 'border-[#003366] bg-blue-50 ring-2 ring-[#003366]/20'
+                          : 'border-gray-200 bg-white hover:border-[#b29dd9]'
+                      }`}
+                    >
+                      <div className="mb-2 flex items-start justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-semibold text-[#003366]">{style.label}</p>
+                          <p className="mt-1 text-xs leading-snug text-gray-500">{style.description}</p>
+                        </div>
+                        <span className={`mt-0.5 h-3 w-3 flex-none rounded-full border ${selected ? 'border-[#003366] bg-[#003366]' : 'border-gray-300 bg-white'}`} />
+                      </div>
+
+                      <div className="aspect-[3/4] overflow-hidden rounded border border-gray-200 bg-white px-3 py-3 shadow-inner">
+                        <p className="border-b border-gray-300 pb-1 text-center text-[8px] font-bold underline">TRANSCRIPT</p>
+                        <div className="mt-3 text-[7px] text-gray-800" style={{ lineHeight: sampleLineHeight }}>
+                          {[{ label: firstLabel, text: style.questionAnswerMode ? 'Could you describe what happened next?' : 'This is a sample paragraph of transcript text.' }, { label: secondLabel, text: style.questionAnswerMode ? 'I reviewed the notes and answered the question.' : 'This is a second speaker response for comparison.' }].map((sample, index) => (
+                            <div key={sample.label} style={{ marginBottom: index === 0 ? sampleGap : 0 }}>
+                              {style.speakerPlacement === 'own-line' ? (
+                                <>
+                                  <p className={style.speakerBold ? 'font-bold' : ''}>{sample.label}:</p>
+                                  <p style={{ marginTop: Math.max(2, style.speakerSpacingAfter / 90) }}>{sample.text}</p>
+                                </>
+                              ) : (
+                                <p><span className={style.speakerBold ? 'font-bold' : ''}>{sample.label}:</span> {sample.text}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
           {/* Audio Player Section */}

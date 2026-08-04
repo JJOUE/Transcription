@@ -16,6 +16,110 @@ export interface TranscriptTemplateData {
   timestampedTranscript?: TranscriptSegment[]; // New field for timestamped data
 }
 
+export type TranscriptStyleId =
+  | 'standard-speaker-paragraph'
+  | 'speaker-own-line'
+  | 'question-answer'
+  | 'formal-interview'
+  | 'clean-read';
+
+export interface TranscriptStylePreset {
+  id: TranscriptStyleId;
+  label: string;
+  description: string;
+  speakerPlacement: 'inline' | 'own-line' | 'tab-hanging';
+  speakerBold: boolean;
+  questionAnswerMode: boolean;
+  lineSpacing: number;
+  paragraphSpacingAfter: number;
+  speakerSpacingBefore: number;
+  speakerSpacingAfter: number;
+}
+
+export const TRANSCRIPT_STYLE_PRESETS: TranscriptStylePreset[] = [
+  {
+    id: 'standard-speaker-paragraph',
+    label: 'Standard Speaker Paragraph',
+    description: 'Bold speaker labels followed by transcript text on the same line.',
+    speakerPlacement: 'inline',
+    speakerBold: true,
+    questionAnswerMode: false,
+    lineSpacing: 300,
+    paragraphSpacingAfter: 220,
+    speakerSpacingBefore: 240,
+    speakerSpacingAfter: 0,
+  },
+  {
+    id: 'speaker-own-line',
+    label: 'Speaker on Own Line',
+    description: 'The current familiar layout with each speaker label above their text.',
+    speakerPlacement: 'own-line',
+    speakerBold: true,
+    questionAnswerMode: false,
+    lineSpacing: 300,
+    paragraphSpacingAfter: 220,
+    speakerSpacingBefore: 400,
+    speakerSpacingAfter: 200,
+  },
+  {
+    id: 'question-answer',
+    label: 'Q and A Style',
+    description: 'Alternating speakers are presented as questions and answers.',
+    speakerPlacement: 'own-line',
+    speakerBold: true,
+    questionAnswerMode: true,
+    lineSpacing: 300,
+    paragraphSpacingAfter: 240,
+    speakerSpacingBefore: 360,
+    speakerSpacingAfter: 140,
+  },
+  {
+    id: 'formal-interview',
+    label: 'Formal Interview Style',
+    description: 'Strong speaker headings with more generous spacing between turns.',
+    speakerPlacement: 'own-line',
+    speakerBold: true,
+    questionAnswerMode: false,
+    lineSpacing: 340,
+    paragraphSpacingAfter: 300,
+    speakerSpacingBefore: 520,
+    speakerSpacingAfter: 220,
+  },
+  {
+    id: 'clean-read',
+    label: 'Clean Read Style',
+    description: 'A compact inline layout with restrained paragraph spacing.',
+    speakerPlacement: 'inline',
+    speakerBold: true,
+    questionAnswerMode: false,
+    lineSpacing: 280,
+    paragraphSpacingAfter: 140,
+    speakerSpacingBefore: 180,
+    speakerSpacingAfter: 0,
+  },
+];
+
+export const DEFAULT_TRANSCRIPT_STYLE_ID: TranscriptStyleId = 'speaker-own-line';
+
+export const getTranscriptStylePreset = (styleId?: TranscriptStyleId): TranscriptStylePreset =>
+  TRANSCRIPT_STYLE_PRESETS.find(style => style.id === styleId) ||
+  TRANSCRIPT_STYLE_PRESETS.find(style => style.id === DEFAULT_TRANSCRIPT_STYLE_ID)!;
+
+const getOrderedSpeakerIds = (segments: TranscriptSegment[] = []) =>
+  [...new Set(segments.map(segment => segment.speaker).filter((speaker): speaker is string => Boolean(speaker && speaker !== 'UU')))];
+
+const getStyledSpeakerLabel = (
+  preset: TranscriptStylePreset,
+  displayName: string,
+  speaker: string | undefined,
+  orderedSpeakers: string[]
+) => {
+  if (!preset.questionAnswerMode) return displayName;
+  const speakerIndex = speaker ? orderedSpeakers.indexOf(speaker) : -1;
+  if (speakerIndex < 0) return displayName;
+  return speakerIndex % 2 === 0 ? 'Q' : 'A';
+};
+
 const MAX_SENTENCES_PER_PARAGRAPH = 9;
 
 function normalizeTranscriptSegmentText(text: string): string {
@@ -98,6 +202,7 @@ export interface ExportOptions {
   getSpeakerColor?: (speaker: string | undefined) => string;
   getSpeakerDisplayName?: (speaker: string | undefined) => string;
   speakerLabelLayout?: 'separate-line' | 'tab-hanging' | 'space-inline';
+  transcriptStyleId?: TranscriptStyleId;
 }
 
 export async function exportTranscriptPDF(templateData: TranscriptTemplateData, options?: ExportOptions): Promise<void> {
@@ -109,16 +214,18 @@ export async function exportTranscriptPDF(templateData: TranscriptTemplateData, 
   const timestampFrequency = options?.timestampFrequency || 60;
   const activeTimestampFrequency = timestampFrequency === 'none' ? null : timestampFrequency;
   const speakerNames = options?.speakerNames || {};
+  const transcriptStyle = getTranscriptStylePreset(options?.transcriptStyleId);
+  const orderedSpeakers = getOrderedSpeakerIds(templateData.timestampedTranscript);
 
   // Helper function to get speaker display name
   const getSpeakerDisplayName = (speaker: string | undefined): string => {
     const providedDisplayName = options?.getSpeakerDisplayName?.(speaker);
-    if (providedDisplayName) return providedDisplayName;
+    if (providedDisplayName) return getStyledSpeakerLabel(transcriptStyle, providedDisplayName, speaker, orderedSpeakers);
     if (!speaker || speaker === 'UU') return 'Speaker';
     if (speakerNames[speaker]) {
-      return speakerNames[speaker];
+      return getStyledSpeakerLabel(transcriptStyle, speakerNames[speaker], speaker, orderedSpeakers);
     }
-    return `Speaker ${speaker.replace('S', '')}`;
+    return getStyledSpeakerLabel(transcriptStyle, `Speaker ${speaker.replace('S', '')}`, speaker, orderedSpeakers);
   };
 
   // Load and add the logo
@@ -218,6 +325,7 @@ export async function exportTranscriptPDF(templateData: TranscriptTemplateData, 
     let currentSpeaker: string | undefined = undefined;
     let accumulatedText = '';
     let currentParagraphSentenceCount = 0;
+    let shouldRenderSpeakerLabel = true;
     // Start from the first timestamp interval (0 seconds)
     let nextTimestampTarget = 0;
     let pendingTimestamp: string | null = null;
@@ -230,9 +338,38 @@ export async function exportTranscriptPDF(templateData: TranscriptTemplateData, 
       return 25;
     };
 
-    const renderTextWithTimestamp = (text: string, timestamp: string | null) => {
+    const renderTextWithTimestamp = (
+      text: string,
+      timestamp: string | null,
+      speaker: string | undefined,
+      includeSpeakerLabel: boolean
+    ) => {
       pdf.setFont('helvetica', 'normal');
       pdf.setTextColor(0, 0, 0);
+
+      if (transcriptStyle.speakerPlacement === 'inline' && includeSpeakerLabel) {
+        if (yPos > pageHeight - 50) yPos = addNewPage();
+        const speakerLabel = `${getSpeakerDisplayName(speaker)}:`;
+        pdf.setFont('helvetica', transcriptStyle.speakerBold ? 'bold' : 'normal');
+        pdf.text(speakerLabel, 25, yPos);
+        const labelWidth = pdf.getTextWidth(speakerLabel) + 2;
+        pdf.setFont('helvetica', 'normal');
+        const lines = pdf.splitTextToSize(text.trim(), Math.max(40, pageWidth - 50 - labelWidth));
+        lines.forEach((line: string, index: number) => {
+          if (index > 0) {
+            yPos += 6;
+            if (yPos > pageHeight - 50) yPos = addNewPage();
+          }
+          pdf.text(line, index === 0 ? 25 + labelWidth : 25, yPos);
+        });
+        yPos += 6;
+        if (timestamp) {
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(`[${timestamp}]`, 25, yPos);
+          yPos += 6;
+        }
+        return;
+      }
 
       if (timestamp) {
         // Text with inline timestamp
@@ -272,11 +409,12 @@ export async function exportTranscriptPDF(templateData: TranscriptTemplateData, 
 
     const addCurrentSegment = () => {
       if (accumulatedText.trim()) {
-        renderTextWithTimestamp(accumulatedText, pendingTimestamp);
+        renderTextWithTimestamp(accumulatedText, pendingTimestamp, currentSpeaker, shouldRenderSpeakerLabel);
         accumulatedText = '';
         currentParagraphSentenceCount = 0;
         pendingTimestamp = null;
-        yPos += 4; // Extra space between paragraphs
+        shouldRenderSpeakerLabel = false;
+        yPos += Math.max(2, transcriptStyle.paragraphSpacingAfter / 50);
       }
     };
 
@@ -289,17 +427,19 @@ export async function exportTranscriptPDF(templateData: TranscriptTemplateData, 
       if (speakerChanged) {
         addCurrentSegment();
 
+        shouldRenderSpeakerLabel = true;
         // Add extra space before new speaker
-        yPos += 6;
+        yPos += Math.max(2, transcriptStyle.speakerSpacingBefore / 70);
         if (yPos > pageHeight - 50) {
           yPos = addNewPage();
         }
 
-        // Add speaker label
-        pdf.setFont('helvetica', 'bold');
-        pdf.setTextColor(0, 51, 102); // Brand color
-        pdf.text(getSpeakerDisplayName(segment.speaker), 25, yPos);
-        yPos += 8;
+        if (transcriptStyle.speakerPlacement === 'own-line') {
+          pdf.setFont('helvetica', transcriptStyle.speakerBold ? 'bold' : 'normal');
+          pdf.setTextColor(0, 0, 0);
+          pdf.text(getSpeakerDisplayName(segment.speaker), 25, yPos);
+          yPos += Math.max(6, transcriptStyle.speakerSpacingAfter / 25);
+        }
 
         currentSpeaker = segment.speaker;
         // Don't reset timestamp target when speaker changes - keep continuous timeline
@@ -310,10 +450,12 @@ export async function exportTranscriptPDF(templateData: TranscriptTemplateData, 
         if (yPos > pageHeight - 50) {
           yPos = addNewPage();
         }
-        pdf.setFont('helvetica', 'bold');
-        pdf.setTextColor(0, 51, 102);
-        pdf.text(getSpeakerDisplayName(segment.speaker), 25, yPos);
-        yPos += 8;
+        if (transcriptStyle.speakerPlacement === 'own-line') {
+          pdf.setFont('helvetica', transcriptStyle.speakerBold ? 'bold' : 'normal');
+          pdf.setTextColor(0, 0, 0);
+          pdf.text(getSpeakerDisplayName(segment.speaker), 25, yPos);
+          yPos += Math.max(6, transcriptStyle.speakerSpacingAfter / 25);
+        }
 
         currentSpeaker = segment.speaker;
         // Set the first timestamp target based on the frequency
@@ -451,18 +593,26 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
   const timestampFrequency = options?.timestampFrequency || 60;
   const activeTimestampFrequency = timestampFrequency === 'none' ? null : timestampFrequency;
   const speakerNames = options?.speakerNames || {};
-  const speakerLabelLayout = options?.speakerLabelLayout || 'separate-line';
+  const transcriptStyle = getTranscriptStylePreset(options?.transcriptStyleId);
+  const orderedSpeakers = getOrderedSpeakerIds(templateData.timestampedTranscript);
+  const speakerLabelLayout = options?.speakerLabelLayout || (
+    transcriptStyle.speakerPlacement === 'tab-hanging'
+      ? 'tab-hanging'
+      : transcriptStyle.speakerPlacement === 'inline'
+      ? 'space-inline'
+      : 'separate-line'
+  );
   const usesInlineSpeakerLabels = speakerLabelLayout === 'tab-hanging' || speakerLabelLayout === 'space-inline';
   const hangingIndentTwips = 2268; // 4 cm, so wrapped lines align under transcript text.
 
   const getSpeakerDisplayName = (speaker: string | undefined): string => {
     const providedDisplayName = options?.getSpeakerDisplayName?.(speaker);
-    if (providedDisplayName) return providedDisplayName;
+    if (providedDisplayName) return getStyledSpeakerLabel(transcriptStyle, providedDisplayName, speaker, orderedSpeakers);
     if (!speaker || speaker === 'UU') return 'Speaker';
     if (speakerNames[speaker]) {
-      return speakerNames[speaker];
+      return getStyledSpeakerLabel(transcriptStyle, speakerNames[speaker], speaker, orderedSpeakers);
     }
-    return `Speaker ${speaker.replace('S', '')}`;
+    return getStyledSpeakerLabel(transcriptStyle, `Speaker ${speaker.replace('S', '')}`, speaker, orderedSpeakers);
   };
 
   const paragraphs: Paragraph[] = [];
@@ -474,21 +624,21 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
   let nextTimestampTarget = 0;
   let pendingTimestamp: string | null = null;
 
-  const addSpeakerLabelParagraph = (speaker: string | undefined, before = 400) => {
+  const addSpeakerLabelParagraph = (speaker: string | undefined, before = transcriptStyle.speakerSpacingBefore) => {
     if (usesInlineSpeakerLabels) return;
 
     paragraphs.push(new Paragraph({
       children: [
         new TextRun({
           text: getSpeakerDisplayName(speaker),
-          bold: true,
+          bold: transcriptStyle.speakerBold,
           color: "000000",
           size: 24
         })
       ],
       spacing: {
         before,
-        after: 200
+        after: transcriptStyle.speakerSpacingAfter
       }
     }));
   };
@@ -501,7 +651,7 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
       if (usesInlineSpeakerLabels && shouldRenderSpeakerLabelOnNextParagraph) {
         children.push(new TextRun({
           text: `${speakerDisplayName}:`,
-          bold: true,
+          bold: transcriptStyle.speakerBold,
           color: "000000",
           size: 24
         }));
@@ -539,8 +689,8 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
           ? [{ type: TabStopType.LEFT, position: hangingIndentTwips }]
           : undefined,
         spacing: {
-          line: 300,
-          after: 200
+          line: transcriptStyle.lineSpacing,
+          after: transcriptStyle.paragraphSpacingAfter
         }
       }));
 
@@ -570,7 +720,7 @@ function generateDocxTranscriptContent(templateData: TranscriptTemplateData, opt
       addCurrentSegment(currentSpeaker);
     } else if (currentSpeaker === undefined) {
       // First segment - add speaker label
-      addSpeakerLabelParagraph(segment.speaker, 200);
+      addSpeakerLabelParagraph(segment.speaker, Math.min(200, transcriptStyle.speakerSpacingBefore));
 
       currentSpeaker = segment.speaker;
       shouldRenderSpeakerLabelOnNextParagraph = true;
@@ -650,6 +800,37 @@ export async function exportTranscriptDOCX(templateData: TranscriptTemplateData,
   a.click();
   window.URL.revokeObjectURL(url);
   document.body.removeChild(a);
+}
+
+export function formatTranscriptSegmentsForStyle(
+  segments: TranscriptSegment[] | undefined,
+  styleId: TranscriptStyleId,
+  getSpeakerDisplayName: (speaker: string | undefined) => string
+): string {
+  if (!segments?.length) return '';
+
+  const preset = getTranscriptStylePreset(styleId);
+  const orderedSpeakers = getOrderedSpeakerIds(segments);
+  const groups: Array<{ speaker?: string; text: string }> = [];
+
+  segments.forEach(segment => {
+    const text = normalizeTranscriptSegmentText(segment.text);
+    if (!text) return;
+    const previous = groups[groups.length - 1];
+    if (previous && previous.speaker === segment.speaker) {
+      previous.text = `${previous.text} ${text}`.trim();
+    } else {
+      groups.push({ speaker: segment.speaker, text });
+    }
+  });
+
+  return groups.map(group => {
+    const displayName = getSpeakerDisplayName(group.speaker);
+    const label = getStyledSpeakerLabel(preset, displayName, group.speaker, orderedSpeakers);
+    return preset.speakerPlacement === 'own-line'
+      ? `${label}:\n${group.text}`
+      : `${label}: ${group.text}`;
+  }).join('\n\n');
 }
 
 export function exportTranscriptTXT(templateData: TranscriptTemplateData): void {
