@@ -265,6 +265,7 @@ export default function TranscriptViewerPage() {
   const [uploadingFinishedTranscript, setUploadingFinishedTranscript] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>('pdf');
   const [selectedTranscriptStyle, setSelectedTranscriptStyle] = useState<TranscriptStyleId>(DEFAULT_TRANSCRIPT_STYLE_ID);
+  const [showDownloadOptions, setShowDownloadOptions] = useState(false);
   const [timestampFrequency, setTimestampFrequency] = useState<TimestampFrequency>(60); // 30s, 60s, 5min (300s), or no display timestamps
   const [speakerNames, setSpeakerNames] = useState<Record<string, string>>({});
   const [sidebarSpeakerNameDrafts, setSidebarSpeakerNameDrafts] = useState<Record<string, string>>({});
@@ -1310,10 +1311,9 @@ export default function TranscriptViewerPage() {
   };
 
   const saveAndDownload = async () => {
-    const draftForExport = getDraftTranscriptForExport();
     const saved = await saveEdits();
     if (saved) {
-      exportTranscript(selectedFormat, draftForExport);
+      setShowDownloadOptions(true);
     }
   };
 
@@ -5225,95 +5225,164 @@ export default function TranscriptViewerPage() {
                 Download Transcript
               </Button>
             ) : (
-              <div className="flex">
-                <Button
-                  variant="outline"
-                  onClick={() => exportTranscript(selectedFormat)}
-                  className="border-gray-300 rounded-r-none border-r-0"
-                  size="sm"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Export {getExportFormatLabel(selectedFormat)}
-                </Button>
-                <select
-                  value={selectedFormat}
-                  onChange={(e) => setSelectedFormat(e.target.value as ExportFormat)}
-                  className="border border-gray-300 rounded-l-none rounded-r-md px-2 py-1.5 text-sm bg-white hover:bg-gray-50"
-                >
-                  <option value="pdf">PDF</option>
-                  <option value="docx">DOCX</option>
-                  <option value="docx-speaker-tab">DOCX - Speaker + Tab / Hanging Indent</option>
-                  <option value="docx-speaker-space">DOCX - Speaker + Space</option>
-                  <option value="txt">TXT</option>
-                  <option value="srt">SRT</option>
-                  <option value="vtt">VTT</option>
-                </select>
-              </div>
+              <Button
+                variant="default"
+                onClick={() => setShowDownloadOptions(true)}
+                className="bg-[#003366] hover:bg-[#004080]"
+                size="sm"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download
+              </Button>
             )}
 
           </div>
         </div>
 
-        {!transcription.adminTranscriptURL && !isRetentionDeleted(transcription) && (
-          <Card className="mb-6 border border-gray-200 shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg text-[#003366]">Transcript Style</CardTitle>
-              <p className="text-sm text-gray-600">
-                Choose the page style used for DOCX and PDF exports. TXT uses the closest practical speaker structure.
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                {TRANSCRIPT_STYLE_PRESETS.map(style => {
-                  const selected = selectedTranscriptStyle === style.id;
-                  const firstLabel = style.questionAnswerMode ? 'Q' : 'SPEAKER 1';
-                  const secondLabel = style.questionAnswerMode ? 'A' : 'SPEAKER 2';
-                  const sampleLineHeight = Math.max(1.15, style.lineSpacing / 240);
-                  const sampleGap = Math.max(4, style.paragraphSpacingAfter / 45);
-
-                  return (
-                    <button
-                      key={style.id}
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() => setSelectedTranscriptStyle(style.id)}
-                      className={`min-w-0 rounded-md border p-3 text-left transition-colors ${
-                        selected
-                          ? 'border-[#003366] bg-blue-50 ring-2 ring-[#003366]/20'
-                          : 'border-gray-200 bg-white hover:border-[#b29dd9]'
-                      }`}
-                    >
-                      <div className="mb-2 flex items-start justify-between gap-2">
-                        <div>
-                          <p className="text-sm font-semibold text-[#003366]">{style.label}</p>
-                          <p className="mt-1 text-xs leading-snug text-gray-500">{style.description}</p>
-                        </div>
-                        <span className={`mt-0.5 h-3 w-3 flex-none rounded-full border ${selected ? 'border-[#003366] bg-[#003366]' : 'border-gray-300 bg-white'}`} />
-                      </div>
-
-                      <div className="aspect-[3/4] overflow-hidden rounded border border-gray-200 bg-white px-3 py-3 shadow-inner">
-                        <p className="border-b border-gray-300 pb-1 text-center text-[8px] font-bold underline">TRANSCRIPT</p>
-                        <div className="mt-3 text-[7px] text-gray-800" style={{ lineHeight: sampleLineHeight }}>
-                          {[{ label: firstLabel, text: style.questionAnswerMode ? 'Could you describe what happened next?' : 'This is a sample paragraph of transcript text.' }, { label: secondLabel, text: style.questionAnswerMode ? 'I reviewed the notes and answered the question.' : 'This is a second speaker response for comparison.' }].map((sample, index) => (
-                            <div key={sample.label} style={{ marginBottom: index === 0 ? sampleGap : 0 }}>
-                              {style.speakerPlacement === 'own-line' ? (
-                                <>
-                                  <p className={style.speakerBold ? 'font-bold' : ''}>{sample.label}:</p>
-                                  <p style={{ marginTop: Math.max(2, style.speakerSpacingAfter / 90) }}>{sample.text}</p>
-                                </>
-                              ) : (
-                                <p><span className={style.speakerBold ? 'font-bold' : ''}>{sample.label}:</span> {sample.text}</p>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
+        {showDownloadOptions && !transcription.adminTranscriptURL && !isRetentionDeleted(transcription) && (
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-3 sm:p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="download-transcript-title"
+            onMouseDown={(event) => {
+              if (event.currentTarget === event.target) setShowDownloadOptions(false);
+            }}
+          >
+            <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
+              <div className="flex items-start justify-between gap-4 border-b border-gray-200 px-4 py-4 sm:px-6">
+                <div>
+                  <h2 id="download-transcript-title" className="text-xl font-semibold text-[#003366]">Download Transcript</h2>
+                  <p className="mt-1 text-sm text-gray-600">Choose a transcript style and file format.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowDownloadOptions(false)}
+                  className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                  aria-label="Close download options"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
-            </CardContent>
-          </Card>
+
+              <div className="overflow-y-auto px-4 py-5 sm:px-6">
+                <section aria-labelledby="choose-style-heading">
+                  <h3 id="choose-style-heading" className="text-sm font-semibold text-[#003366]">Choose a style</h3>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                    {TRANSCRIPT_STYLE_PRESETS.map(style => {
+                      const selected = selectedTranscriptStyle === style.id;
+                      const firstLabel = style.questionAnswerMode ? 'Q' : 'SPEAKER 1';
+                      const secondLabel = style.questionAnswerMode ? 'A' : 'SPEAKER 2';
+                      const sampleLineHeight = Math.max(1.15, style.lineSpacing / 240);
+                      const sampleGap = Math.max(4, style.paragraphSpacingAfter / 45);
+
+                      return (
+                        <button
+                          key={style.id}
+                          type="button"
+                          aria-pressed={selected}
+                          onClick={() => setSelectedTranscriptStyle(style.id)}
+                          className={`min-w-0 rounded-md border p-3 text-left transition-colors ${
+                            selected
+                              ? 'border-[#003366] bg-blue-50 ring-2 ring-[#003366]/20'
+                              : 'border-gray-200 bg-white hover:border-[#b29dd9]'
+                          }`}
+                        >
+                          <div className="mb-2 flex min-h-16 items-start justify-between gap-2">
+                            <div>
+                              <p className="text-sm font-semibold text-[#003366]">{style.label}</p>
+                              <p className="mt-1 text-xs leading-snug text-gray-500">{style.description}</p>
+                            </div>
+                            <span className={`mt-0.5 h-3 w-3 flex-none rounded-full border ${selected ? 'border-[#003366] bg-[#003366]' : 'border-gray-300 bg-white'}`} />
+                          </div>
+
+                          <div className="aspect-[3/4] overflow-hidden rounded border border-gray-200 bg-white px-3 py-3 shadow-inner">
+                            <p className="border-b border-gray-300 pb-1 text-center text-[8px] font-bold underline">TRANSCRIPT</p>
+                            <div className="mt-3 text-[7px] text-gray-800" style={{ lineHeight: sampleLineHeight }}>
+                              {[{ label: firstLabel, text: style.questionAnswerMode ? 'Could you describe what happened next?' : 'This is a sample paragraph of transcript text.' }, { label: secondLabel, text: style.questionAnswerMode ? 'I reviewed the notes and answered the question.' : 'This is a second speaker response for comparison.' }].map((sample, index) => (
+                                <div key={sample.label} style={{ marginBottom: index === 0 ? sampleGap : 0 }}>
+                                  {style.speakerPlacement === 'own-line' ? (
+                                    <>
+                                      <p className={style.speakerBold ? 'font-bold' : ''}>{sample.label}:</p>
+                                      <p style={{ marginTop: Math.max(2, style.speakerSpacingAfter / 90) }}>{sample.text}</p>
+                                    </>
+                                  ) : (
+                                    <p><span className={style.speakerBold ? 'font-bold' : ''}>{sample.label}:</span> {sample.text}</p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                <div className="mt-6 grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(260px,0.7fr)]">
+                  <section aria-labelledby="choose-format-heading">
+                    <h3 id="choose-format-heading" className="text-sm font-semibold text-[#003366]">Choose a format</h3>
+                    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5 md:grid-cols-3">
+                      {(['docx', 'pdf', 'txt', 'srt', 'vtt'] as ExportFormat[]).map(format => (
+                        <button
+                          key={format}
+                          type="button"
+                          aria-pressed={selectedFormat === format}
+                          onClick={() => setSelectedFormat(format)}
+                          className={`rounded-md border px-3 py-2 text-sm font-medium ${
+                            selectedFormat === format
+                              ? 'border-[#003366] bg-[#003366] text-white'
+                              : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          {getExportFormatLabel(format)}
+                        </button>
+                      ))}
+                    </div>
+                    {(selectedFormat === 'srt' || selectedFormat === 'vtt') && (
+                      <p className="mt-2 text-xs text-gray-500">Subtitle timing and structure remain unchanged by transcript style.</p>
+                    )}
+                  </section>
+
+                  <section aria-labelledby="download-preview-heading">
+                    <h3 id="download-preview-heading" className="text-sm font-semibold text-[#003366]">Preview</h3>
+                    <div className="mt-3 rounded-md border border-gray-200 bg-gray-50 p-4 text-sm text-gray-800">
+                      <p className="text-center text-xs font-bold underline">TRANSCRIPT</p>
+                      {(() => {
+                        const style = TRANSCRIPT_STYLE_PRESETS.find(item => item.id === selectedTranscriptStyle) || TRANSCRIPT_STYLE_PRESETS[0];
+                        const label = style.questionAnswerMode ? 'Q' : 'SPEAKER 1';
+                        return style.speakerPlacement === 'own-line' ? (
+                          <div className="mt-4">
+                            <p className={style.speakerBold ? 'font-bold' : ''}>{label}:</p>
+                            <p className="mt-2">This is fictitious sample transcript text showing the selected download layout.</p>
+                          </div>
+                        ) : (
+                          <p className="mt-4"><span className={style.speakerBold ? 'font-bold' : ''}>{label}:</span> This is fictitious sample transcript text showing the selected download layout.</p>
+                        );
+                      })()}
+                    </div>
+                  </section>
+                </div>
+              </div>
+
+              <div className="flex flex-col-reverse gap-2 border-t border-gray-200 px-4 py-4 sm:flex-row sm:justify-end sm:px-6">
+                <Button type="button" variant="outline" onClick={() => setShowDownloadOptions(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  className="bg-[#003366] text-white hover:bg-[#004080]"
+                  onClick={async () => {
+                    await exportTranscript(selectedFormat);
+                    setShowDownloadOptions(false);
+                  }}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
@@ -6153,33 +6222,6 @@ export default function TranscriptViewerPage() {
                               </Button>
                             )}
 
-                            {!isEditing && !isRetentionDeleted(transcription) && !transcription.adminTranscriptURL && (
-                              <div className="flex">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  onClick={() => exportTranscript(selectedFormat)}
-                                  className="rounded-r-none border-r-0"
-                                  size="sm"
-                                >
-                                  <Download className="h-4 w-4 mr-2" />
-                                  Export
-                                </Button>
-                                <select
-                                  value={selectedFormat}
-                                  onChange={(e) => setSelectedFormat(e.target.value as ExportFormat)}
-                                  className="rounded-l-none rounded-r-md border border-gray-300 bg-white px-2 py-1.5 text-sm hover:bg-gray-50"
-                                >
-                                  <option value="pdf">PDF</option>
-                                  <option value="docx">DOCX</option>
-                                  <option value="docx-speaker-tab">DOCX - Speaker + Tab / Hanging Indent</option>
-                                  <option value="docx-speaker-space">DOCX - Speaker + Space</option>
-                                  <option value="txt">TXT</option>
-                                  <option value="srt">SRT</option>
-                                  <option value="vtt">VTT</option>
-                                </select>
-                              </div>
-                            )}
                           </div>
                         </div>
 
