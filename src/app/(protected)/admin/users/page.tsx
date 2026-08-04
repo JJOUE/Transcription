@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Search, Filter, MoreHorizontal, Mail, Ban, Coins, XCircle, Star, Package, Clock, TrendingUp, Trash2, AlertTriangle } from 'lucide-react';
+import { Search, Filter, MoreHorizontal, Mail, Ban, Coins, XCircle, Star, Clock, TrendingUp, Trash2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,9 +24,52 @@ import { UserData } from '@/lib/firebase/auth';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { DollarSign } from 'lucide-react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
 import { TranscriptionBalanceAdjustment } from '@/components/admin/TranscriptionBalanceAdjustment';
+
+type MinuteBalances = { ai: number; hybrid: number; human: number; trial: number };
+
+const getMinuteBalances = (client: UserData): MinuteBalances => {
+  const balances: MinuteBalances = {
+    ai: 0,
+    hybrid: 0,
+    human: 0,
+    trial: Math.max(0, Number(client.freeTrialMinutes) || 0),
+  };
+
+  for (const pkg of client.packages || []) {
+    if (pkg.active === false) continue;
+    const remaining = Math.max(0, Number(pkg.minutesRemaining) || 0);
+    if (pkg.type === 'ai') balances.ai += remaining;
+    if (pkg.type === 'hybrid') balances.hybrid += remaining;
+    if (pkg.type === 'human') balances.human += remaining;
+  }
+
+  return balances;
+};
+
+const BalanceSummary = ({ balances, compact = false }: { balances: MinuteBalances; compact?: boolean }) => {
+  const items = [
+    ['AI', balances.ai],
+    ['Hybrid', balances.hybrid],
+    ['Human', balances.human],
+    ['AI trial', balances.trial],
+  ].filter(([, minutes]) => Number(minutes) > 0) as Array<[string, number]>;
+
+  if (items.length === 0) return <span className="text-sm text-gray-400">No minutes available</span>;
+
+  return (
+    <div className={compact ? 'flex flex-wrap gap-x-2 gap-y-1 text-xs' : 'flex flex-wrap gap-2 text-xs'}>
+      {items.map(([label, minutes], index) => (
+        <React.Fragment key={label}>
+          {compact && index > 0 && <span className="text-gray-300" aria-hidden="true">|</span>}
+          <span className={compact ? 'text-gray-700' : 'rounded bg-blue-50 px-2 py-1 text-[#003366]'}>
+            <strong>{label}:</strong> {minutes} min
+          </span>
+        </React.Fragment>
+      ))}
+    </div>
+  );
+};
 
 export default function UserManagementPage() {
   const { user, userData, loading: authLoading } = useAuth();
@@ -37,7 +80,6 @@ export default function UserManagementPage() {
   const [filterRole, setFilterRole] = useState('all');
   const [filterFreeTrial, setFilterFreeTrial] = useState('all');
   const [users, setUsers] = useState<UserData[]>([]);
-  const [userPackages, setUserPackages] = useState<Record<string, { total: number; ai: number; hybrid: number; human: number }>>({});
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [walletAmount, setWalletAmount] = useState('');
   const [adjustmentReason, setAdjustmentReason] = useState('');
@@ -69,38 +111,6 @@ export default function UserManagementPage() {
         const allUsers = await getAllUsers();
         setUsers(allUsers);
         setLoading(false);
-
-        // Load remaining package minutes in parallel (non-blocking)
-        const packagePromises = allUsers.map(async (u) => {
-          const userId = u.id || u.uid;
-          try {
-            const packagesRef = collection(db, 'users', userId, 'packages');
-            const activePackagesQuery = query(packagesRef, where('active', '==', true));
-            const snapshot = await getDocs(activePackagesQuery);
-
-            const counts = { total: 0, ai: 0, hybrid: 0, human: 0 };
-            snapshot.forEach(doc => {
-              const pkg = doc.data();
-              const remaining = Math.max(0, Number(pkg.minutesRemaining) || 0);
-              counts.total += remaining;
-              if (pkg.type === 'ai') counts.ai += remaining;
-              else if (pkg.type === 'hybrid') counts.hybrid += remaining;
-              else if (pkg.type === 'human') counts.human += remaining;
-            });
-
-            return { userId, counts };
-          } catch (pkgError) {
-            console.warn(`Failed to load packages for user ${userId}:`, pkgError);
-            return { userId, counts: { total: 0, ai: 0, hybrid: 0, human: 0 } };
-          }
-        });
-
-        const results = await Promise.all(packagePromises);
-        const packagesData: Record<string, { total: number; ai: number; hybrid: number; human: number }> = {};
-        for (const { userId, counts } of results) {
-          packagesData[userId] = counts;
-        }
-        setUserPackages(packagesData);
       } catch (error) {
         console.error('Error loading users:', error);
         toast({
@@ -304,6 +314,20 @@ export default function UserManagementPage() {
   });
   const hasActiveFilters = searchTerm.trim() !== '' || filterRole !== 'all' || filterFreeTrial !== 'all';
 
+  const handleBalanceSaved = async () => {
+    setBalanceAdjustmentUser(null);
+    try {
+      setUsers(await getAllUsers());
+    } catch (error) {
+      console.error('Error refreshing user balances:', error);
+      toast({
+        title: 'Balance saved',
+        description: 'The adjustment was saved, but the user list could not refresh automatically.',
+        variant: 'destructive',
+      });
+    }
+  };
+
 
   if (authLoading || loading) {
     return (
@@ -317,6 +341,69 @@ export default function UserManagementPage() {
     return null;
   }
 
+  const renderActions = (client: UserData) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" aria-label={`Actions for ${client.name || client.email}`}>
+          <MoreHorizontal className="h-4 w-4 mr-1" />
+          Actions
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => setBalanceAdjustmentUser(client)}>
+          <Coins className="mr-2 h-4 w-4" />
+          Adjust Transcription Balance
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => {
+          setSelectedUser(client);
+          setWalletAmount((client.walletBalance || 0).toFixed(2));
+          setAdjustmentReason('');
+        }}>
+          <DollarSign className="mr-2 h-4 w-4" />
+          Edit Legacy Account Credit
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => {
+          setFreeTrialModalUser(client);
+          setFreeTrialMinutes((client.freeTrialMinutes || 0).toString());
+          setFreeTrialReason('');
+        }}>
+          <Star className="mr-2 h-4 w-4" />
+          Manage Free Trial
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => router.push(`/admin/users/${client.id || client.uid}/activity`)}>
+          <Clock className="mr-2 h-4 w-4" />
+          View Activity
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => toast({
+          title: 'Feature not available',
+          description: 'Email functionality will be available in a future update.',
+        })}>
+          <Mail className="mr-2 h-4 w-4" />
+          Send Email
+        </DropdownMenuItem>
+        <DropdownMenuItem className="text-red-600" onClick={() => toast({
+          title: 'Feature not available',
+          description: 'User suspension will be available in a future update.',
+        })}>
+          <Ban className="mr-2 h-4 w-4" />
+          Suspend User
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="text-red-600"
+          onClick={() => {
+            setDeleteModalUser(client);
+            setDeleteConfirmText('');
+          }}
+          disabled={client.role === 'admin'}
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          Delete User
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
@@ -328,7 +415,7 @@ export default function UserManagementPage() {
               User Management
             </h1>
             <p className="text-gray-600">
-              Manage user accounts, credits, and permissions.
+              Manage user accounts, transcription balances, and permissions.
             </p>
           </div>
         </div>
@@ -383,15 +470,30 @@ export default function UserManagementPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto -mx-4 sm:mx-0">
-              <table className="w-full min-w-[800px]">
+            <div className="space-y-3 md:hidden">
+              {filteredUsers.length === 0 && <p className="py-8 text-center text-gray-500">No users found</p>}
+              {filteredUsers.map(client => {
+                const clientId = client.id || client.uid;
+                return (
+                  <div key={clientId} className="rounded-md border border-gray-200 p-4">
+                    <p className="font-medium text-[#003366]">{client.name || 'Unnamed User'}</p>
+                    <p className="text-sm text-gray-600 break-all">{client.email}</p>
+                    <div className="mt-2">
+                      <BalanceSummary balances={getMinuteBalances(client)} compact />
+                    </div>
+                    <div className="mt-3">{renderActions(client)}</div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full min-w-[900px]">
                 <thead>
                   <tr className="border-b border-gray-200">
                     <th className="text-left py-3 px-4 font-medium text-gray-600">User</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">Minutes available</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600">Role</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">Free Trial</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600 hidden md:table-cell">Packages</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">Legacy account credit</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600 hidden lg:table-cell">Total Spent</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600 hidden lg:table-cell">Jobs</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600 hidden xl:table-cell">Joined</th>
@@ -401,7 +503,7 @@ export default function UserManagementPage() {
                 <tbody>
                   {filteredUsers.length === 0 && (
                     <tr>
-                      <td colSpan={9} className="py-8 text-center text-gray-500">
+                      <td colSpan={7} className="py-8 text-center text-gray-500">
                         No users found
                       </td>
                     </tr>
@@ -409,12 +511,6 @@ export default function UserManagementPage() {
 
                   {filteredUsers.map((user) => {
                     const userId = user.id || user.uid;
-                    const freeTrialRemaining = user.freeTrialMinutes || 0;
-                    const freeTrialUsed = user.freeTrialMinutesUsed || 0;
-                    const freeTrialTotal = user.freeTrialMinutesTotal || 60;
-                    const freeTrialPercent = (freeTrialUsed / freeTrialTotal) * 100;
-                    const packages = userPackages[userId] || { total: 0, ai: 0, hybrid: 0, human: 0 };
-
                     return (
                       <tr key={userId} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-4 px-4">
@@ -423,6 +519,7 @@ export default function UserManagementPage() {
                             <p className="text-sm text-gray-600 truncate max-w-[200px]" title={user.email}>{user.email}</p>
                           </div>
                         </td>
+                        <td className="py-4 px-4"><BalanceSummary balances={getMinuteBalances(user)} /></td>
                         <td className="py-4 px-4">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${
                             user.role === 'admin'
@@ -431,66 +528,6 @@ export default function UserManagementPage() {
                           }`}>
                             {user.role === 'admin' ? 'Admin' : 'User'}
                           </span>
-                        </td>
-                        <td className="py-4 px-4">
-                          {user.freeTrialActive ? (
-                            <div className="min-w-[110px]">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 whitespace-nowrap">
-                                ✓ Active
-                              </span>
-                              <div className="flex items-center gap-1 mt-1">
-                                <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                  <div
-                                    className="h-full bg-green-500 transition-all"
-                                    style={{ width: `${Math.min(100, freeTrialPercent)}%` }}
-                                  />
-                                </div>
-                              </div>
-                              <div className="text-xs text-gray-600 mt-1">
-                                {freeTrialRemaining}/{freeTrialTotal} min
-                              </div>
-                            </div>
-                          ) : freeTrialUsed > 0 ? (
-                            <div className="min-w-[110px]">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 whitespace-nowrap">
-                                Used
-                              </span>
-                              <div className="text-xs text-gray-500 mt-1">
-                                {freeTrialUsed}/{freeTrialTotal} min
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-gray-400 text-sm">—</span>
-                          )}
-                        </td>
-                        <td className="py-4 px-4 hidden md:table-cell">
-                          {packages.total > 0 ? (
-                            <div className="min-w-[100px]">
-                              <div className="flex items-center gap-1 mb-1">
-                                <Package className="h-3 w-3 text-[#003366]" />
-                                <span className="font-medium text-[#003366]">{packages.total} min</span>
-                              </div>
-                              <div className="flex gap-1 text-xs">
-                                {packages.ai > 0 && (
-                                  <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">AI: {packages.ai} min</span>
-                                )}
-                                {packages.hybrid > 0 && (
-                                  <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">H: {packages.hybrid} min</span>
-                                )}
-                                {packages.human > 0 && (
-                                  <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded">Hu: {packages.human} min</span>
-                                )}
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-gray-400 text-sm">—</span>
-                          )}
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-1 text-[#003366] font-medium">
-                            <DollarSign className="h-3 w-3" />
-                            <span>{(user.walletBalance || 0).toFixed(2)}</span>
-                          </div>
                         </td>
                         <td className="py-4 px-4 hidden lg:table-cell">
                           <div className="flex items-center gap-1 text-gray-700 font-medium">
@@ -506,76 +543,7 @@ export default function UserManagementPage() {
                             {user.createdAt?.toDate?.()?.toLocaleDateString() || '—'}
                           </span>
                         </td>
-                      <td className="py-4 px-4">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setBalanceAdjustmentUser(user)}>
-                              <Coins className="mr-2 h-4 w-4" />
-                              Adjust Transcription Balance
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => {
-                              setSelectedUser(user);
-                              const currentBalance = user.walletBalance || 0;
-                              setWalletAmount(currentBalance.toFixed(2));
-                              setAdjustmentReason('');
-                            }}>
-                              <DollarSign className="mr-2 h-4 w-4" />
-                              Edit Legacy Account Credit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => {
-                              setFreeTrialModalUser(user);
-                              const currentFreeTrialMinutes = user.freeTrialMinutes || 0;
-                              setFreeTrialMinutes(currentFreeTrialMinutes.toString());
-                              setFreeTrialReason('');
-                            }}>
-                              <Star className="mr-2 h-4 w-4" />
-                              Manage Free Trial
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => {
-                              const userId = user.id || user.uid;
-                              router.push(`/admin/users/${userId}/activity`);
-                            }}>
-                              <Clock className="mr-2 h-4 w-4" />
-                              View Activity
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => {
-                              toast({
-                                title: "Feature not available",
-                                description: "Email functionality will be available in a future update.",
-                              });
-                            }}>
-                              <Mail className="mr-2 h-4 w-4" />
-                              Send Email
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600" onClick={() => {
-                              toast({
-                                title: "Feature not available",
-                                description: "User suspension will be available in a future update.",
-                              });
-                            }}>
-                              <Ban className="mr-2 h-4 w-4" />
-                              Suspend User
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-red-600"
-                              onClick={() => {
-                                setDeleteModalUser(user);
-                                setDeleteConfirmText('');
-                              }}
-                              disabled={user.role === 'admin'}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete User
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
+                      <td className="py-4 px-4">{renderActions(user)}</td>
                     </tr>
                     );
                   })}
@@ -590,7 +558,7 @@ export default function UserManagementPage() {
         <TranscriptionBalanceAdjustment
           client={balanceAdjustmentUser}
           onClose={() => setBalanceAdjustmentUser(null)}
-          onSaved={() => window.location.reload()}
+          onSaved={handleBalanceSaved}
         />
       )}
 
