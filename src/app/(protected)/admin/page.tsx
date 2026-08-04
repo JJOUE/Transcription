@@ -9,6 +9,7 @@ import { Footer } from '@/components/layout/Footer';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { WorkQueueCard } from '@/components/admin/WorkQueueCard';
 import { ManualCompletedDelivery } from '@/components/admin/ManualCompletedDelivery';
+import { ManualFileDeletion } from '@/components/admin/ManualFileDeletion';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCredits } from '@/contexts/CreditContext';
 import { usePackages } from '@/contexts/PackageContext';
@@ -781,6 +782,7 @@ export default function AdminPage() {
         )}
 
         <ManualCompletedDelivery />
+        <ManualFileDeletion />
 
         {/* Your Work - Pending Jobs */}
         <Card className="border-2 border-[#b29dd9] shadow-md">

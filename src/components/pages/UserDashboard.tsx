@@ -135,12 +135,13 @@ export function UserDashboard() {
 
   // Separate transcription and office studio jobs
   const transcriptionJobs = recentJobs.filter(
-    job => job.type !== 'office' ||
+    job => !isRetentionDeleted(job) && (job.type !== 'office' ||
       (job.mode === 'human' && Boolean(job.officeCompletedDocumentPath))
+    )
   );
 
   const officeJobs = recentJobs.filter(
-    job => job.type === 'office' &&
+    job => !isRetentionDeleted(job) && job.type === 'office' &&
       !(job.mode === 'human' && Boolean(job.officeCompletedDocumentPath))
   );
 

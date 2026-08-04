@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import Link from 'next/link';
-import { Archive, Download, CheckCircle, XCircle, Edit, Eye, FilePenLine, Music, Upload, RotateCcw, Zap } from 'lucide-react';
+import { Archive, Download, CheckCircle, XCircle, Edit, Eye, FilePenLine, Music, Upload, RotateCcw, Zap, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -792,6 +792,14 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
 
         {/* Action Buttons Row */}
         <div className="flex flex-wrap gap-2">
+          {!retentionDeleted && job.id && (
+            <Button asChild size="sm" variant="outline" className="border-red-300 text-red-700 hover:bg-red-50">
+              <Link href={`/admin?deleteJob=${encodeURIComponent(job.id)}#manual-file-deletion`}>
+                <Trash2 className="h-4 w-4 mr-1" />
+                {deletionRequested ? 'Complete Deletion Request' : 'Delete Files'}
+              </Link>
+            </Button>
+          )}
           {/* Download Audio */}
           {retentionDeleted && (job.downloadURL || job.templateURL || job.voiceInstructionsURL) && (
             <span className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md">

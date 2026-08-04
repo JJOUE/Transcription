@@ -14,7 +14,7 @@ import { CreditDisplay } from '@/components/ui/CreditDisplay';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
-import { getTranscriptionsByUser } from '@/lib/firebase/transcriptions';
+import { getTranscriptionsByUser, requestFileDeletion } from '@/lib/firebase/transcriptions';
 import { TranscriptionJob, updateTranscriptionStatus } from '@/lib/firebase/transcriptions';
 import { Timestamp } from 'firebase/firestore';
 import { formatDuration } from '@/lib/utils';
@@ -181,19 +181,16 @@ export default function TranscriptionsPage() {
 
     setIsDeleting(true);
     try {
-      const token = await user.getIdToken();
-      const response = await fetch(`/api/transcriptions/${deleteTarget.id}/delete`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
+      await requestFileDeletion(deleteTarget.id, user.uid);
+      setTranscriptions(prev => prev.map(item => item.id === deleteTarget.id ? {
+        ...item,
+        deletionRequested: true,
+        deletionRequestStatus: 'requested',
+      } : item));
+      toast({
+        title: 'Deletion requested',
+        description: 'Talk to Text Canada will review and process your file deletion request.',
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to delete transcription');
-      }
-
-      setTranscriptions(prev => prev.filter(t => t.id !== deleteTarget.id));
-      toast({ title: 'Transcription deleted', description: 'The transcription and its files have been permanently deleted.' });
     } catch (error) {
       console.error('Delete error:', error);
       toast({ title: 'Delete failed', description: error instanceof Error ? error.message : 'Please try again.', variant: 'destructive' });
@@ -438,7 +435,8 @@ export default function TranscriptionsPage() {
                       variant="ghost"
                       onClick={() => setDeleteTarget(transcription)}
                       className="text-gray-400 hover:text-red-600 hover:bg-red-50"
-                      title="Delete transcription"
+                      title={transcription.deletionRequested ? 'File deletion requested' : 'Request file deletion'}
+                      disabled={transcription.deletionRequested}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -549,7 +547,7 @@ export default function TranscriptionsPage() {
                   <AlertTriangle className="h-5 w-5 text-red-600" />
                 </div>
                 <h3 className="text-lg font-semibold text-red-800">
-                  Delete Transcription
+                  Request File Deletion
                 </h3>
               </div>
 
@@ -568,7 +566,7 @@ export default function TranscriptionsPage() {
               </div>
 
               <p className="text-sm text-gray-700 mb-6">
-                This will permanently delete the transcription, its transcript, and all uploaded files. This action cannot be undone.
+                Talk to Text Canada will review this request and process it according to the file retention policy. Your files are not deleted immediately.
               </p>
 
               <div className="flex gap-3">
@@ -585,7 +583,7 @@ export default function TranscriptionsPage() {
                   disabled={isDeleting}
                   className="flex-1 bg-red-600 hover:bg-red-700 text-white"
                 >
-                  {isDeleting ? 'Deleting...' : 'Delete'}
+                  {isDeleting ? 'Sending Request...' : 'Request Deletion'}
                 </Button>
               </div>
             </div>
