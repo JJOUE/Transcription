@@ -1433,6 +1433,8 @@ export default function TranscriptViewerPage() {
 
       setTranscription(prev => prev ? {
         ...prev,
+        status: 'complete',
+        completedAt: Timestamp.now(),
         finishedTranscriptPath: result.path,
         finishedTranscriptFilename: result.filename,
         finishedTranscriptUploadedAt: Timestamp.now(),

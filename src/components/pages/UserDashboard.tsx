@@ -142,9 +142,13 @@ export function UserDashboard() {
     job => job.type === 'office'
   );
 
+  const isCompletedTranscriptionJob = (job: TranscriptionJob) =>
+    job.status === 'complete' ||
+    (Boolean(job.finishedTranscriptPath) && (job.mode === 'human' || job.mode === 'hybrid'));
+
   const stats = {
     totalJobs: allJobs.length,
-    completedJobs: allJobs.filter(j => j.status === 'complete').length,
+    completedJobs: allJobs.filter(j => j.type === 'office' ? j.status === 'complete' : isCompletedTranscriptionJob(j)).length,
     spentThisMonth: allJobs.reduce((s, j) => s + ((j.creditsUsed || 0) / 100), 0), // Convert credits to CAD (100 credits = $1)
     avgTurnaroundTime: calculateAvgTurnaround(allJobs)
   };
@@ -504,7 +508,7 @@ export function UserDashboard() {
 
                   {!jobsLoading &&
                     transcriptionJobs
-                    .filter((job) => job.status !== 'complete')
+                    .filter((job) => !isCompletedTranscriptionJob(job))
                     .map((job) => (
                       
                     <div
@@ -558,7 +562,7 @@ export function UserDashboard() {
 
                       {!jobsLoading &&
                         transcriptionJobs
-                          .filter((job) => job.status === 'complete')
+                          .filter((job) => isCompletedTranscriptionJob(job))
                           .map((job) => (
                             
                           <div
@@ -571,7 +575,7 @@ export function UserDashboard() {
                                  {job.originalFilename}
                                 </h3>
                                 
-                                <StatusBadge status={job.status} />
+                                <StatusBadge status={isCompletedTranscriptionJob(job) ? 'complete' : job.status} />
                               </div>
                                  
                               <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
@@ -604,15 +608,27 @@ export function UserDashboard() {
                             </div>
                                 
                             <div className="flex items-center space-x-2">
-                              <Button
-                                 size="sm"
-                                 asChild
-                                 className="bg-white border border-[#003366] text-[#003366] hover:bg-[#003366] hover:text-white shadow-sm"
-                              >
-                                <Link href={`/transcript/${job.id}`}>
-                                  Open Workspace
-                                </Link>
-                              </Button>
+                              {job.finishedTranscriptPath && !isRetentionDeleted(job) ? (
+                                <Button
+                                  size="sm"
+                                  asChild
+                                  className="bg-[#003366] text-white hover:bg-[#004080] shadow-sm"
+                                >
+                                  <a href={`/api/transcripts/${job.id}/finished-transcript`}>
+                                    Download Finished Transcript
+                                  </a>
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  asChild
+                                  className="bg-white border border-[#003366] text-[#003366] hover:bg-[#003366] hover:text-white shadow-sm"
+                                >
+                                  <Link href={`/transcript/${job.id}`}>
+                                    Open Workspace
+                                  </Link>
+                                </Button>
+                              )}
                             </div>
                           </div>
                   ))}
