@@ -499,7 +499,11 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
       const downloadURL = await getDownloadURL(storageRef);
 
       // Update Office document in Firestore
-      await uploadOfficeCompletedDocument(job.id, storagePath, downloadURL, file.name);
+      await uploadOfficeCompletedDocument(job.id, storagePath, downloadURL, file.name, {
+        contentType: file.type,
+        size: file.size,
+        uploadedBy: user?.uid,
+      });
 
       toast({
         title: "Document Uploaded",

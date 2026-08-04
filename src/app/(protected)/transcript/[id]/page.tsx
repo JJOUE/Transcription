@@ -4600,6 +4600,75 @@ export default function TranscriptViewerPage() {
     );
   }
 
+  const deliveredHumanFilePath = transcription.finishedTranscriptPath || transcription.officeCompletedDocumentPath;
+  const deliveredHumanFilename = transcription.finishedTranscriptPath
+    ? transcription.finishedTranscriptFilename
+    : transcription.officeCompletedFilename;
+  const deliveredHumanDownloadHref = transcription.finishedTranscriptPath
+    ? `/api/transcripts/${transcription.id}/finished-transcript`
+    : transcription.officeCompletedDocumentPath
+    ? `/api/document-workspace/${transcription.id}/completed-document`
+    : null;
+  const shouldShowFinishedHumanDelivery =
+    transcription.mode === 'human' &&
+    Boolean(deliveredHumanFilePath && deliveredHumanDownloadHref);
+
+  if (shouldShowFinishedHumanDelivery) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <Header />
+        <main className="container mx-auto max-w-3xl px-4 py-8 flex-1">
+          <Button
+            variant="ghost"
+            onClick={() => router.push('/dashboard')}
+            className="mb-4 hover:bg-gray-100"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Dashboard
+          </Button>
+
+          <Card className="border border-green-200 shadow-sm">
+            <CardHeader>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <CardTitle className="text-2xl text-[#003366]">Finished transcript ready</CardTitle>
+                  <p className="mt-2 text-gray-600">Your completed transcript is ready to download.</p>
+                </div>
+                <StatusBadge status="complete" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="rounded-md border border-gray-200 bg-white p-4">
+                <p className="font-medium text-gray-900">
+                  {deliveredHumanFilename || transcription.originalFilename || 'Finished transcript'}
+                </p>
+                {formatRetentionLabel(transcription) && (
+                  <p className={isRetentionDeleted(transcription) ? 'mt-2 text-sm text-red-600' : 'mt-2 text-sm text-gray-600'}>
+                    {formatRetentionLabel(transcription)}
+                  </p>
+                )}
+              </div>
+
+              {isRetentionDeleted(transcription) ? (
+                <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  This completed file has expired or been deleted.
+                </p>
+              ) : (
+                <Button asChild className="bg-[#003366] text-white hover:bg-[#004080]">
+                  <a href={deliveredHumanDownloadHref || undefined}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Finished Transcript
+                  </a>
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   const workspaceMode = isEditingSpeakerSegments
     ? 'Editing Speakers'
     : isEditing
@@ -5030,7 +5099,7 @@ export default function TranscriptViewerPage() {
           </div>
         </div>
 
-        {(transcription.finishedTranscriptPath || userData?.role === 'admin') && (
+        {(transcription.finishedTranscriptPath || (userData?.role === 'admin' && transcription.type !== 'office')) && (
           <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>

@@ -135,20 +135,26 @@ export function UserDashboard() {
 
   // Separate transcription and office studio jobs
   const transcriptionJobs = recentJobs.filter(
-    job => job.type !== 'office'
+    job => job.type !== 'office' ||
+      (job.mode === 'human' && Boolean(job.officeCompletedDocumentPath))
   );
 
   const officeJobs = recentJobs.filter(
-    job => job.type === 'office'
+    job => job.type === 'office' &&
+      !(job.mode === 'human' && Boolean(job.officeCompletedDocumentPath))
   );
 
   const isCompletedTranscriptionJob = (job: TranscriptionJob) =>
     job.status === 'complete' ||
-    (Boolean(job.finishedTranscriptPath) && (job.mode === 'human' || job.mode === 'hybrid'));
+    (Boolean(job.finishedTranscriptPath || job.officeCompletedDocumentPath) &&
+      (job.mode === 'human' || job.mode === 'hybrid'));
+
+  const isCompletedOfficeJob = (job: TranscriptionJob) =>
+    job.status === 'complete' || Boolean(job.officeCompletedDocumentPath || job.officeCompletedDocumentURL);
 
   const stats = {
     totalJobs: allJobs.length,
-    completedJobs: allJobs.filter(j => j.type === 'office' ? j.status === 'complete' : isCompletedTranscriptionJob(j)).length,
+    completedJobs: allJobs.filter(j => j.type === 'office' ? isCompletedOfficeJob(j) : isCompletedTranscriptionJob(j)).length,
     spentThisMonth: allJobs.reduce((s, j) => s + ((j.creditsUsed || 0) / 100), 0), // Convert credits to CAD (100 credits = $1)
     avgTurnaroundTime: calculateAvgTurnaround(allJobs)
   };
@@ -594,7 +600,7 @@ export function UserDashboard() {
                                 <span className="text-[#003366] font-medium">
                                   CA${((job.creditsUsed || 0) / 100).toFixed(2)}
                                 </span>
-                                {job.finishedTranscriptPath && !isRetentionDeleted(job) && (
+                                {(job.finishedTranscriptPath || job.officeCompletedDocumentPath) && !isRetentionDeleted(job) && (
                                   <span className="font-semibold text-green-700">
                                     Finished transcript ready
                                   </span>
@@ -608,13 +614,15 @@ export function UserDashboard() {
                             </div>
                                 
                             <div className="flex items-center space-x-2">
-                              {job.finishedTranscriptPath && !isRetentionDeleted(job) ? (
+                              {(job.finishedTranscriptPath || job.officeCompletedDocumentPath) && !isRetentionDeleted(job) ? (
                                 <Button
                                   size="sm"
                                   asChild
                                   className="bg-[#003366] text-white hover:bg-[#004080] shadow-sm"
                                 >
-                                  <a href={`/api/transcripts/${job.id}/finished-transcript`}>
+                                  <a href={job.officeCompletedDocumentPath
+                                    ? `/api/document-workspace/${job.id}/completed-document`
+                                    : `/api/transcripts/${job.id}/finished-transcript`}>
                                     Download Finished Transcript
                                   </a>
                                 </Button>
@@ -659,10 +667,10 @@ export function UserDashboard() {
                             <h3 className="text-base font-semibold text-[#003366] truncate">
                               {job.originalFilename}
                             </h3>
-                            <StatusBadge status={job.status} />
-                            {job.status === 'complete' && (job.officeCompletedDocumentPath || job.officeCompletedDocumentURL) && !isRetentionDeleted(job) && (
+                            <StatusBadge status={isCompletedOfficeJob(job) ? 'complete' : job.status} />
+                            {isCompletedOfficeJob(job) && (job.officeCompletedDocumentPath || job.officeCompletedDocumentURL) && !isRetentionDeleted(job) && (
                               <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-semibold text-green-700">
-                                Completed work ready
+                                {job.mode === 'human' ? 'Finished transcript ready' : 'Completed work ready'}
                               </span>
                             )}
                           </div>
@@ -712,7 +720,7 @@ export function UserDashboard() {
                                   rel: 'noopener noreferrer',
                                 } : {})}
                               >
-                                📥 Download
+                                {job.mode === 'human' ? 'Download Finished Transcript' : 'Download Completed Work'}
                               </a>
                             </Button>
                           )}

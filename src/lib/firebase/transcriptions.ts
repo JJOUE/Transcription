@@ -134,6 +134,10 @@ export interface TranscriptionJob {
   officeCompletedDocumentURL?: string; // Download URL for completed document
   officeCompletedDocumentPath?: string; // Storage path for completed document
   officeCompletedFilename?: string; // Filename of completed document
+  officeCompletedDocumentContentType?: string;
+  officeCompletedDocumentSize?: number;
+  officeCompletedDocumentUploadedAt?: Timestamp;
+  officeCompletedDocumentUploadedBy?: string;
   officeReviewed?: boolean; // Whether Office project has been reviewed
   officeTemplateCategory?: string; // Legacy template/reference category
   officeTemplateName?: string; // Legacy template/reference name
@@ -454,14 +458,25 @@ export const uploadOfficeCompletedDocument = async (
   id: string,
   documentPath: string,
   documentURL: string,
-  filename: string
+  filename: string,
+  metadata?: {
+    contentType?: string;
+    size?: number;
+    uploadedBy?: string;
+  }
 ): Promise<void> => {
   const docRef = doc(db, TRANSCRIPTIONS_COLLECTION, id);
   await updateDoc(docRef, {
     officeCompletedDocumentPath: documentPath,
     officeCompletedDocumentURL: documentURL,
     officeCompletedFilename: filename,
+    officeCompletedDocumentContentType: metadata?.contentType || 'application/octet-stream',
+    officeCompletedDocumentSize: metadata?.size || 0,
+    officeCompletedDocumentUploadedAt: Timestamp.now(),
+    officeCompletedDocumentUploadedBy: metadata?.uploadedBy || '',
     officeStatus: 'completed' as OfficeStatus,
+    status: 'complete' as TranscriptionStatus,
+    completedAt: Timestamp.now(),
     updatedAt: Timestamp.now()
   });
 };
