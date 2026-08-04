@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb, adminStorage } from '@/lib/firebase/admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
 const MAX_COMPLETED_DOCUMENT_SIZE = 50 * 1024 * 1024;
 const ALLOWED_COMPLETED_DOCUMENT_TYPES = new Map([
@@ -16,6 +16,11 @@ const sanitizeFilename = (filename: string) => {
     .trim();
 
   return cleaned || 'completed-document';
+};
+
+const normalizeDeliveryLabel = (value: FormDataEntryValue | null) => {
+  const label = typeof value === 'string' ? value.trim() : '';
+  return label.slice(0, 80) || 'Completed Document';
 };
 
 export async function GET(
@@ -66,14 +71,24 @@ export async function GET(
       }
     }
 
-    if (job.filesDeletedAt || job.deletionStatus === 'deleted') {
+    if (job.filesDeletedAt || job.deletionStatus === 'deleted' || job.deletionRequestStatus === 'processed' || job.deletionRequestStatus === 'completed') {
       return NextResponse.json(
         { error: 'Files have expired or been deleted' },
         { status: 410 }
       );
     }
 
-    const documentPath = job.officeCompletedDocumentPath;
+    const requestedFileId = request.nextUrl.searchParams.get('fileId');
+    const completedFiles = Array.isArray(job.completedFiles) ? job.completedFiles : [];
+    const requestedVersion = requestedFileId
+      ? completedFiles.find((entry: { id?: unknown }) => entry?.id === requestedFileId)
+      : null;
+
+    if (requestedFileId && !requestedVersion) {
+      return NextResponse.json({ error: 'Completed document version not found' }, { status: 404 });
+    }
+
+    const documentPath = requestedVersion?.path || job.officeCompletedDocumentPath;
 
     if (!documentPath || typeof documentPath !== 'string') {
       return NextResponse.json(
@@ -109,7 +124,7 @@ export async function GET(
 
     const [contents] = await file.download();
     const [metadata] = await file.getMetadata();
-    const filename = job.officeCompletedFilename || metadata.name?.split('/').pop() || 'completed-document';
+    const filename = requestedVersion?.filename || job.officeCompletedFilename || metadata.name?.split('/').pop() || 'completed-document';
     const contentType = metadata.contentType || 'application/octet-stream';
 
     return new NextResponse(contents, {
@@ -175,7 +190,7 @@ export async function POST(
       return NextResponse.json({ ok: false, error: 'The project has no client user ID.' }, { status: 400 });
     }
 
-    if (job.filesDeletedAt || job.deletionStatus === 'deleted') {
+    if (job.filesDeletedAt || job.deletionStatus === 'deleted' || job.deletionRequestStatus === 'processed' || job.deletionRequestStatus === 'completed') {
       return NextResponse.json(
         { ok: false, error: 'Files for this project have already been deleted.' },
         { status: 410 }
@@ -184,6 +199,7 @@ export async function POST(
 
     const formData = await request.formData();
     const uploadedFile = formData.get('file');
+    const label = normalizeDeliveryLabel(formData.get('label'));
 
     if (!(uploadedFile instanceof File) || uploadedFile.size === 0) {
       return NextResponse.json({ ok: false, error: 'Select a completed document to upload.' }, { status: 400 });
@@ -205,7 +221,9 @@ export async function POST(
     }
 
     const contentType = expectedContentType;
-    const documentPath = `transcriptions/${job.userId}/${id}/completed-document/${filename}`;
+    const uploadTimestamp = Date.now();
+    const fileId = `document-${uploadTimestamp}`;
+    const documentPath = `transcriptions/${job.userId}/${id}/completed-document/${uploadTimestamp}_${filename}`;
     const buffer = Buffer.from(await uploadedFile.arrayBuffer());
 
     await adminStorage.bucket().file(documentPath).save(buffer, {
@@ -215,6 +233,39 @@ export async function POST(
         cacheControl: 'private, no-store',
       },
     });
+
+    const existingVersions = Array.isArray(job.completedFiles) ? job.completedFiles : [];
+    const hasLegacyVersion = existingVersions.some((entry: { path?: unknown }) => entry?.path === job.officeCompletedDocumentPath);
+    const legacyVersion = job.officeCompletedDocumentPath && !hasLegacyVersion
+      ? [{
+          id: 'legacy-office-completed-file',
+          label: 'Completed Document',
+          filename: job.officeCompletedFilename || 'Completed document',
+          path: job.officeCompletedDocumentPath,
+          contentType: job.officeCompletedDocumentContentType || 'application/octet-stream',
+          size: job.officeCompletedDocumentSize || 0,
+          uploadedAt: job.officeCompletedDocumentUploadedAt || job.completedAt || Timestamp.now(),
+          uploadedBy: job.officeCompletedDocumentUploadedBy || '',
+          versionType: 'document',
+          isLatest: false,
+        }]
+      : [];
+    const completedFiles = [
+      ...existingVersions.map((entry: Record<string, unknown>) => ({ ...entry, isLatest: false })),
+      ...legacyVersion,
+      {
+        id: fileId,
+        label,
+        filename,
+        path: documentPath,
+        contentType,
+        size: uploadedFile.size,
+        uploadedAt: Timestamp.now(),
+        uploadedBy: decodedToken.uid,
+        versionType: 'document',
+        isLatest: true,
+      },
+    ];
 
     await jobRef.update({
       status: 'complete',
@@ -227,6 +278,7 @@ export async function POST(
       officeCompletedDocumentSize: uploadedFile.size,
       officeCompletedDocumentUploadedAt: FieldValue.serverTimestamp(),
       officeCompletedDocumentUploadedBy: decodedToken.uid,
+      completedFiles,
     });
 
     return NextResponse.json({
@@ -234,6 +286,8 @@ export async function POST(
       jobId: id,
       filename,
       documentPath,
+      fileId,
+      label,
     });
   } catch (error) {
     console.error('[Manual Document Delivery] Upload failed:', error);

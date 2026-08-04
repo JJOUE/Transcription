@@ -1429,6 +1429,7 @@ export default function TranscriptViewerPage() {
       setUploadingFinishedTranscript(true);
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('label', transcription.finishedTranscriptPath ? 'Revised Transcript' : 'Completed Transcript');
 
       const response = await fetch(`/api/transcripts/${transcription.id}/finished-transcript`, {
         method: 'POST',
@@ -4616,11 +4617,47 @@ export default function TranscriptViewerPage() {
     );
   }
 
-  const deliveredHumanFilePath = transcription.finishedTranscriptPath || transcription.officeCompletedDocumentPath;
-  const deliveredHumanFilename = transcription.finishedTranscriptPath
+  if (isRetentionDeleted(transcription)) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <Header />
+        <main className="container mx-auto max-w-3xl px-4 py-8 flex-1">
+          <Button
+            variant="ghost"
+            onClick={() => router.push('/dashboard')}
+            className="mb-4 hover:bg-gray-100"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Dashboard
+          </Button>
+          <Card className="border border-red-200 shadow-sm">
+            <CardContent className="p-8 text-center">
+              <Trash2 className="mx-auto mb-4 h-12 w-12 text-red-500" />
+              <h1 className="text-2xl font-semibold text-[#003366]">Files deleted</h1>
+              <p className="mt-2 text-gray-600">Files for this project have been deleted.</p>
+            </CardContent>
+          </Card>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  const deliveredVersionType = transcription.type === 'office' ? 'document' : 'transcript';
+  const deliveredFileVersions = (transcription.completedFiles || []).filter(file => file.versionType === deliveredVersionType);
+  const latestDeliveredFile = deliveredFileVersions.find(file => file.isLatest) || deliveredFileVersions.at(-1);
+  const previousDeliveredFiles = latestDeliveredFile
+    ? deliveredFileVersions.filter(file => file.id !== latestDeliveredFile.id)
+    : [];
+  const deliveredHumanFilePath = latestDeliveredFile?.path || transcription.finishedTranscriptPath || transcription.officeCompletedDocumentPath;
+  const deliveredHumanFilename = latestDeliveredFile?.filename || (transcription.finishedTranscriptPath
     ? transcription.finishedTranscriptFilename
-    : transcription.officeCompletedFilename;
-  const deliveredHumanDownloadHref = transcription.finishedTranscriptPath
+    : transcription.officeCompletedFilename);
+  const deliveredHumanDownloadHref = latestDeliveredFile
+    ? transcription.type === 'office'
+      ? `/api/document-workspace/${transcription.id}/completed-document?fileId=${encodeURIComponent(latestDeliveredFile.id)}`
+      : `/api/transcripts/${transcription.id}/finished-transcript?fileId=${encodeURIComponent(latestDeliveredFile.id)}`
+    : transcription.finishedTranscriptPath
     ? `/api/transcripts/${transcription.id}/finished-transcript`
     : transcription.officeCompletedDocumentPath
     ? `/api/document-workspace/${transcription.id}/completed-document`
@@ -4655,9 +4692,14 @@ export default function TranscriptViewerPage() {
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="rounded-md border border-gray-200 bg-white p-4">
-                <p className="font-medium text-gray-900">
-                  {deliveredHumanFilename || transcription.originalFilename || 'Finished transcript'}
-                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-medium text-gray-900">
+                    {latestDeliveredFile?.label || 'Completed Transcript'}: {deliveredHumanFilename || transcription.originalFilename || 'Finished transcript'}
+                  </p>
+                  {latestDeliveredFile && (
+                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">Latest version</span>
+                  )}
+                </div>
                 {formatRetentionLabel(transcription) && (
                   <p className={isRetentionDeleted(transcription) ? 'mt-2 text-sm text-red-600' : 'mt-2 text-sm text-gray-600'}>
                     {formatRetentionLabel(transcription)}
@@ -4676,6 +4718,33 @@ export default function TranscriptViewerPage() {
                     Download Finished Transcript
                   </a>
                 </Button>
+              )}
+
+              {!isRetentionDeleted(transcription) && previousDeliveredFiles.length > 0 && (
+                <div className="border-t border-gray-200 pt-4">
+                  <h2 className="text-sm font-semibold text-[#003366]">Previous versions</h2>
+                  <div className="mt-2 space-y-2">
+                    {previousDeliveredFiles.map(file => {
+                      const href = file.versionType === 'document'
+                        ? `/api/document-workspace/${transcription.id}/completed-document?fileId=${encodeURIComponent(file.id)}`
+                        : `/api/transcripts/${transcription.id}/finished-transcript?fileId=${encodeURIComponent(file.id)}`;
+                      return (
+                        <div key={file.id} className="flex flex-col gap-2 rounded-md border border-gray-200 p-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">{file.label}</p>
+                            <p className="text-xs text-gray-500">{file.filename}</p>
+                          </div>
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={href}>
+                              <Download className="h-4 w-4 mr-1" />
+                              Download
+                            </a>
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -5157,7 +5226,7 @@ export default function TranscriptViewerPage() {
                       disabled={uploadingFinishedTranscript}
                     >
                       {uploadingFinishedTranscript ? <LoadingSpinner size="sm" className="mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
-                      {transcription.finishedTranscriptPath ? 'Replace Finished Transcript' : 'Upload Finished Transcript'}
+                      {transcription.finishedTranscriptPath ? 'Add Revised Version' : 'Upload Finished Transcript'}
                     </Button>
                     <input
                       ref={finishedTranscriptInputRef}

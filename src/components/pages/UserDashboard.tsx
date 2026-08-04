@@ -58,8 +58,9 @@ export function UserDashboard() {
       try {
         setJobsLoading(true);
         const jobs = await getTranscriptionsByUser(user.uid);
-        setAllJobs(jobs); // Store all jobs for stats
-        setRecentJobs(jobs.slice(0, 5)); // Show only 5 most recent
+        const visibleJobs = jobs.filter(job => !isRetentionDeleted(job));
+        setAllJobs(visibleJobs); // Deleted file records remain in Firestore but stay out of client-facing stats.
+        setRecentJobs(visibleJobs.slice(0, 5)); // Show only 5 most recent visible jobs
       } catch (error) {
         console.error('Error loading jobs:', error);
       } finally {
@@ -603,7 +604,8 @@ export function UserDashboard() {
                                 </span>
                                 {(job.finishedTranscriptPath || job.officeCompletedDocumentPath) && !isRetentionDeleted(job) && (
                                   <span className="font-semibold text-green-700">
-                                    Finished transcript ready
+                                    {job.completedFiles?.find(file => file.isLatest)?.label || 'Finished transcript ready'}
+                                    {job.completedFiles?.length ? ' · Latest version' : ''}
                                   </span>
                                 )}
                                 {formatRetentionLabel(job) && (
@@ -671,7 +673,8 @@ export function UserDashboard() {
                             <StatusBadge status={isCompletedOfficeJob(job) ? 'complete' : job.status} />
                             {isCompletedOfficeJob(job) && (job.officeCompletedDocumentPath || job.officeCompletedDocumentURL) && !isRetentionDeleted(job) && (
                               <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-semibold text-green-700">
-                                {job.mode === 'human' ? 'Finished transcript ready' : 'Completed work ready'}
+                                {job.completedFiles?.find(file => file.isLatest)?.label || (job.mode === 'human' ? 'Finished transcript ready' : 'Completed work ready')}
+                                {job.completedFiles?.length ? ' · Latest version' : ''}
                               </span>
                             )}
                           </div>

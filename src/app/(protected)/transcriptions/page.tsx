@@ -86,6 +86,8 @@ export default function TranscriptionsPage() {
   // Filter transcriptions based on search and filters
   const filteredTranscriptions = useMemo(() => {
     return transcriptions.filter(transcription => {
+      if (isRetentionDeleted(transcription)) return false;
+
       const matchesSearch = transcription.originalFilename?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === 'all' || transcription.status === statusFilter;
 

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { Download, FileText, Mic, ArrowLeft, ExternalLink } from 'lucide-react';
+import { Download, FileText, Mic, ArrowLeft, ExternalLink, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Header } from '@/components/layout/Header';
@@ -87,7 +87,14 @@ export default function DocumentWorkspaceProjectPage() {
   const retentionDeleted = project ? isRetentionDeleted(project) : false;
   const submittedDate = project ? formatDate(project.createdAt) : null;
   const dueDate = project ? formatDate(project.officeDueDate) : null;
-  const completedDocumentDownloadHref = project?.officeCompletedDocumentPath
+  const completedDocumentVersions = (project?.completedFiles || []).filter(file => file.versionType === 'document');
+  const latestCompletedDocument = completedDocumentVersions.find(file => file.isLatest) || completedDocumentVersions.at(-1);
+  const previousCompletedDocuments = latestCompletedDocument
+    ? completedDocumentVersions.filter(file => file.id !== latestCompletedDocument.id)
+    : [];
+  const completedDocumentDownloadHref = latestCompletedDocument
+    ? `/api/document-workspace/${project?.id}/completed-document?fileId=${encodeURIComponent(latestCompletedDocument.id)}`
+    : project?.officeCompletedDocumentPath
     ? `/api/document-workspace/${project.id}/completed-document`
     : project?.officeCompletedDocumentURL;
   const completedDocumentAvailable = Boolean(completedDocumentDownloadHref && !retentionDeleted);
@@ -156,6 +163,30 @@ export default function DocumentWorkspaceProjectPage() {
               <Button onClick={() => router.push('/dashboard')} className="bg-[#003366] hover:bg-[#002244]">
                 Back to Dashboard
               </Button>
+            </CardContent>
+          </Card>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (retentionDeleted) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <Header />
+        <main className="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+          <Button variant="ghost" asChild className="mb-4 text-[#003366] hover:bg-blue-50">
+            <Link href="/dashboard">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Dashboard
+            </Link>
+          </Button>
+          <Card className="border border-red-200 shadow-sm">
+            <CardContent className="p-8 text-center">
+              <Trash2 className="mx-auto mb-4 h-12 w-12 text-red-500" />
+              <h1 className="text-2xl font-semibold text-[#003366]">Files deleted</h1>
+              <p className="mt-2 text-gray-600">Files for this project have been deleted.</p>
             </CardContent>
           </Card>
         </main>
@@ -340,7 +371,14 @@ export default function DocumentWorkspaceProjectPage() {
                 ) : completedDocumentAvailable ? (
                   <div className="space-y-4">
                     <div>
-                      <p className="font-medium text-gray-900">{project.officeCompletedFilename || 'Completed document'}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium text-gray-900">
+                          {latestCompletedDocument?.label || 'Completed Document'}: {latestCompletedDocument?.filename || project.officeCompletedFilename || 'Completed document'}
+                        </p>
+                        {latestCompletedDocument && (
+                          <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">Latest version</span>
+                        )}
+                      </div>
                       {retentionLabel && (
                         <p className="mt-2 text-sm text-gray-600">{retentionLabel}</p>
                       )}
@@ -348,7 +386,7 @@ export default function DocumentWorkspaceProjectPage() {
                     <Button asChild className="w-full bg-[#003366] hover:bg-[#002244]">
                       <a
                         href={completedDocumentDownloadHref}
-                        download={project.officeCompletedFilename || 'completed-document'}
+                        download={latestCompletedDocument?.filename || project.officeCompletedFilename || 'completed-document'}
                         {...(!project.officeCompletedDocumentPath ? {
                           target: '_blank',
                           rel: 'noopener noreferrer',
@@ -358,6 +396,27 @@ export default function DocumentWorkspaceProjectPage() {
                         Download Completed Document
                       </a>
                     </Button>
+                    {previousCompletedDocuments.length > 0 && (
+                      <div className="border-t border-gray-200 pt-4">
+                        <p className="text-sm font-semibold text-[#003366]">Previous versions</p>
+                        <div className="mt-2 space-y-2">
+                          {previousCompletedDocuments.map(file => (
+                            <div key={file.id} className="flex flex-col gap-2 rounded-md border border-gray-200 p-3 sm:flex-row sm:items-center sm:justify-between">
+                              <div>
+                                <p className="text-sm font-medium text-gray-800">{file.label}</p>
+                                <p className="text-xs text-gray-500">{file.filename}</p>
+                              </div>
+                              <Button variant="outline" size="sm" asChild>
+                                <a href={`/api/document-workspace/${project.id}/completed-document?fileId=${encodeURIComponent(file.id)}`}>
+                                  <Download className="h-4 w-4 mr-1" />
+                                  Download
+                                </a>
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <p className="text-sm text-gray-600">

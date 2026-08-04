@@ -13,6 +13,7 @@ export interface RetentionAwareJob {
   retentionHold?: boolean;
   filesDeletedAt?: RetentionTimestamp;
   deletionStatus?: DeletionStatus;
+  deletionRequestStatus?: string;
 }
 
 const RETENTION_ARCHIVE_DAYS = 30;
@@ -40,7 +41,12 @@ export const toRetentionDate = (value: RetentionTimestamp): Date | null => {
 };
 
 export const isRetentionDeleted = (job: RetentionAwareJob): boolean =>
-  Boolean(job.filesDeletedAt || job.deletionStatus === 'deleted');
+  Boolean(
+    job.filesDeletedAt ||
+    job.deletionStatus === 'deleted' ||
+    job.deletionRequestStatus === 'processed' ||
+    job.deletionRequestStatus === 'completed'
+  );
 
 const hasRetentionClockStarted = (job: RetentionAwareJob): boolean =>
   job.status === 'complete' || job.officeStatus === 'delivered';

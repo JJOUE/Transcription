@@ -26,6 +26,19 @@ export interface TranscriptSegment {
   confidence?: number; // Optional confidence score
 }
 
+export interface CompletedFileVersion {
+  id: string;
+  label: string;
+  filename: string;
+  path: string;
+  contentType: string;
+  size: number;
+  uploadedAt: Timestamp;
+  uploadedBy: string;
+  versionType: 'transcript' | 'document';
+  isLatest: boolean;
+}
+
 export interface TranscriptionJob {
   id?: string;
   userId: string;
@@ -123,6 +136,7 @@ export interface TranscriptionJob {
   finishedTranscriptUploadedBy?: string;
   finishedTranscriptContentType?: string;
   finishedTranscriptSize?: number;
+  completedFiles?: CompletedFileVersion[];
   // Document Workspace specific fields
   assignedTypist?: string; // UID of assigned typist
   assignedTypistName?: string; // Name of assigned typist

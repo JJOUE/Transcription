@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { adminAuth, adminDb, adminStorage } from '@/lib/firebase/admin';
 
 const MAX_FINISHED_TRANSCRIPT_SIZE = 50 * 1024 * 1024;
@@ -27,6 +27,11 @@ const getAuthenticatedUser = async (request: NextRequest) => {
   const token = request.cookies.get('auth-token')?.value;
   if (!token) return null;
   return adminAuth.verifyIdToken(token);
+};
+
+const normalizeDeliveryLabel = (value: FormDataEntryValue | null) => {
+  const label = typeof value === 'string' ? value.trim() : '';
+  return label.slice(0, 80) || 'Completed Transcript';
 };
 
 export async function GET(
@@ -58,11 +63,21 @@ export async function GET(
       }
     }
 
-    if (job?.filesDeletedAt || job?.deletionStatus === 'deleted') {
+    if (job?.filesDeletedAt || job?.deletionStatus === 'deleted' || job?.deletionRequestStatus === 'processed' || job?.deletionRequestStatus === 'completed') {
       return NextResponse.json({ error: 'Files have expired or been deleted' }, { status: 410 });
     }
 
-    const finishedTranscriptPath = job?.finishedTranscriptPath;
+    const requestedFileId = request.nextUrl.searchParams.get('fileId');
+    const completedFiles = Array.isArray(job?.completedFiles) ? job.completedFiles : [];
+    const requestedVersion = requestedFileId
+      ? completedFiles.find((entry: { id?: unknown }) => entry?.id === requestedFileId)
+      : null;
+
+    if (requestedFileId && !requestedVersion) {
+      return NextResponse.json({ error: 'Finished transcript version not found' }, { status: 404 });
+    }
+
+    const finishedTranscriptPath = requestedVersion?.path || job?.finishedTranscriptPath;
     if (!finishedTranscriptPath || typeof finishedTranscriptPath !== 'string') {
       return NextResponse.json({ error: 'Finished transcript is not available' }, { status: 404 });
     }
@@ -82,7 +97,7 @@ export async function GET(
     const [contents] = await file.download();
     const [metadata] = await file.getMetadata();
     const filename = sanitizeFilename(
-      job.finishedTranscriptFilename || metadata.name?.split('/').pop() || 'finished-transcript'
+      requestedVersion?.filename || job.finishedTranscriptFilename || metadata.name?.split('/').pop() || 'finished-transcript'
     );
 
     return new NextResponse(contents, {
@@ -130,12 +145,13 @@ export async function POST(
       return NextResponse.json({ error: 'Use Document Workspace completed-document delivery for this project' }, { status: 400 });
     }
 
-    if (job?.filesDeletedAt || job?.deletionStatus === 'deleted') {
+    if (job?.filesDeletedAt || job?.deletionStatus === 'deleted' || job?.deletionRequestStatus === 'processed' || job?.deletionRequestStatus === 'completed') {
       return NextResponse.json({ error: 'Files have expired or been deleted' }, { status: 410 });
     }
 
     const formData = await request.formData();
     const uploadedFile = formData.get('file');
+    const label = normalizeDeliveryLabel(formData.get('label'));
     if (!(uploadedFile instanceof File)) {
       return NextResponse.json({ error: 'A finished transcript file is required' }, { status: 400 });
     }
@@ -151,7 +167,9 @@ export async function POST(
     }
 
     const filename = sanitizeFilename(uploadedFile.name);
-    const storagePath = `transcriptions/${job?.userId}/${id}/finished-transcript/${filename}`;
+    const uploadTimestamp = Date.now();
+    const fileId = `transcript-${uploadTimestamp}`;
+    const storagePath = `transcriptions/${job?.userId}/${id}/finished-transcript/${uploadTimestamp}_${filename}`;
     const expectedPrefix = `transcriptions/${job?.userId}/${id}/finished-transcript/`;
     if (!job?.userId || !storagePath.startsWith(expectedPrefix)) {
       return NextResponse.json({ error: 'Invalid finished transcript storage path' }, { status: 400 });
@@ -164,7 +182,39 @@ export async function POST(
       metadata: { contentType },
     });
 
-    const previousPath = typeof job.finishedTranscriptPath === 'string' ? job.finishedTranscriptPath : null;
+    const existingVersions = Array.isArray(job.completedFiles) ? job.completedFiles : [];
+    const hasLegacyVersion = existingVersions.some((entry: { path?: unknown }) => entry?.path === job.finishedTranscriptPath);
+    const legacyVersion = job.finishedTranscriptPath && !hasLegacyVersion
+      ? [{
+          id: 'legacy-finished-transcript',
+          label: 'Completed Transcript',
+          filename: job.finishedTranscriptFilename || 'Finished transcript',
+          path: job.finishedTranscriptPath,
+          contentType: job.finishedTranscriptContentType || 'application/octet-stream',
+          size: job.finishedTranscriptSize || 0,
+          uploadedAt: job.finishedTranscriptUploadedAt || job.completedAt || Timestamp.now(),
+          uploadedBy: job.finishedTranscriptUploadedBy || '',
+          versionType: 'transcript',
+          isLatest: false,
+        }]
+      : [];
+    const completedFiles = [
+      ...existingVersions.map((entry: Record<string, unknown>) => ({ ...entry, isLatest: false })),
+      ...legacyVersion,
+      {
+        id: fileId,
+        label,
+        filename,
+        path: storagePath,
+        contentType,
+        size: uploadedFile.size,
+        uploadedAt: Timestamp.now(),
+        uploadedBy: decodedToken.uid,
+        versionType: 'transcript',
+        isLatest: true,
+      },
+    ];
+
     await jobRef.update({
       finishedTranscriptPath: storagePath,
       finishedTranscriptFilename: filename,
@@ -172,18 +222,11 @@ export async function POST(
       finishedTranscriptUploadedBy: decodedToken.uid,
       finishedTranscriptContentType: contentType,
       finishedTranscriptSize: uploadedFile.size,
+      completedFiles,
       status: 'complete',
       completedAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     });
-
-    if (previousPath && previousPath !== storagePath && previousPath.startsWith(expectedPrefix)) {
-      try {
-        await bucket.file(previousPath).delete({ ignoreNotFound: true });
-      } catch (cleanupError) {
-        console.error('[Finished Transcript] Previous file cleanup failed:', cleanupError);
-      }
-    }
 
     return NextResponse.json({
       ok: true,
@@ -191,6 +234,8 @@ export async function POST(
       path: storagePath,
       contentType,
       size: uploadedFile.size,
+      fileId,
+      label,
     });
   } catch (error) {
     console.error('[Finished Transcript] Upload error:', error);
