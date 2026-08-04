@@ -405,7 +405,7 @@ export default function ProfilePage() {
                   <li>Remove your profile and all personal data</li>
                   <li>Delete all your transcriptions and uploaded files</li>
                   <li>Remove your transaction and billing history</li>
-                  <li>Forfeit any remaining wallet balance or credits</li>
+                  <li>Forfeit any remaining transcription minutes or legacy account credit</li>
                 </ul>
               </div>
 

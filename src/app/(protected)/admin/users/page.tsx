@@ -70,7 +70,7 @@ export default function UserManagementPage() {
         setUsers(allUsers);
         setLoading(false);
 
-        // Load package counts in parallel (non-blocking)
+        // Load remaining package minutes in parallel (non-blocking)
         const packagePromises = allUsers.map(async (u) => {
           const userId = u.id || u.uid;
           try {
@@ -81,10 +81,11 @@ export default function UserManagementPage() {
             const counts = { total: 0, ai: 0, hybrid: 0, human: 0 };
             snapshot.forEach(doc => {
               const pkg = doc.data();
-              counts.total++;
-              if (pkg.type === 'ai') counts.ai++;
-              else if (pkg.type === 'hybrid') counts.hybrid++;
-              else if (pkg.type === 'human') counts.human++;
+              const remaining = Math.max(0, Number(pkg.minutesRemaining) || 0);
+              counts.total += remaining;
+              if (pkg.type === 'ai') counts.ai += remaining;
+              else if (pkg.type === 'hybrid') counts.hybrid += remaining;
+              else if (pkg.type === 'human') counts.human += remaining;
             });
 
             return { userId, counts };
@@ -124,7 +125,7 @@ export default function UserManagementPage() {
     if (isNaN(amount) || amount < 0) {
       toast({
         title: "Invalid amount",
-        description: "Please enter a valid wallet amount.",
+        description: "Please enter a valid legacy account credit amount.",
         variant: "destructive",
       });
       return;
@@ -141,13 +142,13 @@ export default function UserManagementPage() {
         },
         body: JSON.stringify({
           walletBalance: amount,
-          reason: adjustmentReason.trim() || `Admin updated wallet balance to CA$${amount.toFixed(2)}`,
+          reason: adjustmentReason.trim() || `Admin updated legacy account credit to CA$${amount.toFixed(2)}`,
         }),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to update wallet balance');
+        throw new Error(error.error || 'Failed to update legacy account credit');
       }
 
       const result = await response.json();
@@ -161,7 +162,7 @@ export default function UserManagementPage() {
       );
 
       toast({
-        title: "Wallet balance updated",
+        title: "Legacy account credit updated",
         description: result.message,
       });
 
@@ -173,7 +174,7 @@ export default function UserManagementPage() {
       console.error('Error updating wallet balance:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : 'Failed to update wallet balance',
+        description: error instanceof Error ? error.message : 'Failed to update legacy account credit',
         variant: "destructive",
       });
     } finally {
@@ -390,7 +391,7 @@ export default function UserManagementPage() {
                     <th className="text-left py-3 px-4 font-medium text-gray-600">Role</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600">Free Trial</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600 hidden md:table-cell">Packages</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">Wallet</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">Legacy account credit</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600 hidden lg:table-cell">Total Spent</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600 hidden lg:table-cell">Jobs</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600 hidden xl:table-cell">Joined</th>
@@ -467,17 +468,17 @@ export default function UserManagementPage() {
                             <div className="min-w-[100px]">
                               <div className="flex items-center gap-1 mb-1">
                                 <Package className="h-3 w-3 text-[#003366]" />
-                                <span className="font-medium text-[#003366]">{packages.total}</span>
+                                <span className="font-medium text-[#003366]">{packages.total} min</span>
                               </div>
                               <div className="flex gap-1 text-xs">
                                 {packages.ai > 0 && (
-                                  <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">AI: {packages.ai}</span>
+                                  <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">AI: {packages.ai} min</span>
                                 )}
                                 {packages.hybrid > 0 && (
-                                  <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">H: {packages.hybrid}</span>
+                                  <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">H: {packages.hybrid} min</span>
                                 )}
                                 {packages.human > 0 && (
-                                  <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded">Hu: {packages.human}</span>
+                                  <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded">Hu: {packages.human} min</span>
                                 )}
                               </div>
                             </div>
@@ -524,7 +525,7 @@ export default function UserManagementPage() {
                               setAdjustmentReason('');
                             }}>
                               <DollarSign className="mr-2 h-4 w-4" />
-                              Edit Wallet Balance
+                              Edit Legacy Account Credit
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => {
                               setFreeTrialModalUser(user);
@@ -593,14 +594,14 @@ export default function UserManagementPage() {
         />
       )}
 
-      {/* Wallet Balance Edit Modal */}
+      {/* Legacy account credit edit modal */}
       {selectedUser && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-[#003366]">
-                  Edit Wallet Balance
+                  Edit Legacy Account Credit
                 </h3>
                 <Button
                   variant="ghost"
@@ -623,7 +624,7 @@ export default function UserManagementPage() {
                   <strong>Email:</strong> {selectedUser.email}
                 </div>
                 <div className="text-sm text-gray-600 flex items-center gap-2">
-                  <strong>Current Balance:</strong>
+                  <strong>Current legacy credit:</strong>
                   <div className="flex items-center gap-1 text-[#003366] font-medium">
                     <DollarSign className="h-3 w-3" />
                     <span>{(selectedUser.walletBalance || 0).toFixed(2)}</span>
@@ -634,7 +635,7 @@ export default function UserManagementPage() {
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="walletAmount" className="text-sm font-medium text-gray-700">
-                    New Wallet Balance (CA$)
+                    New Legacy Account Credit (CA$)
                   </Label>
                   <div className="relative">
                     <DollarSign className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -645,7 +646,7 @@ export default function UserManagementPage() {
                       step="0.01"
                       value={walletAmount}
                       onChange={(e) => setWalletAmount(e.target.value)}
-                      placeholder="Enter wallet balance"
+                      placeholder="Enter legacy account credit"
                       className="mt-1 pl-10"
                     />
                   </div>
@@ -676,7 +677,7 @@ export default function UserManagementPage() {
                     id="adjustmentReason"
                     value={adjustmentReason}
                     onChange={(e) => setAdjustmentReason(e.target.value)}
-                    placeholder="Enter reason for wallet balance adjustment..."
+                    placeholder="Enter reason for legacy account credit adjustment..."
                     rows={3}
                     className="mt-1"
                   />
@@ -872,7 +873,7 @@ export default function UserManagementPage() {
                   <strong>Email:</strong> {deleteModalUser.email}
                 </div>
                 <div className="text-sm text-gray-600">
-                  <strong>Wallet Balance:</strong> CA${(deleteModalUser.walletBalance || 0).toFixed(2)}
+                  <strong>Legacy account credit:</strong> CA${(deleteModalUser.walletBalance || 0).toFixed(2)}
                 </div>
                 <div className="text-sm text-gray-600">
                   <strong>Total Jobs:</strong> {deleteModalUser.totalJobs || 0}

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { CreditCard, Download, Clock, CheckCircle, ChevronLeft, ChevronRight, Zap, Users, Check, Star, Wallet, Info, TrendingDown, Calendar, FileAudio } from 'lucide-react';
+import { CreditCard, Download, Clock, CheckCircle, ChevronLeft, ChevronRight, Zap, Users, Check, Star, Info, TrendingDown, Calendar, FileAudio } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -44,7 +44,7 @@ export default function BillingPage() {
   const { user, userData } = useAuth();
   const { transactions, purchaseCredits } = useCredits();
   const { activePackages, loading: packagesLoading } = usePackages();
-  const { walletBalance, freeTrialMinutes, freeTrialActive, freeTrialUsed, freeTrialTotal, refreshWallet } = useWallet();
+  const { freeTrialMinutes, freeTrialActive, freeTrialUsed, freeTrialTotal, refreshWallet } = useWallet();
   const { toast } = useToast();
   const [selectedTab, setSelectedTab] = useState('ai');
   const [scriptsLoaded, setScriptsLoaded] = useState(false);
@@ -251,8 +251,8 @@ export default function BillingPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-[#003366]">Billing & Wallet</h1>
-          <p className="text-gray-600 mt-2">Purchase transcription minutes and manage your wallet balance</p>
+          <h1 className="text-3xl font-bold text-[#003366]">Transcription Minutes & Billing</h1>
+          <p className="text-gray-600 mt-2">Purchase transcription minutes and review your billing history</p>
         </div>
 
         {/* How It Works Section */}
@@ -260,11 +260,11 @@ export default function BillingPage() {
           <Info className="h-4 w-4" />
           <AlertTitle>How Our Prepaid System Works</AlertTitle>
           <AlertDescription className="mt-2 space-y-2">
-            <p>1. <strong>Add funds to your wallet</strong> or purchase discounted minute packages</p>
-            <p>2. <strong>Upload files for transcription</strong> - costs are automatically deducted from your wallet</p>
-            <p>3. <strong>Save with packages</strong> - Get up to 50% off PLUS free add-ons (rush delivery & multiple speakers included!)</p>
+            <p>1. <strong>Choose pay as you go</strong> or purchase a transcription minute package</p>
+            <p>2. <strong>Upload files for transcription</strong> and review the service and order charges before submitting</p>
+            <p>3. <strong>Use package minutes</strong> for the matching AI, Hybrid, or Human transcription service</p>
             <p className="text-sm text-gray-600 mt-3">
-              <strong>Package Benefits:</strong> Better rates + FREE add-ons | <strong>Wallet Top-up:</strong> Standard rates + add-ons cost extra
+              <strong>Package benefits:</strong> Rush service and speaker add-ons are included with eligible transcription packages. <strong>Pay as you go:</strong> Standard rates with order surcharges calculated separately.
             </p>
             <p className="text-sm text-gray-500 mt-1">
               Standard rates: AI ${pricingSettings?.payAsYouGo.ai.toFixed(2) || '0.40'}/min • Hybrid ${pricingSettings?.payAsYouGo.hybrid.toFixed(2) || '1.50'}/min • Human ${pricingSettings?.payAsYouGo.human.toFixed(2) || '2.50'}/min
@@ -301,19 +301,6 @@ export default function BillingPage() {
           <Card className="border-0 shadow">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">
-                Wallet Balance
-              </CardTitle>
-              <Wallet className="h-4 w-4 text-gray-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-[#003366]">CA${walletBalance.toFixed(2)}</div>
-              <p className="text-xs text-gray-500 mt-1">Available for all transcriptions</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">
                 Minutes Used This Month
               </CardTitle>
               <Clock className="h-4 w-4 text-gray-400" />
@@ -334,7 +321,7 @@ export default function BillingPage() {
                 BEST VALUE
               </span>
             </TabsTrigger>
-            <TabsTrigger value="wallet">Wallet Top-Up</TabsTrigger>
+            <TabsTrigger value="wallet">Pay as You Go</TabsTrigger>
           </TabsList>
 
           {/* Minute Packages Tab */}
@@ -474,7 +461,7 @@ export default function BillingPage() {
                                           {pkg.includesAddons && (
                                             <>
                                               <div className="text-green-600 font-medium">✓ FREE Rush delivery</div>
-                                              <div className="text-green-600 font-medium">✓ FREE Multiple speakers</div>
+                                              <div className="text-green-600 font-medium">✓ Speaker add-on included</div>
                                               <div className="text-xs text-gray-500 italic mt-1">
                                                 (Save up to CA$0.75/min on add-ons)
                                               </div>
@@ -536,11 +523,11 @@ export default function BillingPage() {
             </Card>
           </TabsContent>
 
-          {/* Wallet Top-Up Tab */}
+          {/* Pay-as-you-go purchase tab */}
           <TabsContent value="wallet" className="space-y-4">
             <Card className="border-0 shadow">
               <CardHeader>
-                <CardTitle className="text-xl">Add Funds to Wallet</CardTitle>
+                <CardTitle className="text-xl">Buy Pay-as-You-Go Transcription</CardTitle>
                 <p className="text-sm text-gray-600">
                   Quick top-up for pay-as-you-go transcriptions at standard rates
                 </p>
@@ -549,18 +536,18 @@ export default function BillingPage() {
                 <Alert className="mb-6">
                   <Info className="h-4 w-4" />
                   <AlertDescription>
-                    <strong>Important:</strong> Wallet top-ups use pay-as-you-go rates and add-ons cost extra.
+                    <strong>Important:</strong> Pay-as-you-go purchases use the standard per-minute rates. Order surcharges are calculated separately.
                     <br />
-                    <strong>Save more with packages</strong> - they include FREE rush delivery & multiple speakers for Hybrid/Human!
+                    <strong>Package benefits:</strong> Rush service and speaker add-ons are included with eligible Hybrid and Human transcription packages.
                   </AlertDescription>
                 </Alert>
 
                 {isTestMode ? (
                   <Alert className="mb-6 bg-yellow-50 border-yellow-200">
                     <Info className="h-4 w-4 text-yellow-700" />
-                    <AlertTitle className="text-yellow-800">Test Mode - Wallet Top-ups</AlertTitle>
+                    <AlertTitle className="text-yellow-800">Test Mode - Pay-as-You-Go Purchase</AlertTitle>
                     <AlertDescription className="text-yellow-700">
-                      Click any amount below to simulate adding funds to your wallet.
+                      Click any amount below to simulate a pay-as-you-go transcription purchase.
                       No real charges will occur. Use test card: 4242 4242 4242 4242
                     </AlertDescription>
                   </Alert>
@@ -586,7 +573,7 @@ export default function BillingPage() {
                           type="wallet"
                           className="w-full bg-[#003366] hover:bg-[#002244] text-white py-3 rounded-lg font-medium"
                         >
-                          Add CA${amount} to Wallet
+                          Purchase CA${amount}
                         </SecureCheckoutButton>
                       </CardContent>
                     </Card>
@@ -615,10 +602,10 @@ export default function BillingPage() {
                   <h4 className="font-semibold text-orange-900 mb-2">⚠️ Add-On Charges (Pay-as-you-go only):</h4>
                   <ul className="space-y-1 text-sm text-gray-700">
                     <li>• Rush delivery (24-48 hours): <strong>+CA$0.50/min</strong> (Hybrid) or <strong>+CA$0.75/min</strong> (Human)</li>
-                    <li>• Multiple speakers (3+): <strong>+CA$0.25/min</strong> (Hybrid) or <strong>+CA$0.30/min</strong> (Human)</li>
+                    <li>• Five or more speakers: <strong>+CA$0.25/min</strong> (Hybrid) or <strong>+CA$0.30/min</strong> (Human). One to four speakers have no extra speaker charge.</li>
                   </ul>
                   <p className="text-xs text-orange-800 mt-2 font-medium">
-                    💡 These add-ons are FREE with all Hybrid & Human packages!
+                    Rush service and speaker add-ons are included with eligible Hybrid and Human transcription packages.
                   </p>
                 </div>
               </CardContent>

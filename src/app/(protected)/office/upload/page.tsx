@@ -140,17 +140,16 @@ export default function OfficeUploadPage() {
   // Office studio uses human mode pricing for cost calculation
   const costPerMinute = pricingSettings?.payAsYouGo.human || 2.50;
 
-  // Calculate total cost
+  // Calculate billing against packages and pay-as-you-go credit.
   const totalDuration = uploadedFiles.reduce((sum, f) => sum + f.duration, 0);
   const hasDocumentSourceFiles = uploadedFiles.some(f => !f.isMedia);
-  const totalCost = isAdminInternalUser ? 0 : (totalDuration / 60) * costPerMinute;
-  const rushCost = !isAdminInternalUser && rushDelivery ? Math.ceil(totalDuration / 60) * 0.50 : 0; // $0.50 per minute for rush
-  const totalWithRush = totalCost + rushCost;
-
-  // Calculate billing against packages and wallet
   const activePackage = packages.find(p => p.active);
   const packageMinutes = activePackage ? activePackage.minutesRemaining : 0;
   const billingMinutes = Math.ceil(totalDuration / 60);
+  const totalCost = isAdminInternalUser ? 0 : (totalDuration / 60) * costPerMinute;
+  const rushCost = !isAdminInternalUser && !activePackage && rushDelivery ? billingMinutes * 0.50 : 0;
+  const totalWithRush = totalCost + rushCost;
+
   const minutesFromWallet = isAdminInternalUser ? 0 : Math.max(0, billingMinutes - packageMinutes);
   const walletAmountNeeded = minutesFromWallet * costPerMinute;
   const hasInsufficientBalance = !isAdminInternalUser && walletAmountNeeded > walletBalance;
@@ -390,8 +389,8 @@ export default function OfficeUploadPage() {
 
     if (hasInsufficientBalance) {
       toast({
-        title: "Insufficient Wallet Balance",
-        description: `You need CA$${walletAmountNeeded.toFixed(2)} but only have CA$${walletBalance.toFixed(2)}. Please top up your wallet.`,
+        title: "Additional purchase required",
+        description: "Your available package and pay-as-you-go minutes do not cover this project.",
         variant: "destructive"
       });
       return;
@@ -948,7 +947,7 @@ export default function OfficeUploadPage() {
         {uploadedFiles.length > 0 && (
           <Card className="mb-6 border-l-4 border-l-[#003366] bg-gradient-to-r from-blue-50 to-transparent shadow-sm">
             <CardContent className="p-6">
-              <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <div>
                   <p className="text-sm text-gray-600">Total Duration</p>
                   <p className="text-2xl font-bold text-[#003366]">
@@ -956,10 +955,12 @@ export default function OfficeUploadPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Cost</p>
-                  <p className="text-2xl font-bold text-[#003366]">
-                    CA${totalWithRush.toFixed(2)}
-                  </p>
+                  <p className="text-sm text-gray-600">Order summary</p>
+                  <div className="text-sm space-y-1 mt-1">
+                    <p className="flex justify-between gap-4"><span>Transcription: {billingMinutes} minutes</span><strong>CA${totalCost.toFixed(2)}</strong></p>
+                    {rushDelivery && <p className="flex justify-between gap-4"><span>Rush service</span><strong>{activePackage ? 'Included with package' : `CA$${rushCost.toFixed(2)}`}</strong></p>}
+                    <p className="flex justify-between gap-4 border-t pt-1 text-[#003366]"><span>Total</span><strong>CA${totalWithRush.toFixed(2)}</strong></p>
+                  </div>
                 </div>
               </div>
 
@@ -970,7 +971,7 @@ export default function OfficeUploadPage() {
                   </p>
                   {minutesFromWallet > 0 && (
                     <p>
-                      Wallet charge: <span className="font-medium">CA${(minutesFromWallet * costPerMinute).toFixed(2)}</span>
+                      Pay-as-you-go transcription: <span className="font-medium">{minutesFromWallet} minutes</span>
                     </p>
                   )}
                 </div>
@@ -984,7 +985,7 @@ export default function OfficeUploadPage() {
 
               {isAdminInternalUser && (
                 <div className="mt-4 p-3 bg-slate-50 border border-slate-200 rounded text-slate-700 text-sm">
-                  <span className="font-medium">Internal admin processing:</span> this project will be marked admin-comped and will not charge Stripe or wallet balance.
+                  <span className="font-medium">Internal admin processing:</span> this project will be marked admin-comped and will not create a client charge.
                 </div>
               )}
 
@@ -992,7 +993,7 @@ export default function OfficeUploadPage() {
                 <div className="mt-4 flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
                   <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
                   <span>
-                    Insufficient balance. Top up CA${walletAmountNeeded.toFixed(2)} to proceed.
+                    Additional pay-as-you-go transcription must be purchased before submitting this project.
                   </span>
                 </div>
               )}

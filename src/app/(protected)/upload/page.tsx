@@ -99,7 +99,7 @@ export default function UploadPage() {
   // Add-on options
   const [rushDelivery, setRushDelivery] = useState(false);
   const [multipleSpeakers, setMultipleSpeakers] = useState(false);
-  const [speakerCount, setSpeakerCount] = useState(2);
+  const [speakerCount, setSpeakerCount] = useState(5);
   const { user, userData, refreshUser } = useAuth();
   const { consumeCredits } = useCredits();
   const {
@@ -288,6 +288,7 @@ export default function UploadPage() {
   const freeTrialMinutesUsed = isAdminInternalUser ? 0 : balanceCheck.freeTrialMinutes;
   const packageMinutesUsed = isAdminInternalUser ? 0 : balanceCheck.packageMinutes;
   const walletMinutesUsed = isAdminInternalUser ? 0 : totalBillingMinutes - freeTrialMinutesUsed - packageMinutesUsed;
+  const hasSpeakerSurcharge = multipleSpeakers && speakerCount >= 5;
 
   // Calculate add-on costs (only if NOT using package or free trial for those minutes)
   let addOnCostPerMinute = 0;
@@ -295,7 +296,7 @@ export default function UploadPage() {
     if (rushDelivery) {
       addOnCostPerMinute += transcriptionMode === 'hybrid' ? 0.50 : 0.75;
     }
-    if (multipleSpeakers) {
+    if (hasSpeakerSurcharge) {
       addOnCostPerMinute += transcriptionMode === 'hybrid' ? 0.25 : 0.30;
     }
   }
@@ -307,6 +308,8 @@ export default function UploadPage() {
   const totalCost = isAdminInternalUser ? 0 : balanceCheck.totalCost + addOnCost;
   const walletAmountNeeded = isAdminInternalUser ? 0 : balanceCheck.walletNeeded + addOnCost;
   const hasInsufficientBalance = !isAdminInternalUser && walletAmountNeeded > walletBalance;
+  const payAsYouGoRate = selectedMode.costPerMinute + addOnCostPerMinute;
+  const availablePayAsYouGoMinutes = Math.floor(walletBalance / Math.max(payAsYouGoRate, 0.01));
 
   // Function to get accurate duration from audio/video files
   const getMediaDuration = (file: File): Promise<number> => {
@@ -461,8 +464,8 @@ export default function UploadPage() {
 
     if (hasInsufficientBalance) {
       toast({
-        title: "Insufficient Wallet Balance",
-        description: `You need CA$${walletAmountNeeded.toFixed(2)} from your wallet but only have CA$${walletBalance.toFixed(2)}. Please top up your wallet to continue.`,
+        title: "Additional purchase required",
+        description: "Your available package and pay-as-you-go minutes do not cover this order. Purchase more transcription minutes to continue.",
         variant: "destructive",
       });
       return;
@@ -558,7 +561,7 @@ export default function UploadPage() {
           if (rushDelivery) {
             fileAddOnCost += billingMinutes * (transcriptionMode === 'hybrid' ? 0.50 : 0.75);
           }
-          if (multipleSpeakers) {
+          if (hasSpeakerSurcharge) {
             fileAddOnCost += billingMinutes * (transcriptionMode === 'hybrid' ? 0.25 : 0.30);
           }
         }
@@ -622,8 +625,8 @@ export default function UploadPage() {
           }),
           // Add-on options
           rushDelivery: (transcriptionMode === 'hybrid' || transcriptionMode === 'human') ? rushDelivery : false,
-          multipleSpeakers: (transcriptionMode === 'hybrid' || transcriptionMode === 'human') ? multipleSpeakers : false,
-          speakerCount: multipleSpeakers ? speakerCount : 2,
+          multipleSpeakers: (transcriptionMode === 'hybrid' || transcriptionMode === 'human') ? hasSpeakerSurcharge : false,
+          speakerCount: multipleSpeakers ? speakerCount : 1,
           addOnCost: fileAddOnCost,
           hasPackage: hasPackage,
           // Template for human transcription
@@ -1476,7 +1479,7 @@ export default function UploadPage() {
                 </CardTitle>
                 <p className="text-sm text-gray-600 mt-2">
                   {userData?.hasActivePackage
-                    ? "✨ These add-ons are FREE with your package!"
+                    ? "Rush service and speaker add-ons are included with eligible transcription packages."
                     : "Select optional add-ons (additional charges apply)"}
                 </p>
               </CardHeader>
@@ -1521,7 +1524,7 @@ export default function UploadPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <span className="text-xl">👥</span>
-                        <h4 className="font-medium text-gray-900">Multiple Speakers (3+)</h4>
+                        <h4 className="font-medium text-gray-900">Five or more speakers</h4>
                         {!userData?.hasActivePackage && (
                           <span className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600">
                             +CA${transcriptionMode === 'hybrid' ? '0.25' : '0.30'}/min
@@ -1534,7 +1537,7 @@ export default function UploadPage() {
                         )}
                       </div>
                       <p className="text-sm text-gray-600 mt-1">
-                        Enhanced speaker identification for recordings with 3 or more speakers
+                        Recordings with one to four speakers have no extra speaker charge. Pay-as-you-go recordings with five or more speakers include an additional speaker surcharge.
                       </p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer ml-4">
@@ -1555,10 +1558,10 @@ export default function UploadPage() {
                         <span className="text-sm font-medium text-gray-700">Number of speakers:</span>
                         <input
                           type="number"
-                          min="3"
+                          min="5"
                           max="10"
                           value={speakerCount}
-                          onChange={(e) => setSpeakerCount(Math.max(3, Math.min(10, parseInt(e.target.value) || 3)))}
+                          onChange={(e) => setSpeakerCount(Math.max(5, Math.min(10, parseInt(e.target.value) || 5)))}
                           className="w-20 px-3 py-1 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-[#b29dd9] focus:border-transparent"
                         />
                       </label>
@@ -1567,7 +1570,7 @@ export default function UploadPage() {
                 </div>
 
                 {/* Cost Summary for Add-ons */}
-                {(rushDelivery || multipleSpeakers) && !userData?.hasActivePackage && (
+                {(rushDelivery || hasSpeakerSurcharge) && !userData?.hasActivePackage && (
                   <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                     <div className="flex items-start space-x-2">
                       <div className="text-amber-600 mt-0.5">💰</div>
@@ -1577,8 +1580,8 @@ export default function UploadPage() {
                           {rushDelivery && (
                             <div>• Rush Delivery: +CA${(transcriptionMode === 'hybrid' ? 0.50 : 0.75).toFixed(2)}/min</div>
                           )}
-                          {multipleSpeakers && (
-                            <div>• Multiple Speakers: +CA${(transcriptionMode === 'hybrid' ? 0.25 : 0.30).toFixed(2)}/min</div>
+                          {hasSpeakerSurcharge && (
+                            <div>• Five or more speakers: +CA${(transcriptionMode === 'hybrid' ? 0.25 : 0.30).toFixed(2)}/min</div>
                           )}
                         </div>
                       </div>
@@ -1587,14 +1590,14 @@ export default function UploadPage() {
                 )}
 
                 {/* Package Benefit Notice */}
-                {(rushDelivery || multipleSpeakers) && userData?.hasActivePackage && (
+                {(rushDelivery || hasSpeakerSurcharge) && userData?.hasActivePackage && (
                   <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                     <div className="flex items-start space-x-2">
                       <div className="text-green-600 mt-0.5">✨</div>
                       <div>
-                        <p className="text-sm text-green-800 font-medium">Package Benefits Active!</p>
+                        <p className="text-sm text-green-800 font-medium">Package benefits active</p>
                         <p className="text-sm text-green-700 mt-1">
-                          Your selected add-ons are included FREE with your package. No additional charges!
+                          Rush service and speaker add-ons are included with eligible transcription packages.
                         </p>
                       </div>
                     </div>
@@ -1735,7 +1738,7 @@ export default function UploadPage() {
                         Internal admin processing
                       </span>
                       <span className="text-sm font-bold text-slate-800">
-                        No Stripe or wallet charge
+                        No client charge
                       </span>
                     </div>
                     <p className="mt-1 text-xs text-slate-600">
@@ -1757,11 +1760,11 @@ export default function UploadPage() {
                           </span>
                         </div>
                         <div className="text-xs text-green-600 mt-2">
-                          {activePackage.minutesRemaining - packageMinutesUsed} minutes will remain • No wallet needed
+                          {activePackage.minutesRemaining - packageMinutesUsed} minutes will remain; no pay-as-you-go purchase needed
                         </div>
                       </div>
                     ) : (
-                      /* Package + Wallet needed */
+                      /* Package plus pay-as-you-go needed */
                       <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
                         <div className="text-xs text-amber-700 font-medium mb-2">Package insufficient, using both:</div>
                         <div className="space-y-2">
@@ -1772,7 +1775,7 @@ export default function UploadPage() {
                             </span>
                           </div>
                           <div className="flex justify-between items-center">
-                            <span className="text-sm text-amber-700">From Wallet:</span>
+                            <span className="text-sm text-amber-700">Pay as you go:</span>
                             <span className="text-sm font-semibold text-amber-800">
                               {walletMinutesUsed} min × CA${selectedMode.costPerMinute.toFixed(2)}
                             </span>
@@ -1783,7 +1786,7 @@ export default function UploadPage() {
                   </>
                 )}
 
-                {/* No package available - wallet only */}
+                {/* No package available - pay as you go */}
                 {!activePackage && walletMinutesUsed > 0 && (
                   <div className="flex justify-between items-center py-2">
                     <span className="text-gray-600">Rate ({selectedMode.name}):</span>
@@ -1802,9 +1805,9 @@ export default function UploadPage() {
                         <span className="text-sm text-gray-700">CA${(walletMinutesUsed * (transcriptionMode === 'hybrid' ? 0.50 : 0.75)).toFixed(2)}</span>
                       </div>
                     )}
-                    {multipleSpeakers && (
+                    {hasSpeakerSurcharge && (
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">+ Multiple Speakers:</span>
+                        <span className="text-sm text-gray-600">+ Five or more speakers:</span>
                         <span className="text-sm text-gray-700">CA${(walletMinutesUsed * (transcriptionMode === 'hybrid' ? 0.25 : 0.30)).toFixed(2)}</span>
                       </div>
                     )}
@@ -1840,15 +1843,13 @@ export default function UploadPage() {
                       {walletMinutesUsed > 0 && (
                         <>
                           <div className="flex justify-between items-center">
-                            <span className="text-gray-500">Wallet Balance:</span>
-                            <span className={walletBalance >= walletAmountNeeded ? 'text-gray-700' : 'text-red-600 font-medium'}>
-                              CA${walletBalance.toFixed(2)}
-                            </span>
+                          <span className="text-gray-500">Pay-as-you-go minutes available:</span>
+                            <span className={walletBalance >= walletAmountNeeded ? 'text-gray-700' : 'text-red-600 font-medium'}>{availablePayAsYouGoMinutes} minutes</span>
                           </div>
                           {walletBalance >= walletAmountNeeded && (
                             <div className="flex justify-between items-center">
-                              <span className="text-gray-500">After Transaction:</span>
-                              <span className="text-gray-700">CA${(walletBalance - walletAmountNeeded).toFixed(2)}</span>
+                              <span className="text-gray-500">Estimated minutes remaining:</span>
+                              <span className="text-gray-700">{Math.max(0, availablePayAsYouGoMinutes - walletMinutesUsed)} minutes</span>
                             </div>
                           )}
                         </>
@@ -1856,9 +1857,9 @@ export default function UploadPage() {
                     </div>
 
                     {/* Package benefits for add-ons */}
-                    {activePackage && (rushDelivery || multipleSpeakers) && (transcriptionMode === 'hybrid' || transcriptionMode === 'human') && (
+                    {activePackage && (rushDelivery || hasSpeakerSurcharge) && (transcriptionMode === 'hybrid' || transcriptionMode === 'human') && (
                       <div className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
-                        ✓ Add-ons included FREE with your package
+                        Rush service and speaker add-ons included with eligible package
                       </div>
                     )}
                   </div>
@@ -1870,17 +1871,17 @@ export default function UploadPage() {
                       <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 mr-3" />
                       <div>
                         <p className="font-medium text-red-800 mb-2">
-                          Insufficient Wallet Balance
+                          Additional purchase required
                         </p>
                         <p className="text-red-700">
                           {activePackage && walletMinutesUsed > 0 ? (
-                            <>Your package can cover {packageMinutesUsed} minutes, but you need CA${walletAmountNeeded.toFixed(2)} from your wallet for the remaining {walletMinutesUsed} minutes. You only have CA${walletBalance.toFixed(2)}.</>
+                            <>Your package covers {packageMinutesUsed} minutes, but you need additional pay-as-you-go transcription for the remaining {walletMinutesUsed} minutes.</>
                           ) : (
-                            <>You need CA${walletAmountNeeded.toFixed(2)} but only have CA${walletBalance.toFixed(2)} in your wallet.</>
+                            <>Your available pay-as-you-go minutes do not cover this order.</>
                           )}
                         </p>
                         <Link href="/billing" className="text-red-800 underline mt-2 inline-block">
-                          Top up your wallet
+                          Purchase transcription minutes
                         </Link>
                       </div>
                     </div>

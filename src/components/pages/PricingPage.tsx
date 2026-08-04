@@ -96,7 +96,7 @@ export function PricingPage() {
     },
     {
       type: 'Multiple Speakers',
-      description: '3 or more speakers',
+      description: 'No extra speaker charge for 1 to 4 speakers; pay-as-you-go recordings with 5 or more include a surcharge',
       hybrid: '+$0.25/minute',
       human: '+$0.30/minute'
     }
@@ -518,15 +518,15 @@ const getTypeInfo = (type: string) => {
         </div>
       </section>
 
-      {/* Wallet Top-up Section */}
+      {/* Pay-as-you-go Section */}
       <section className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-[#003366] mb-4">
-              Wallet Top-Up
+              Pay as you go
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Pre-load your account with credits for add-on services
+              Purchase transcription service without choosing a minute package
             </p>
           </div>
 
@@ -536,7 +536,7 @@ const getTypeInfo = (type: string) => {
                 <div className="text-3xl font-bold text-[#003366] mb-2">
                   CA$50
                 </div>
-                <p className="text-gray-600 mb-4">Starter wallet</p>
+                <p className="text-gray-600 mb-4">Small pay-as-you-go project</p>
                 <div className="text-xs text-gray-500 mt-4">
                   Available for customers
                 </div>
@@ -548,7 +548,7 @@ const getTypeInfo = (type: string) => {
                 <div className="text-3xl font-bold text-[#003366] mb-2">
                   CA$200
                 </div>
-                <p className="text-gray-600 mb-4">Professional wallet</p>
+                <p className="text-gray-600 mb-4">Ongoing pay-as-you-go work</p>
                 <div className="text-xs text-gray-500 mt-4">
                   Available for customers
                 </div>
@@ -560,7 +560,7 @@ const getTypeInfo = (type: string) => {
                 <div className="text-3xl font-bold text-[#003366] mb-2">
                   CA$500
                 </div>
-                <p className="text-gray-600 mb-4">Enterprise wallet</p>
+                <p className="text-gray-600 mb-4">Larger pay-as-you-go projects</p>
                 <div className="text-xs text-gray-500 mt-4">
                   Available for customers
                 </div>
@@ -704,11 +704,12 @@ const getTypeInfo = (type: string) => {
 
             <div>
               <h3 className="text-lg font-semibold text-[#003366] mb-2">
-                How does wallet credit work?
+                How does pay-as-you-go transcription work?
               </h3>
               <p className="text-gray-600">
-                Wallet credits are used for add-on services like rush delivery or multiple speaker
-                identification. Top up your wallet and we'll automatically deduct as needed.
+                Choose your transcription service and submit a project without purchasing a package.
+                The final amount depends on the audio minutes, selected service, and any order surcharge.
+                Recordings with one to four speakers have no extra speaker charge. Pay-as-you-go recordings with five or more speakers include an additional speaker surcharge. Rush service and speaker add-ons are included with eligible transcription packages.
               </p>
             </div>
 

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ChevronLeft, CreditCard, FileText, Clock, CheckCircle, Download, User, Wallet, TrendingUp, Calendar, Package } from 'lucide-react';
+import { ChevronLeft, CreditCard, FileText, Clock, CheckCircle, Download, User, Star, TrendingUp, Calendar, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Header } from '@/components/layout/Header';
@@ -165,6 +165,13 @@ export default function UserActivityPage() {
   }
 
   const activePackages = packages.filter(pkg => pkg.active);
+  const remainingPackageMinutes = (type: UserPackage['type']) => activePackages
+    .filter(pkg => pkg.type === type)
+    .reduce((sum, pkg) => sum + Math.max(0, pkg.minutesRemaining || 0), 0);
+  const aiMinutesRemaining = remainingPackageMinutes('ai');
+  const hybridMinutesRemaining = remainingPackageMinutes('hybrid');
+  const humanMinutesRemaining = remainingPackageMinutes('human');
+  const aiTrialMinutesRemaining = Math.max(0, userData.freeTrialMinutes || 0);
   const completedJobs = transcriptions.filter(t => t.status === 'complete').length;
   const totalSpent = transactions
     .filter(t => t.type === 'wallet_topup' || t.type === 'package_purchase')
@@ -244,17 +251,43 @@ export default function UserActivityPage() {
         </Card>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <Card className="border-0 shadow-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Wallet Balance</p>
-                  <p className="text-2xl font-bold text-[#003366]">CA${(userData.walletBalance || 0).toFixed(2)}</p>
+                  <p className="text-sm font-medium text-gray-600">AI Package Minutes</p>
+                  <p className="text-2xl font-bold text-[#003366]">{aiMinutesRemaining}</p>
                 </div>
                 <div className="w-12 h-12 bg-[#b29dd9] rounded-lg flex items-center justify-center">
-                  <Wallet className="h-6 w-6 text-white" />
+                  <Package className="h-6 w-6 text-white" />
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-6">
+              <p className="text-sm font-medium text-gray-600">Hybrid Package Minutes</p>
+              <p className="text-2xl font-bold text-[#003366]">{hybridMinutesRemaining}</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-6">
+              <p className="text-sm font-medium text-gray-600">Human Package Minutes</p>
+              <p className="text-2xl font-bold text-[#003366]">{humanMinutesRemaining}</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">AI Trial Minutes</p>
+                  <p className="text-2xl font-bold text-[#003366]">{aiTrialMinutesRemaining}</p>
+                </div>
+                <Star className="h-6 w-6 text-[#b29dd9]" />
               </div>
             </CardContent>
           </Card>

@@ -493,7 +493,7 @@ export function PackageManager() {
               </div>
               <p className="text-xs text-gray-500 mt-4">
                 <Info className="h-3 w-3 inline mr-1" />
-                These rates are used as the "Standard Price" reference for package savings calculations and wallet top-up estimates.
+                These rates are used as the "Standard Price" reference for package savings and pay-as-you-go estimates.
               </p>
             </CardContent>
           </Card>

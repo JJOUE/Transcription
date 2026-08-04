@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Upload, FileText, CreditCard, Clock, CheckCircle, AlertCircle, Package } from 'lucide-react';
+import { Upload, FileText, CreditCard, Clock, CheckCircle, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Header } from '@/components/layout/Header';
@@ -37,12 +37,10 @@ export function UserDashboard() {
   const { user, userData } = useAuth();
   const { transactions } = useCredits();
   const {
-    walletBalance: contextWalletBalance,
     packages,
     freeTrialMinutes,
     freeTrialUsed,
     freeTrialTotal,
-    loading: walletLoading
   } = useWallet();
 
   const [allJobs, setAllJobs] = useState<TranscriptionJob[]>([]);
@@ -71,9 +69,6 @@ export function UserDashboard() {
   }, [user]);
 
   // Real transaction data now comes from CreditContext
-
-  // Use wallet balance from context, with userData fallback while loading
-  const walletBalance = walletLoading ? (userData?.walletBalance || 0) : contextWalletBalance;
 
   // Get active packages
   const activePackages = packages.filter(pkg => pkg.active);
@@ -205,7 +200,7 @@ export function UserDashboard() {
             <CardHeader>
               <CardTitle className="text-xl text-[#003366] flex items-center gap-2">
                 <Package className="h-5 w-5" />
-                Your transcription balance
+                Your transcription minutes
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -295,20 +290,7 @@ export function UserDashboard() {
         ) : null}
 
         {/* Quick Stats */}
-        <div className={`grid grid-cols-1 sm:grid-cols-2 ${walletBalance > 0 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-4 md:gap-6 mb-8`}>
-          {walletBalance > 0 && <Card className="border-0 shadow-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Account credit</p>
-                  <p className="text-2xl font-bold text-[#003366]">CA${walletBalance.toFixed(2)}</p>
-                </div>
-                <div className="w-12 h-12 bg-[#b29dd9] rounded-lg flex items-center justify-center">
-                  <CreditCard className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8">
 
           <Card className="border-0 shadow-sm">
             <CardContent className="p-6">
@@ -389,26 +371,9 @@ export function UserDashboard() {
                 >
                   <Link href="/billing">
                     <CreditCard className="mr-2 h-4 w-4" />
-                    Add Funds
+                    Buy Transcription Minutes
                   </Link>
                 </Button>
-
-                {/* Credit Balance Alert */}
-                {walletBalance > 0 && walletBalance < 100 && (
-                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <div className="flex items-start">
-                      <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 mr-2" />
-                      <div>
-                        <p className="text-sm font-medium text-yellow-800">
-                          Low Credit Balance
-                        </p>
-                        <p className="text-sm text-yellow-700 mt-1">
-                          Your wallet balance is low (CA${walletBalance}). Consider adding funds or purchasing a package to avoid interruptions.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </div>
@@ -725,7 +690,7 @@ export function UserDashboard() {
                 
                 {transactions.length === 0 && (
                   <p className="text-gray-500 text-center py-8">
-                    No transaction history yet. Add funds or purchase a package to get started!
+                    No transaction history yet. Purchase transcription minutes to get started.
                   </p>
                 )}
               </div>
