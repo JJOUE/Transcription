@@ -26,6 +26,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { DollarSign } from 'lucide-react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
+import { TranscriptionBalanceAdjustment } from '@/components/admin/TranscriptionBalanceAdjustment';
 
 export default function UserManagementPage() {
   const { user, userData, loading: authLoading } = useAuth();
@@ -41,6 +42,7 @@ export default function UserManagementPage() {
   const [walletAmount, setWalletAmount] = useState('');
   const [adjustmentReason, setAdjustmentReason] = useState('');
   const [updating, setUpdating] = useState(false);
+  const [balanceAdjustmentUser, setBalanceAdjustmentUser] = useState<UserData | null>(null);
 
   // Free trial management modal
   const [freeTrialModalUser, setFreeTrialModalUser] = useState<UserData | null>(null);
@@ -511,6 +513,10 @@ export default function UserManagementPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setBalanceAdjustmentUser(user)}>
+                              <Coins className="mr-2 h-4 w-4" />
+                              Adjust Transcription Balance
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => {
                               setSelectedUser(user);
                               const currentBalance = user.walletBalance || 0;
@@ -578,6 +584,14 @@ export default function UserManagementPage() {
           </CardContent>
         </Card>
       </div>
+
+      {balanceAdjustmentUser && (
+        <TranscriptionBalanceAdjustment
+          client={balanceAdjustmentUser}
+          onClose={() => setBalanceAdjustmentUser(null)}
+          onSaved={() => window.location.reload()}
+        />
+      )}
 
       {/* Wallet Balance Edit Modal */}
       {selectedUser && (

@@ -40,7 +40,6 @@ export function UserDashboard() {
     walletBalance: contextWalletBalance,
     packages,
     freeTrialMinutes,
-    freeTrialActive,
     freeTrialUsed,
     freeTrialTotal,
     loading: walletLoading
@@ -78,7 +77,32 @@ export function UserDashboard() {
 
   // Get active packages
   const activePackages = packages.filter(pkg => pkg.active);
-  const totalPackageMinutes = activePackages.reduce((sum, pkg) => sum + pkg.minutesRemaining, 0);
+  type BalancePackage = {
+    type: 'ai' | 'hybrid' | 'human';
+    minutesTotal: number;
+    minutesUsed: number;
+    minutesRemaining: number;
+    active: boolean;
+  };
+  const storedActivePackages = ((userData?.packages || activePackages) as BalancePackage[])
+    .filter(pkg => pkg.active && pkg.minutesRemaining > 0);
+  const packageBalances = (['ai', 'hybrid', 'human'] as const)
+    .map(type => {
+      const matchingPackages = storedActivePackages.filter(pkg => pkg.type === type);
+      return {
+        type,
+        purchased: matchingPackages.reduce((sum, pkg) => sum + pkg.minutesTotal, 0),
+        used: matchingPackages.reduce((sum, pkg) => sum + pkg.minutesUsed, 0),
+        remaining: matchingPackages.reduce((sum, pkg) => sum + pkg.minutesRemaining, 0),
+      };
+    })
+    .filter(balance => balance.purchased > 0);
+
+  const packageTypeLabel = (type: 'ai' | 'hybrid' | 'human') => ({
+    ai: 'AI Transcription Package',
+    hybrid: 'Hybrid Review Package',
+    human: 'Human Transcription Package',
+  })[type];
 
   // Calculate real average turnaround time from user's completed jobs
   const calculateAvgTurnaround = (jobs: TranscriptionJob[]) => {
@@ -176,114 +200,40 @@ export function UserDashboard() {
           </p>
         </div>
 
-        {/* FREE TRIAL Display - Prominent banner at top */}
-        {freeTrialActive && freeTrialMinutes > 0 && (
-          <Card className="border-2 border-[#b29dd9] shadow-lg mb-6 bg-gradient-to-r from-[#003366] to-[#004488]">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="text-4xl">🎉</span>
-                    <div>
-                      <h3 className="text-2xl font-bold text-white">
-                        Free AI Trial Active!
-                      </h3>
-                      <p className="text-sm text-white/80 mt-1">
-                        Your first 60 minutes of AI transcription are free.
-                      </p>
-                    </div>
+        {(packageBalances.length > 0 || freeTrialTotal > 0) && (
+          <Card className="border border-[#b29dd9] shadow-sm mb-6">
+            <CardHeader>
+              <CardTitle className="text-xl text-[#003366] flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Your transcription balance
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {packageBalances.map(balance => (
+                  <div key={balance.type} className="border border-gray-200 rounded-lg p-4">
+                    <h3 className="font-semibold text-[#003366] mb-3">{packageTypeLabel(balance.type)}</h3>
+                    <dl className="space-y-2 text-sm">
+                      <div className="flex justify-between gap-4"><dt className="text-gray-600">Purchased</dt><dd className="font-medium">{balance.purchased} minutes</dd></div>
+                      <div className="flex justify-between gap-4"><dt className="text-gray-600">Used</dt><dd className="font-medium">{balance.used} minutes</dd></div>
+                      <div className="flex justify-between gap-4"><dt className="text-gray-600">Remaining</dt><dd className="font-bold text-[#003366]">{balance.remaining} minutes</dd></div>
+                    </dl>
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                    <div className="bg-white/10 backdrop-blur rounded-lg p-4 border border-white/20">
-                      <p className="text-sm text-white/70 mb-1">Remaining</p>
-                      <p className="text-3xl font-bold text-white">{freeTrialMinutes}</p>
-                      <p className="text-xs text-green-400 font-semibold">FREE AI minutes</p>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur rounded-lg p-4 border border-white/20">
-                      <p className="text-sm text-white/70 mb-1">Used</p>
-                      <p className="text-3xl font-bold text-white">{freeTrialUsed}</p>
-                      <p className="text-xs text-white/60">of {freeTrialTotal} minutes</p>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur rounded-lg p-4 border border-white/20">
-                      <p className="text-sm text-white/70 mb-1">Savings</p>
-                      <p className="text-3xl font-bold text-green-400">CA${(freeTrialMinutes * 0.4).toFixed(0)}</p>
-                      <p className="text-xs text-white/60">value available</p>
-                    </div>
+                ))}
+                {freeTrialTotal > 0 && (
+                  <div className="border border-gray-200 rounded-lg p-4">
+                    <h3 className="font-semibold text-[#003366] mb-3">AI trial minutes</h3>
+                    <dl className="space-y-2 text-sm">
+                      <div className="flex justify-between gap-4"><dt className="text-gray-600">Allowance</dt><dd className="font-medium">{freeTrialTotal} minutes</dd></div>
+                      <div className="flex justify-between gap-4"><dt className="text-gray-600">Used</dt><dd className="font-medium">{freeTrialUsed} minutes</dd></div>
+                      <div className="flex justify-between gap-4"><dt className="text-gray-600">Remaining</dt><dd className="font-bold text-[#003366]">{freeTrialMinutes} minutes</dd></div>
+                    </dl>
                   </div>
-
-                  <div className="mt-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-white/80 font-medium">Trial Progress</span>
-                      <span className="text-sm text-white/80">{((freeTrialUsed / freeTrialTotal) * 100).toFixed(0)}% used</span>
-                    </div>
-                    <div className="w-full bg-white/20 rounded-full h-3">
-                      <div
-                        className="bg-[#b29dd9] h-3 rounded-full transition-all"
-                        style={{ width: `${(freeTrialUsed / freeTrialTotal) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-4">
-                    <Link href="/upload">
-                      <Button className="bg-white hover:bg-gray-100 text-[#003366] font-semibold shadow-md">
-                        Start Free AI Transcription →
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
+                )}
               </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Active Packages Display */}
-        {activePackages.length > 0 && (
-          <Card className="border-0 shadow-sm mb-6 bg-gradient-to-r from-[#003366] to-[#004488]">
-            <CardContent className="p-6">
-              <div className="text-white">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold flex items-center">
-                    <Package className="h-5 w-5 mr-2" />
-                    Active Packages
-                  </h3>
-                  <span className="text-sm bg-white/20 px-3 py-1 rounded-full">
-                    {totalPackageMinutes} total minutes available
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {activePackages.map((pkg) => {
-                    const daysRemaining = Math.ceil((new Date(pkg.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-                    const usagePercent = ((pkg.minutesUsed / pkg.minutesTotal) * 100).toFixed(0);
-
-                    return (
-                      <div key={pkg.id} className="bg-white/10 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium capitalize">{pkg.type} Package</span>
-                          {daysRemaining <= 7 && (
-                            <span className="text-xs bg-yellow-500 text-white px-2 py-0.5 rounded">
-                              {daysRemaining}d left
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-2xl font-bold mb-1">
-                          {pkg.minutesRemaining} / {pkg.minutesTotal} min
-                        </div>
-                        <div className="text-xs text-white/70 mb-2">
-                          CA${pkg.rate.toFixed(2)}/min • {usagePercent}% used
-                        </div>
-                        <div className="w-full bg-white/20 rounded-full h-2">
-                          <div
-                            className="bg-[#b29dd9] h-2 rounded-full transition-all"
-                            style={{ width: `${usagePercent}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              <p className="text-sm text-gray-600 mt-4">
+                Your package minutes are used when you submit a transcription. Minutes from refunded or cancelled projects are returned to your available balance.
+              </p>
             </CardContent>
           </Card>
         )}
@@ -345,32 +295,20 @@ export function UserDashboard() {
         ) : null}
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
-          <Card className="border-0 shadow-sm">
+        <div className={`grid grid-cols-1 sm:grid-cols-2 ${walletBalance > 0 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-4 md:gap-6 mb-8`}>
+          {walletBalance > 0 && <Card className="border-0 shadow-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Wallet Balance</p>
+                  <p className="text-sm font-medium text-gray-600">Account credit</p>
                   <p className="text-2xl font-bold text-[#003366]">CA${walletBalance.toFixed(2)}</p>
-                  <div className="space-y-0.5 mt-1">
-                    {freeTrialActive && freeTrialMinutes > 0 && (
-                      <p className="text-xs text-green-600 font-semibold">
-                        🎉 + {freeTrialMinutes} FREE AI transcription minutes
-                      </p>
-                    )}
-                    {totalPackageMinutes > 0 && (
-                      <p className="text-xs text-gray-500">
-                        + {totalPackageMinutes} pkg minutes
-                      </p>
-                    )}
-                  </div>
                 </div>
                 <div className="w-12 h-12 bg-[#b29dd9] rounded-lg flex items-center justify-center">
                   <CreditCard className="h-6 w-6 text-white" />
                 </div>
               </div>
             </CardContent>
-          </Card>
+          </Card>}
 
           <Card className="border-0 shadow-sm">
             <CardContent className="p-6">
@@ -456,7 +394,7 @@ export function UserDashboard() {
                 </Button>
 
                 {/* Credit Balance Alert */}
-                {walletBalance < 100 && (
+                {walletBalance > 0 && walletBalance < 100 && (
                   <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                     <div className="flex items-start">
                       <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 mr-2" />

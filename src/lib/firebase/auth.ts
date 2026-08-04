@@ -21,6 +21,7 @@ if (typeof window !== 'undefined') {
 }
 
 export interface UserData {
+  id?: string;
   uid: string;
   email: string;
   role: 'user' | 'admin';
@@ -36,6 +37,20 @@ export interface UserData {
   freeTrialMinutesTotal?: number;      // Total free trial minutes granted (60)
   freeTrialMinutesUsed?: number;       // Minutes used from free trial
   freeTrialActive?: boolean;           // Whether free trial is active
+
+  packages?: Array<{
+    id: string;
+    type: 'ai' | 'hybrid' | 'human';
+    name?: string;
+    minutesTotal: number;
+    minutesUsed: number;
+    minutesRemaining: number;
+    rate?: number;
+    active: boolean;
+    purchasedAt?: any;
+    expiresAt?: any;
+    sessionId?: string;
+  }>;
 
   // Subscription info
   subscriptionPlan?: PlanId;
