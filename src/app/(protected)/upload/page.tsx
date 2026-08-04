@@ -661,18 +661,45 @@ export default function UploadPage() {
           );
 
           if (!deductionResult.success) {
-            // If deduction fails, we should probably delete the job or mark it as failed
             console.error('Failed to deduct payment:', deductionResult.error);
             toast({
               title: "Payment failed",
               description: deductionResult.error || "Failed to process payment for transcription",
               variant: "destructive",
             });
-            // TODO: Consider deleting the created job or marking it as payment_failed
+            // TODO: Move wallet deduction server-side and remove, cancel, or mark the job when payment deduction fails.
             throw new Error(deductionResult.error || 'Payment failed');
           }
 
           totalCostProcessed += deductionResult.costDeducted;
+
+          if (transcriptionMode === 'human' || transcriptionMode === 'hybrid') {
+            try {
+              const notificationResponse = await fetch(
+                `/api/transcriptions/${encodeURIComponent(jobId)}/notify-admin`,
+                {
+                  method: 'POST',
+                  credentials: 'include',
+                }
+              );
+
+              if (!notificationResponse.ok) {
+                const notificationError = await notificationResponse.json().catch(() => null);
+                console.error('[Upload] Paid job created, but admin notification failed:', {
+                  jobId,
+                  mode: transcriptionMode,
+                  status: notificationResponse.status,
+                  error: notificationError?.error || 'Unknown notification error',
+                });
+              }
+            } catch (notificationError) {
+              console.error('[Upload] Paid job created, but admin notification request failed:', {
+                jobId,
+                mode: transcriptionMode,
+                error: notificationError,
+              });
+            }
+          }
 
           // Refresh wallet and user data to show updated balances (including free trial usage)
           await Promise.all([refreshWallet(), refreshUser()]);

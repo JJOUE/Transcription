@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`[API] Created transcription job ${docRef.id} for user ${userId}`);
 
-    if (!isAdminUser && validatedBody.type === 'office') {
+    if (!isAdminUser && validatedBody.type === 'office' && validatedBody.officeServiceType) {
       await sendDocumentWorkspaceNotification({
         jobId: docRef.id,
         clientName: userData?.name,
@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
         hasTemplate: Boolean(validatedBody.templateURL || validatedBody.templateFilename),
         rushDelivery: validatedBody.rushDelivery,
       });
-    } else if (!isAdminUser) {
+    } else if (!isAdminUser && validatedBody.mode === 'ai') {
       await sendSimpleNotification({
         jobId: docRef.id,
         clientName: userData?.name,

@@ -59,6 +59,8 @@ export interface TranscriptionJob {
   adminBypass?: boolean; // True when admin/internal work bypassed payment
   adminBypassBy?: string; // Admin uid/email that created the internal job
   adminBypassAt?: Timestamp; // When the internal billing bypass was applied
+  adminSubmissionNotifiedAt?: Timestamp;
+  adminSubmissionNotificationStatus?: 'sending' | 'sent' | 'failed';
   freeTrialMinutesUsed?: number; // AI transcription free-trial minutes applied to this job
   specialInstructions?: string;
   projectDictionaryTerms?: string[]; // Project-only names/terms supplied at upload time

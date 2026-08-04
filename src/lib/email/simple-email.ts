@@ -78,14 +78,14 @@ interface TranscriptionSubmissionNotificationInput {
  */
 export async function sendSimpleNotification(
   notification: TranscriptionSubmissionNotificationInput
-): Promise<void> {
+): Promise<{ ok: boolean; error?: string }> {
   try {
     const RESEND_API_KEY = process.env.RESEND_API_KEY;
     const emailConfig = getContactEmailConfig();
 
     if (!RESEND_API_KEY) {
       console.warn('[Email] Resend API key not configured, skipping transcription notification');
-      return;
+      return { ok: false, error: 'Email service not configured' };
     }
 
     const serviceLabel = notification.mode === 'ai'
@@ -132,11 +132,15 @@ Review uploaded materials inside the secure admin dashboard. No client files are
 
     if (response.ok) {
       console.log('[Email] Transcription submission notification sent');
+      return { ok: true };
     } else {
-      console.error('[Email] Failed to send transcription notification:', await response.text());
+      const errorBody = await response.text();
+      console.error('[Email] Failed to send transcription notification:', errorBody);
+      return { ok: false, error: `Resend rejected notification: ${response.status}` };
     }
   } catch (error) {
     console.error('[Email] Transcription notification error:', error);
+    return { ok: false, error: error instanceof Error ? error.message : 'Notification failed' };
   }
 }
 
