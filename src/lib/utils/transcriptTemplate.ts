@@ -268,15 +268,6 @@ export async function exportTranscriptPDF(templateData: TranscriptTemplateData, 
   pdf.setLineWidth(0.5);
   pdf.rect(10, 10, pageWidth - 20, pageHeight - 20);
 
-  // Add header with company name
-  pdf.setFontSize(18);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('TALK TO TEXT CANADA', 20, 25);
-
-  // Add header underline
-  pdf.setLineWidth(0.3);
-  pdf.line(20, 30, pageWidth - 20, 30);
-
   // Metadata section with border
   let yPos = 45;
   pdf.setFontSize(11);
@@ -309,15 +300,26 @@ export async function exportTranscriptPDF(templateData: TranscriptTemplateData, 
     yPos += 8;
   });
 
-  // Content separator
-  yPos += 15;
+  // Keep the cover page separate from the transcript body.
+  pdf.addPage();
   pdf.setDrawColor(0, 0, 0);
   pdf.setLineWidth(0.5);
-  pdf.line(20, yPos, pageWidth - 20, yPos);
-  yPos += 15;
+  pdf.rect(10, 10, pageWidth - 20, pageHeight - 20);
+
+  pdf.setFontSize(14);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(0, 0, 0);
+  const transcriptTitle = 'TRANSCRIPT';
+  const transcriptTitleWidth = pdf.getTextWidth(transcriptTitle);
+  const transcriptTitleX = (pageWidth - transcriptTitleWidth) / 2;
+  pdf.text(transcriptTitle, transcriptTitleX, 25);
+  pdf.setLineWidth(0.3);
+  pdf.line(transcriptTitleX, 27, transcriptTitleX + transcriptTitleWidth, 27);
+  yPos = 40;
 
   // Add transcript content with padding
   pdf.setFontSize(11);
+  pdf.setFont('helvetica', 'normal');
 
   // Check if we have timestamped data, use it if available
   if (templateData.timestampedTranscript && templateData.timestampedTranscript.length > 0) {
@@ -552,8 +554,7 @@ function generateCoverPage(templateData: TranscriptTemplateData): Paragraph[] {
 
   return [
     new Paragraph({
-      children: [new TextRun({ text: "TRANSCRIPT", bold: true, underline: {}, size: 36, color: "000000" })],
-      alignment: AlignmentType.CENTER,
+      children: [],
       spacing: { before: 2600, after: 500 },
     }),
     ...metadata.map(([label, value]) =>
