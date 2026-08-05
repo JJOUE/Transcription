@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { adminAuth } from '@/lib/firebase/admin';
+import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { cookies } from 'next/headers';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -66,17 +66,58 @@ async function createCheckoutSession(request: NextRequest, decodedToken: any) {
     const userId = decodedToken.uid;
     const userEmail = decodedToken.email;
 
+    let verifiedPackage: {
+      type: 'ai' | 'hybrid' | 'human';
+      name: string;
+      minutes: number;
+      rate: number;
+      price: number;
+    } | null = null;
+
+    if (type === 'package') {
+      if (!packageData?.id || typeof packageData.id !== 'string') {
+        return NextResponse.json({ error: 'A valid package selection is required' }, { status: 400 });
+      }
+
+      const packageSnapshot = await adminDb.collection('packages').doc(packageData.id).get();
+      if (!packageSnapshot.exists) {
+        return NextResponse.json({ error: 'The selected package is no longer available' }, { status: 400 });
+      }
+
+      const catalogPackage = packageSnapshot.data();
+      const packageType = catalogPackage?.type;
+      if (!catalogPackage?.active || !['ai', 'hybrid', 'human'].includes(packageType)) {
+        return NextResponse.json({ error: 'The selected package is not available' }, { status: 400 });
+      }
+
+      const minutes = Number(catalogPackage.minutes);
+      const rate = Number(catalogPackage.perMinuteRate);
+      const price = Number(catalogPackage.price);
+      if (![minutes, rate, price].every(Number.isFinite) || minutes <= 0 || rate <= 0 || price <= 0) {
+        console.error('[Create Checkout] Invalid package catalog data:', packageData.id);
+        return NextResponse.json({ error: 'The selected package is not configured correctly' }, { status: 500 });
+      }
+
+      verifiedPackage = {
+        type: packageType,
+        name: `${packageType === 'ai' ? 'AI Transcription' : packageType === 'hybrid' ? 'Hybrid Review' : 'Human Transcription'} - ${minutes} minutes`,
+        minutes,
+        rate,
+        price,
+      };
+    }
+
     console.log(`[Create Checkout] Creating session for user ${userId} (${userEmail})`);
 
   // Create line items based on type
-  const lineItems = type === 'package' && packageData ? [{
+  const lineItems = type === 'package' && verifiedPackage ? [{
     price_data: {
       currency: 'cad',
       product_data: {
-        name: packageData.name || 'Transcription Package',
-        description: `${packageData.minutes} minutes of ${packageData.type} transcription`
+        name: verifiedPackage.name,
+        description: `${verifiedPackage.minutes} minutes of ${verifiedPackage.type} transcription`
       },
-      unit_amount: Math.round((packageData.price || amount) * 100),
+      unit_amount: Math.round(verifiedPackage.price * 100),
     },
     quantity: 1,
   }] : [{
@@ -105,11 +146,11 @@ async function createCheckoutSession(request: NextRequest, decodedToken: any) {
         userEmail: userEmail,
         type: type,
         // Package-specific metadata
-        ...(type === 'package' && packageData ? {
-          packageType: packageData.type,
-          packageMinutes: String(packageData.minutes),
-          packageRate: String(packageData.rate),
-          packageName: packageData.name
+        ...(type === 'package' && verifiedPackage ? {
+          packageType: verifiedPackage.type,
+          packageMinutes: String(verifiedPackage.minutes),
+          packageRate: String(verifiedPackage.rate),
+          packageName: verifiedPackage.name
         } : {})
       },
       // Prevent customer from changing email during checkout

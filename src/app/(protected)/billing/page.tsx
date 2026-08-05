@@ -489,6 +489,7 @@ export default function BillingPage() {
                                         amount={pkg.price}
                                         type="package"
                                         packageData={{
+                                          id: pkg.id,
                                           type: key,
                                           name: `${typeInfo.name} - ${pkg.minutes} minutes`,
                                           minutes: pkg.minutes,

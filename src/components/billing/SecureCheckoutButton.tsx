@@ -7,6 +7,7 @@ interface SecureCheckoutButtonProps {
   amount: number;
   type?: 'wallet' | 'package';
   packageData?: {
+    id: string;
     type: string;
     name: string;
     minutes: number;
