@@ -5162,6 +5162,7 @@ export default function TranscriptViewerPage() {
             <h1 className="text-2xl font-bold text-[#003366] mb-2 truncate" title={transcription.originalFilename}>
               {transcription.originalFilename}
             </h1>
+            <a href="/guide#transcript-workspace" className="mb-2 inline-flex text-sm font-semibold text-[#003366] underline underline-offset-4">Help &amp; Guide</a>
             <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
               <StatusBadge status={transcription.status} />
               <Badge variant="outline">{transcription.mode.charAt(0).toUpperCase() + transcription.mode.slice(1)}</Badge>

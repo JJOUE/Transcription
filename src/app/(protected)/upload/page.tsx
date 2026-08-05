@@ -973,6 +973,9 @@ export default function UploadPage() {
           <p className="text-gray-600">
             Upload your audio or video files and choose your preferred transcription mode.
           </p>
+          <p className="mt-2 text-sm text-gray-600">
+            Need help uploading your file? <Link href="/guide#uploads" className="font-semibold text-[#003366] underline underline-offset-4">View the step-by-step guide.</Link>
+          </p>
         </div>
 
         {isGuidedIntake && (
@@ -1008,9 +1011,7 @@ export default function UploadPage() {
                   Supports MP3, WAV, MP4, MOV, and other audio/video formats
                 </p>
                 <p className="mx-auto mb-4 max-w-2xl text-sm text-gray-500">
-                  Large files are accepted. Upload time depends on your file size and internet connection.
-                  For best results, we recommend splitting recordings longer than 2 hours into smaller parts.
-                  If you need help with a long file, contact us before uploading.
+                  Large files are accepted; upload time depends on your connection. For best results, split recordings longer than 2 hours. <Link href="/guide#uploads" className="font-medium text-[#003366] underline">Need help?</Link>
                 </p>
                 <input
                   type="file"

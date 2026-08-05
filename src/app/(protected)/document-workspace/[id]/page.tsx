@@ -218,6 +218,7 @@ export default function DocumentWorkspaceProjectPage() {
             <div>
               <h1 className="text-3xl font-bold text-[#003366]">Document Workspace Project</h1>
               <p className="mt-2 text-gray-600">{project.originalFilename || project.filename}</p>
+              <Link href="/guide#document-workspace" className="mt-2 inline-flex text-sm font-semibold text-[#003366] underline underline-offset-4">Help &amp; Guide</Link>
             </div>
             <StatusBadge status={project.status} />
           </div>

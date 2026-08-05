@@ -82,7 +82,7 @@ export function UserMenu() {
         <DropdownMenuItem asChild>
           <Link href="/guide" className="flex items-center text-gray-900 hover:bg-gray-100">
             <HelpCircle className="mr-2 h-4 w-4 text-gray-600" />
-            Guide
+            Help &amp; Guide
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>

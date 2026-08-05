@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Upload, FileText, CreditCard, Clock, CheckCircle, Package } from 'lucide-react';
+import { Upload, FileText, CreditCard, Clock, CheckCircle, Package, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Header } from '@/components/layout/Header';
@@ -200,6 +200,21 @@ export function UserDashboard() {
             Here&apos;s an overview of your transcription activity and account status.
           </p>
         </div>
+
+        <Card className="mb-6 border border-[#ddd3ed] shadow-sm">
+          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <HelpCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-[#72629e]" />
+              <div>
+                <p className="font-semibold text-[#003366]">Need help getting started?</p>
+                <p className="text-sm text-gray-600">Open the Help &amp; Guide for step-by-step instructions.</p>
+              </div>
+            </div>
+            <Button asChild size="sm" variant="outline" className="border-[#003366] text-[#003366]">
+              <Link href="/guide">Help &amp; Guide</Link>
+            </Button>
+          </CardContent>
+        </Card>
 
         {(packageBalances.length > 0 || freeTrialTotal > 0) && (
           <Card className="border border-[#b29dd9] shadow-sm mb-6">

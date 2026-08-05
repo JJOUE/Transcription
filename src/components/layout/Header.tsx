@@ -59,7 +59,7 @@ export function Header() {
               href="/guide"
               className="text-gray-600 hover:text-[#003366] transition-colors"
             >
-              Guide
+              Help &amp; Guide
             </Link>
             {!user && (
               <Link

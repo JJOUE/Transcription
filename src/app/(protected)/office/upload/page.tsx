@@ -710,6 +710,9 @@ export default function OfficeUploadPage() {
           <p className="text-sm text-gray-500 mt-2">
             If you only need audio or video converted into text, use AI Transcription instead.
           </p>
+          <p className="mt-2 text-sm text-gray-600">
+            Need help preparing your files? <Link href="/guide#document-workspace" className="font-semibold text-[#003366] underline underline-offset-4">Open the Help &amp; Guide.</Link>
+          </p>
         </div>
 
         {isGuidedIntake && (

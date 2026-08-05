@@ -16,7 +16,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 
 export const metadata: Metadata = {
-  title: 'Guide | Talk to Text Canada',
+  title: 'Help & Guide | Talk to Text Canada',
   description:
     'A beginner-friendly guide to using Talk to Text Canada for transcription, Transcript Workspace, Document Workspace, uploads, pricing, retention, and downloads.',
   metadataBase: new URL('https://www.talktotext.ca'),
@@ -82,7 +82,7 @@ export default function GuidePage() {
               Client Guide
             </p>
             <h1 className="text-4xl md:text-5xl font-bold text-[#003366] mb-6">
-              How to Use Talk to Text Canada
+              Help &amp; Guide
             </h1>
             <p className="text-lg md:text-xl text-gray-700 max-w-3xl mx-auto mb-8">
               A simple guide to uploading files, using Transcript Workspace and Document Workspace,
@@ -149,7 +149,7 @@ export default function GuidePage() {
             </div>
           </div>
 
-          <div className="rounded-2xl bg-white border border-gray-200 p-8 shadow-sm mb-12">
+          <div id="transcript-workspace" className="scroll-mt-24 rounded-2xl bg-white border border-gray-200 p-8 shadow-sm mb-12">
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between mb-8">
               <div>
                 <h2 className="text-3xl font-bold text-[#003366] mb-3">
@@ -180,7 +180,7 @@ export default function GuidePage() {
             </div>
           </div>
 
-          <div className="rounded-2xl bg-white border border-gray-200 p-8 shadow-sm mb-12">
+          <div id="document-workspace" className="scroll-mt-24 rounded-2xl bg-white border border-gray-200 p-8 shadow-sm mb-12">
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between mb-8">
               <div>
                 <h2 className="text-3xl font-bold text-[#003366] mb-3">
@@ -216,7 +216,7 @@ export default function GuidePage() {
           </div>
 
           <div className="grid lg:grid-cols-2 gap-8 mb-12">
-            <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
+            <div id="uploads" className="scroll-mt-24 rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
               <Upload className="mb-4 h-8 w-8 text-[#b29dd9]" />
               <h2 className="text-2xl font-bold text-[#003366] mb-4">
                 Uploads and File Handling
@@ -253,7 +253,7 @@ export default function GuidePage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-blue-100 bg-blue-50 p-8 mb-12">
+          <div id="downloads" className="scroll-mt-24 rounded-2xl border border-blue-100 bg-blue-50 p-8 mb-12">
             <div className="flex flex-col gap-4 md:flex-row md:items-start">
               <Clock className="h-8 w-8 flex-shrink-0 text-[#003366]" />
               <div>
