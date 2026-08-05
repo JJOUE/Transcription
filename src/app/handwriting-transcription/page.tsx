@@ -162,9 +162,8 @@ export default function HandwritingTranscriptionPage() {
                 Pricing note
               </h2>
               <p className="text-gray-700 mb-5">
-                Handwriting transcription projects may be quoted after review because pricing
-                depends on readability, file quality, length, formatting, turnaround time, and
-                instructions.
+                Finished document preparation starts at CA$25. Pricing depends on the document type,
+                length, template and formatting required. Handwriting transcription requires an administrator-approved quote.
               </p>
               <Link
                 href="/pricing#document-workspace"

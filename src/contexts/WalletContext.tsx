@@ -352,134 +352,22 @@ export function WalletProvider({ children }: WalletProviderProps) {
     }
 
     try {
-      return await runTransaction(db, async (transaction) => {
-        const userRef = doc(db, 'users', user.uid);
-        const userDoc = await transaction.get(userRef);
-
-        if (!userDoc.exists()) {
-          throw new Error('User document not found');
-        }
-
-        const userData = userDoc.data();
-        const currentWallet = userData.walletBalance || 0;
-        const currentPackages = userData.packages || [];
-        const currentFreeTrial = userData.freeTrialMinutes || 0;
-        const currentFreeTrialActive = userData.freeTrialActive || false;
-        const currentFreeTrialUsed = userData.freeTrialMinutesUsed || 0;
-        const now = new Date();
-
-        // Find best package for this mode
-        const eligiblePackages = currentPackages.filter((pkg: any) => {
-          const expiresAt = toDate(pkg.expiresAt);
-          return pkg.type === mode &&
-            pkg.active &&
-            pkg.minutesRemaining > 0 &&
-            expiresAt > now;
-        }).sort((a: any, b: any) => a.rate - b.rate); // Sort by best rate
-
-        let remainingMinutes = minutes;
-        let totalCostDeducted = 0;
-        let freeTrialMinutesUsed = 0;
-        let packageMinutesUsed = 0;
-        let walletUsed = 0;
-        const updatedPackages = [...currentPackages];
-
-        const canUseFreeTrial = mode === 'ai';
-
-        // PRIORITY 1: Use free trial minutes first for AI transcription only
-        if (canUseFreeTrial && currentFreeTrialActive && currentFreeTrial > 0) {
-          freeTrialMinutesUsed = Math.min(remainingMinutes, currentFreeTrial);
-          remainingMinutes -= freeTrialMinutesUsed;
-          // Free trial is FREE - no cost added to totalCostDeducted
-        }
-
-        // PRIORITY 2: Use package minutes (mode-specific, FIFO by purchase date)
-        for (const pkg of eligiblePackages) {
-          if (remainingMinutes <= 0) break;
-
-          const pkgIndex = updatedPackages.findIndex((p: any) => p.id === pkg.id);
-          const minutesToUse = Math.min(remainingMinutes, pkg.minutesRemaining);
-
-          updatedPackages[pkgIndex] = {
-            ...pkg,
-            minutesUsed: pkg.minutesUsed + minutesToUse,
-            minutesRemaining: pkg.minutesRemaining - minutesToUse
-          };
-
-          packageMinutesUsed += minutesToUse;
-          totalCostDeducted += minutesToUse * pkg.rate;
-          remainingMinutes -= minutesToUse;
-        }
-
-        // PRIORITY 3: Use wallet for remaining minutes
-        if (remainingMinutes > 0) {
-          const standardRate = MODE_PRICING[mode].standardRate;
-          const walletCost = remainingMinutes * standardRate;
-
-          if (currentWallet < walletCost) {
-            throw new Error(`Insufficient wallet balance. Need CA$${walletCost.toFixed(2)} but only have CA$${currentWallet.toFixed(2)}`);
-          }
-
-          walletUsed = walletCost;
-          totalCostDeducted += walletCost;
-        }
-
-        // Prepare updates
-        const updates: any = {
-          walletBalance: currentWallet - walletUsed,
-          packages: updatedPackages,
-          updatedAt: serverTimestamp()
-        };
-
-        // Update free trial if used
-        if (freeTrialMinutesUsed > 0) {
-          const newFreeTrialMinutes = currentFreeTrial - freeTrialMinutesUsed;
-          updates.freeTrialMinutes = newFreeTrialMinutes;
-          updates.freeTrialMinutesUsed = currentFreeTrialUsed + freeTrialMinutesUsed;
-          // Deactivate trial if no minutes left
-          if (newFreeTrialMinutes <= 0) {
-            updates.freeTrialActive = false;
-          }
-        }
-
-        // Update user document
-        transaction.update(userRef, updates);
-
-        if (freeTrialMinutesUsed > 0) {
-          const jobRef = doc(db, 'transcriptions', jobId);
-          transaction.update(jobRef, {
-            paymentStatus: 'free-trial',
-            billingType: 'ai-free-trial',
-            freeTrialMinutesUsed,
-            creditsUsed: Math.round(walletUsed * 100),
-            updatedAt: serverTimestamp()
-          });
-        }
-
-        // Record transaction
-        const transactionRef = doc(collection(db, 'transactions'));
-        transaction.set(transactionRef, {
-          userId: user.uid,
-          type: 'transcription',
-          amount: -totalCostDeducted,
-          description: `${MODE_PRICING[mode].name}: ${minutes} minutes${freeTrialMinutesUsed > 0 ? ` (${freeTrialMinutesUsed} free AI trial minutes used)` : ''}`,
-          jobId,
-          freeTrialMinutesUsed,
-          packageMinutesUsed,
-          walletUsed,
-          minutesUsed: minutes,
-          createdAt: serverTimestamp()
-        });
-
-        return {
-          success: true,
-          costDeducted: totalCostDeducted,
-          freeTrialMinutesUsed,
-          packageMinutesUsed,
-          walletUsed,
-          error: undefined
-        };
+      const token = await user.getIdToken();
+      const response = await fetch(`/api/transcriptions/${encodeURIComponent(jobId)}/deduct`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
       });
+      const result = await response.json();
+      if (!response.ok || !result.ok) throw new Error(result.error || 'Failed to process payment');
+      await loadWalletData();
+      return {
+        success: true,
+        costDeducted: Number(result.costDeducted || 0),
+        freeTrialMinutesUsed: Number(result.freeTrialMinutesUsed || 0),
+        packageMinutesUsed: Number(result.packageMinutesUsed || 0),
+        walletUsed: Number(result.walletUsed || 0),
+      };
     } catch (error: any) {
       console.error('Error deducting for transcription:', error);
       return {

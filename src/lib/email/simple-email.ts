@@ -237,3 +237,55 @@ Do not reply with confidential file contents. Review uploaded materials inside t
     console.log('[Email] Document Workspace notification error:', error);
   }
 }
+
+type ProjectTransactionalEmailKind = 'quote-ready' | 'payment-requested' | 'payment-received-ready';
+
+interface ProjectTransactionalEmailInput {
+  kind: ProjectTransactionalEmailKind;
+  clientEmail: string;
+  projectId: string;
+  serviceLabel?: string;
+  total?: number;
+  dashboardUrl: string;
+}
+
+export async function sendDocumentWorkspaceClientEmail(
+  notification: ProjectTransactionalEmailInput,
+): Promise<{ ok: boolean; messageId?: string; error?: string }> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return { ok: false, error: 'Email service not configured' };
+
+  const config = getContactEmailConfig();
+  const businessBcc = process.env.BUSINESS_NOTIFICATION_EMAIL?.trim();
+  const bcc = businessBcc && businessBcc.toLowerCase() !== notification.clientEmail.toLowerCase()
+    ? businessBcc
+    : undefined;
+  const copy = {
+    'quote-ready': { subject: 'Your project quote is ready', heading: 'Your Document Workspace quote is ready to review.' },
+    'payment-requested': { subject: 'Payment requested for your project', heading: 'Payment has been requested for your approved Document Workspace quote.' },
+    'payment-received-ready': {
+      subject: 'Your completed project is ready',
+      heading: notification.total === 0
+        ? 'No payment is required and your completed project is ready.'
+        : 'Payment has been received and your completed project is ready.',
+    },
+  }[notification.kind];
+  const text = `${copy.heading}\n\nProject reference: ${notification.projectId}\nService: ${notification.serviceLabel || 'Document Workspace'}${notification.total == null ? '' : `\nTotal: CA$${notification.total.toFixed(2)}`}\n\nSign in to your secure dashboard to review the project:\n${notification.dashboardUrl}\n\nNo files are attached to this email.`;
+
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: config.from, to: notification.clientEmail, subject: copy.subject, text, ...(bcc ? { bcc } : {}) }),
+    });
+    if (!response.ok) {
+      console.error('[Email] Document Workspace client notification failed:', response.status, await response.text());
+      return { ok: false, error: `Email provider returned ${response.status}` };
+    }
+    const data = await response.json() as { id?: string };
+    return { ok: true, messageId: data.id };
+  } catch (error) {
+    console.error('[Email] Document Workspace client notification error:', error);
+    return { ok: false, error: error instanceof Error ? error.message : 'Email failed' };
+  }
+}

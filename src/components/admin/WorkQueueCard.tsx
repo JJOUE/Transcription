@@ -29,6 +29,9 @@ import {
 import { formatDuration } from '@/lib/utils';
 import { formatRetentionLabel, isRetentionDeleted } from '@/lib/utils/retention';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { Timestamp } from 'firebase/firestore';
+import { DocumentWorkspaceQuoteCalculator } from '@/components/admin/DocumentWorkspaceQuoteCalculator';
+import { DocumentWorkspacePaymentControls } from '@/components/admin/DocumentWorkspacePaymentControls';
 
 interface WorkQueueCardProps {
   job: TranscriptionJob;
@@ -673,6 +676,12 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                 </span>
               )}
 
+              {['pending', 'failed', 'payment-failed'].includes(String(job.paymentStatus || '')) && (
+                <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
+                  {job.paymentStatus === 'pending' ? 'Billing Pending' : 'Billing Failed'}
+                </span>
+              )}
+
               <span>
                 {formatDuration(job.duration || 0)}
               </span>
@@ -763,6 +772,13 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
               Review before deleting any Storage files. This request does not delete files automatically.
             </p>
           </div>
+        )}
+
+        {job.type === 'office' && (job.paymentStatus === 'quote-required' || Boolean(job.officeQuote)) && (
+          <DocumentWorkspaceQuoteCalculator job={job} onSaved={onComplete} />
+        )}
+        {job.type === 'office' && job.officeQuote && (
+          <DocumentWorkspacePaymentControls job={job} onSaved={onComplete} />
         )}
 
         {job.type === 'office' && (

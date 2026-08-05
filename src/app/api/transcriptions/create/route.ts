@@ -101,8 +101,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the transcription job with server timestamp
+    const serverInitialStatus = validatedBody.mode === 'human' ? 'pending-transcription' : 'processing';
     const jobData = {
       ...validatedBody,
+      // Billing and workflow state is established by trusted server routes,
+      // never by values supplied in the browser request.
+      status: serverInitialStatus,
+      paymentStatus: 'pending',
+      billingType: 'pending',
+      freeTrialMinutesUsed: 0,
+      hasPackage: false,
+      addOnCost: 0,
       ...(isAdminUser && {
         creditsUsed: 0,
         addOnCost: 0,

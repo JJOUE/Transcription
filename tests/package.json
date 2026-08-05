@@ -1,0 +1,13 @@
+{
+  "name": "talk-to-text-security-tests",
+  "private": true,
+  "scripts": {
+    "test:firestore-rules": "firebase emulators:exec --config ../firebase.json --project talk-to-text-rules-test --only firestore \"node --test firestore.rules.test.mjs\"",
+    "test:billing": "node --test billing-and-quotes.test.mjs"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.0",
+    "firebase": "^12.2.1",
+    "firebase-tools": "^14.12.1"
+  }
+}

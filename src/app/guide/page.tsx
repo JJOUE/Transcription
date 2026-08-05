@@ -42,13 +42,17 @@ const transcriptSteps = [
 ];
 
 const documentSteps = [
+  'Choose Start a Project and answer the guided questions, or use the standard Document Workspace form.',
+  'Sign in before files are uploaded securely to your project.',
   'Choose Document Workspace for audio instructions for document preparation, copy typing, handwriting transcription, or document preparation from notes or files.',
   'Upload audio, video, documents, scans, handwriting images, PDFs, TXT, DOC, DOCX, JPG, PNG, or HEIC files where supported.',
   'Add instructions describing what should be prepared, typed, cleaned up, formatted, or organized.',
   'Upload an optional template, sample, letterhead, form, or reference document if it helps explain the format you need.',
-  'Submit the project through your secure workspace.',
-  'Track the project from your dashboard.',
-  'Download the completed document from your dashboard when it is ready.',
+  'Submit the project through your secure workspace. Package minutes may cover transcription where applicable.',
+  'Review the administrator-approved quote in your dashboard, then accept or decline it.',
+  'When payment is required, complete the project-specific payment before downloading the final document.',
+  'For an approved zero-dollar courtesy project, no payment is required.',
+  'Download completed work securely from your dashboard.',
 ];
 
 const uploadNotes = [
@@ -60,7 +64,9 @@ const uploadNotes = [
 
 const pricingNotes = [
   'Transcription pricing depends on the service type selected.',
-  'Document Workspace projects involving documents, scans, handwriting, or copy typing may require a custom quote.',
+  'Finished document preparation starts at CA$25. Pricing depends on the document type, length, template and formatting required.',
+  'Document Workspace finished documents require an administrator-approved quote that you can accept or decline in your dashboard.',
+  'Payment is required before final download when the approved quote has an amount owing. Approved zero-dollar courtesy projects require no payment.',
   'Check the Pricing page for current rates and available service options.',
 ];
 
@@ -85,8 +91,14 @@ export default function GuidePage() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/signin"
+                href="/start-project"
                 className="inline-flex items-center justify-center rounded-md bg-[#003366] px-6 py-3 font-semibold text-white hover:bg-[#00264d]"
+              >
+                Start a Project
+              </Link>
+              <Link
+                href="/signin"
+                className="inline-flex items-center justify-center rounded-md border border-[#003366] px-6 py-3 font-semibold text-[#003366] hover:bg-[#003366] hover:text-white"
               >
                 Sign In
               </Link>
@@ -199,8 +211,7 @@ export default function GuidePage() {
             </div>
 
             <p className="text-sm text-gray-600 mt-6 text-center">
-              Non-audio document, scan, handwriting, and copy typing projects may require a custom
-              quote depending on length, clarity, formatting, and complexity.
+              The guided intake remains optional. The standard form is still available while the guided workflow is being introduced.
             </p>
           </div>
 

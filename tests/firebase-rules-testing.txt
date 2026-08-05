@@ -1,0 +1,23 @@
+FIRESTORE RULES TESTS
+
+These tests use only the local Firebase Emulator Suite. They do not require or
+read production Firebase credentials or data.
+
+Requirements:
+- Node.js supported by the project's Firebase CLI version
+- Java 11 or newer (Java 17 or 21 recommended)
+- Rules-test dependencies installed with: npm --prefix tests install
+
+Run:
+  npm --prefix tests install
+  npm run test:firestore-rules
+
+The command starts an isolated Firestore emulator, runs
+tests/firestore.rules.test.mjs, and shuts the emulator down. Test fixtures use
+the synthetic project ID talk-to-text-rules-test and example-only users.
+
+After review, validate and deploy the Firestore rules with:
+  firebase deploy --only firestore:rules
+
+Do not deploy from a workstation unless it is authenticated to the intended
+Firebase project and the emulator suite has passed.

@@ -9,7 +9,7 @@ import {
   browserLocalPersistence,
 } from 'firebase/auth';
 import { auth, db } from './config';
-import { doc, setDoc, getDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { setCookie, deleteCookie } from 'cookies-next';
 import { SubscriptionStatus, PlanId } from '@/lib/types/subscription';
 
@@ -77,24 +77,7 @@ export const signUp = async (email: string, password: string, name?: string) => 
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
-    // Create user document in Firestore with FREE TRIAL
-    await setDoc(doc(db, 'users', user.uid), {
-      uid: user.uid,
-      email: user.email,
-      name: name || '',
-      role: 'user', // Default role
-      createdAt: serverTimestamp(),
-      lastLogin: serverTimestamp(),
-      walletBalance: 0,
-      totalSpent: 0,
-      // Free Trial - 60 AI transcription minutes for all new users
-      freeTrialMinutes: 60,
-      freeTrialMinutesTotal: 60,
-      freeTrialMinutesUsed: 0,
-      freeTrialActive: true,
-    });
-
-    // Get ID token and set cookie
+    // Initialize the profile and free trial through trusted server code.
     const idToken = await user.getIdToken();
     setCookie('auth-token', idToken, {
       maxAge: 60 * 60 * 24 * 7, // 7 days
@@ -102,6 +85,12 @@ export const signUp = async (email: string, password: string, name?: string) => 
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
     });
+    const profileResponse = await fetch('/api/auth/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+      body: JSON.stringify({ action: 'initialize', name: name || '' }),
+    });
+    if (!profileResponse.ok) throw new Error('Account created, but the secure profile could not be initialized. Please contact support.');
 
     return { user, error: null };
   } catch (error: any) {
@@ -115,14 +104,6 @@ export const signIn = async (email: string, password: string) => {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
-    // Update last login
-    await setDoc(
-      doc(db, 'users', user.uid),
-      { lastLogin: serverTimestamp() },
-      { merge: true }
-    );
-
-    // Get ID token and set cookie
     const idToken = await user.getIdToken();
     setCookie('auth-token', idToken, {
       maxAge: 60 * 60 * 24 * 7, // 7 days
@@ -130,6 +111,11 @@ export const signIn = async (email: string, password: string) => {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
     });
+    await fetch('/api/auth/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+      body: JSON.stringify({ action: 'touch-login' }),
+    }).catch(error => console.warn('Could not update last login:', error));
 
     return { user, error: null };
   } catch (error: any) {

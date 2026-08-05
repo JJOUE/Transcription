@@ -33,6 +33,12 @@ const getOfficeServiceLabel = (serviceType?: string) => {
   }
 };
 
+const canDownloadQuotedOfficeFile = (job: TranscriptionJob) => {
+  if (!job.officeQuote) return true;
+  const total = Number(job.acceptedQuoteSnapshot?.total ?? job.officeQuote.total ?? 0);
+  return total > 0 ? job.paymentStatus === 'paid' : Boolean(job.courtesyApprovedAt);
+};
+
 export function UserDashboard() {
   const { user, userData } = useAuth();
   const { transactions } = useCredits();
@@ -156,13 +162,13 @@ export function UserDashboard() {
   // Separate transcription and office studio jobs
   const transcriptionJobs = recentJobs.filter(
     job => !isRetentionDeleted(job) && (job.type !== 'office' ||
-      (job.mode === 'human' && Boolean(job.officeCompletedDocumentPath))
+      (job.mode === 'human' && Boolean(job.officeCompletedDocumentPath) && !job.officeQuote)
     )
   );
 
   const officeJobs = recentJobs.filter(
     job => !isRetentionDeleted(job) && job.type === 'office' &&
-      !(job.mode === 'human' && Boolean(job.officeCompletedDocumentPath))
+      !(job.mode === 'human' && Boolean(job.officeCompletedDocumentPath) && !job.officeQuote)
   );
 
   const isCompletedTranscriptionJob = (job: TranscriptionJob) =>
@@ -579,6 +585,10 @@ export function UserDashboard() {
                                 Quote requested — pricing confirmation required
                               </span>
                             )}
+                            {job.quoteStatus === 'quote-sent' && <span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-800">Quote ready</span>}
+                            {job.quoteStatus === 'quote-accepted' && job.paymentStatus !== 'paid' && <span className="rounded-full bg-indigo-100 px-2 py-1 text-xs font-semibold text-indigo-800">Quote accepted</span>}
+                            {job.paymentStatus === 'requested' && <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800">Payment requested</span>}
+                            {job.paymentStatus === 'paid' && <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-semibold text-green-800">Payment received</span>}
                             {isCompletedOfficeJob(job) && (job.officeCompletedDocumentPath || job.officeCompletedDocumentURL) && !isRetentionDeleted(job) && (
                               <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-semibold text-green-700">
                                 {job.completedFiles?.find(file => file.isLatest)?.label || (job.mode === 'human' ? 'Finished transcript ready' : 'Completed work ready')}
@@ -622,7 +632,7 @@ export function UserDashboard() {
                           {isRetentionDeleted(job) && (job.officeCompletedDocumentPath || job.officeCompletedDocumentURL) && (
                             <span className="text-sm font-medium text-red-600">Files expired/deleted</span>
                           )}
-                          {!isRetentionDeleted(job) && (job.officeCompletedDocumentPath || job.officeCompletedDocumentURL) && (
+                          {!isRetentionDeleted(job) && canDownloadQuotedOfficeFile(job) && (job.officeCompletedDocumentPath || (!job.officeQuote && job.officeCompletedDocumentURL)) && (
                             <Button
                               size="sm"
                               asChild

@@ -190,8 +190,8 @@ export default function DocumentWorkspacePage() {
             </div>
 
             <p className="text-sm text-gray-600 mt-6 text-center">
-              Non-audio document, scan, handwriting, and copy typing projects may require a custom
-              quote depending on length, clarity, formatting, and complexity.
+              Finished document preparation starts at CA$25. Pricing depends on the document type,
+              length, template and formatting required. Finished documents require an administrator-approved quote.
             </p>
           </div>
 
@@ -267,8 +267,8 @@ export default function DocumentWorkspacePage() {
             <p className="text-gray-700 mt-6">
               Completed documents can be delivered through your client workspace so you can
               download and keep your own copies. Editable document delivery, including DOCX where
-              applicable, is intended for prepared document projects. Custom formatting, rush work,
-              and complex requests may require a custom quote.
+              applicable, is intended for prepared document projects. Finished document preparation
+              starts at CA$25 and requires an administrator-approved quote.
             </p>
           </div>
 

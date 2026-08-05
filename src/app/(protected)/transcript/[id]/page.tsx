@@ -3471,7 +3471,7 @@ export default function TranscriptViewerPage() {
       } else {
         // Small transcript - save directly to Firestore
         console.log('[Save] Saving transcript to Firestore');
-        await updateTranscriptionStatus(transcription.id!, 'complete', {
+        await updateTranscriptionStatus(transcription.id!, transcription.status, {
           timestampedTranscript: transcription.timestampedTranscript,
           speakerNames
         });

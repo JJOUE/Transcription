@@ -342,13 +342,16 @@ export function TranscriptionQueue() {
     // - Client file deletion requests
     const isStuckProcessing = item.status === 'processing' && !item.speechmaticsJobId;
     const hasDeletionRequest = item.deletionRequested && item.deletionRequestStatus !== 'processed';
+    const hasFailedWorkflowEmail = item.quoteEmailStatus === 'failed' ||
+      item.paymentRequestEmailStatus === 'failed' || item.completionEmailStatus === 'failed';
     const needsAdminAction = (item.type === 'office' && !['complete', 'cancelled'].includes(item.status)) ||
                             (item.mode === 'human' && !['complete', 'cancelled'].includes(item.status)) ||
                             (item.mode === 'hybrid' && ['pending-review', 'under-review'].includes(item.status)) ||
                             (item.mode === 'ai' && item.status === 'failed') ||
                             (item.mode === 'hybrid' && item.status === 'failed') ||
                             isStuckProcessing ||
-                            hasDeletionRequest;
+                            hasDeletionRequest ||
+                            hasFailedWorkflowEmail;
 
     return matchesSearch && matchesStatus && matchesJobType && needsAdminAction;
   }).sort((a, b) => {
@@ -368,13 +371,16 @@ export function TranscriptionQueue() {
   const adminActionItems = queueItems.filter(item => {
     if (item.isArchived) return false;
     const hasDeletionRequest = item.deletionRequested && item.deletionRequestStatus !== 'processed';
+    const hasFailedWorkflowEmail = item.quoteEmailStatus === 'failed' ||
+      item.paymentRequestEmailStatus === 'failed' || item.completionEmailStatus === 'failed';
 
     return (item.type === 'office' && !['complete', 'cancelled'].includes(item.status)) ||
            (item.mode === 'human' && !['complete', 'cancelled'].includes(item.status)) || 
            (item.mode === 'hybrid' && ['pending-review', 'under-review'].includes(item.status)) ||
            (item.mode === 'ai' && item.status === 'failed') ||
            (item.mode === 'hybrid' && item.status === 'failed') ||
-           hasDeletionRequest;
+           hasDeletionRequest ||
+           hasFailedWorkflowEmail;
   });
 
   const stats = {
@@ -799,6 +805,11 @@ export function TranscriptionQueue() {
                         {item.paymentStatus === 'quote-required' && (
                           <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">
                             Quote Required
+                          </span>
+                        )}
+                        {['pending', 'failed', 'payment-failed'].includes(String(item.paymentStatus || '')) && (
+                          <span className="inline-flex items-center rounded-full border border-red-300 bg-red-100 px-2.5 py-1 text-xs font-bold text-red-800">
+                            {item.paymentStatus === 'pending' ? 'Billing Pending' : 'Billing Failed'}
                           </span>
                         )}
                         {/* Add-on indicators */}

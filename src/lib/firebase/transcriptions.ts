@@ -39,6 +39,21 @@ export interface CompletedFileVersion {
   isLatest: boolean;
 }
 
+export interface DocumentWorkspaceQuoteSnapshot {
+  status: 'sent';
+  quoteId: string;
+  version: number;
+  total: number;
+  subtotal: number;
+  taxAmount: number;
+  outputType: string;
+  clientLineItems?: Array<{ label: string; amount: number }>;
+  clientNotes?: string;
+  expiresAt?: string;
+  sentAt: Timestamp;
+  [key: string]: unknown;
+}
+
 export interface TranscriptionJob {
   id?: string;
   userId: string;
@@ -155,6 +170,35 @@ export interface TranscriptionJob {
   officeCompletedDocumentUploadedAt?: Timestamp;
   officeCompletedDocumentUploadedBy?: string;
   officeReviewed?: boolean; // Whether Office project has been reviewed
+  officeQuote?: DocumentWorkspaceQuoteSnapshot;
+  officeQuoteStatus?: 'sent' | 'accepted' | 'declined';
+  officeQuoteSentAt?: Timestamp;
+  quoteStatus?: 'quote-draft' | 'quote-sent' | 'quote-accepted' | 'quote-declined';
+  quoteAcceptedAt?: Timestamp;
+  quoteDeclinedAt?: Timestamp;
+  quoteAcceptedBy?: string;
+  quoteVersion?: number;
+  acceptedQuoteId?: string;
+  acceptedQuoteSnapshot?: DocumentWorkspaceQuoteSnapshot;
+  paymentRequestedAt?: Timestamp;
+  paymentRequestedBy?: string;
+  stripeCheckoutSessionId?: string;
+  stripeCheckoutUrl?: string;
+  stripePaymentIntentId?: string;
+  paidAt?: Timestamp;
+  paidAmountCents?: number;
+  paidCurrency?: string;
+  courtesyApprovedAt?: Timestamp;
+  courtesyApprovedBy?: string;
+  quoteEmailStatus?: 'sent' | 'failed';
+  quoteEmailSentAt?: Timestamp;
+  quoteEmailMessageId?: string;
+  paymentRequestEmailStatus?: 'sent' | 'failed';
+  paymentRequestEmailSentAt?: Timestamp;
+  paymentRequestEmailMessageId?: string;
+  completionEmailStatus?: 'sent' | 'failed';
+  completionEmailSentAt?: Timestamp;
+  completionEmailMessageId?: string;
   officeTemplateCategory?: string; // Legacy template/reference category
   officeTemplateName?: string; // Legacy template/reference name
 }
@@ -225,9 +269,7 @@ export const updateTranscriptionTranscript = async (id: string, transcript: stri
   const docRef = doc(db, TRANSCRIPTIONS_COLLECTION, id);
   await updateDoc(docRef, {
     transcript,
-    status: 'complete' as TranscriptionStatus,
-    updatedAt: Timestamp.now(),
-    completedAt: Timestamp.now()
+    updatedAt: Timestamp.now()
   });
 };
 

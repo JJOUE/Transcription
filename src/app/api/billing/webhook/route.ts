@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { sendDocumentWorkspaceClientEmail } from '@/lib/email/simple-email';
+import { publicProjectUrl, recordDocumentWorkspaceAudit } from '@/lib/document-workspace/workflow';
 
 // =============================================================================
 // STRIPE WEBHOOK HANDLER - PRODUCTION-READY IMPLEMENTATION
@@ -49,7 +51,6 @@ export async function POST(request: NextRequest) {
   console.log('[WEBHOOK]', requestId, 'Received at:', new Date().toISOString());
   console.log('[WEBHOOK]', requestId, 'Environment:', {
     hasWebhookSecret: !!webhookSecret,
-    secretPrefix: webhookSecret?.substring(0, 10),
     hasStripeKey: !!process.env.STRIPE_SECRET_KEY,
     nodeEnv: process.env.NODE_ENV,
     url: request.url,
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
   // STEP 3: Verify webhook signature to ensure authenticity
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    event = stripe.webhooks.constructEvent(body, signature, webhookSecret!);
     console.log('[WEBHOOK]', requestId, '✅ Signature verified');
     console.log('[WEBHOOK]', requestId, 'Event:', {
       type: event.type,
@@ -228,6 +229,11 @@ async function handleCheckoutSessionCompleted(
     return;
   }
 
+  if (paymentType === 'document-workspace-quote') {
+    await processDocumentWorkspaceQuotePayment(session, requestId);
+    return;
+  }
+
   // Handle missing userId with email fallback
   if (!userId) {
     console.error('[WEBHOOK]', requestId, '❌ Missing userId in metadata');
@@ -274,6 +280,58 @@ async function handleCheckoutSessionCompleted(
   });
 
   console.log('[WEBHOOK]', requestId, '✅ Checkout session processed successfully');
+}
+
+async function processDocumentWorkspaceQuotePayment(session: Stripe.Checkout.Session, requestId: string): Promise<void> {
+  const projectId = session.metadata?.projectId;
+  const quoteId = session.metadata?.quoteId;
+  const expectedAmountCents = Number(session.metadata?.expectedAmountCents);
+  const expectedCurrency = (session.metadata?.expectedCurrency || 'cad').toLowerCase();
+  if (!projectId || !quoteId || !Number.isInteger(expectedAmountCents)) throw new Error('Missing project quote payment metadata');
+  if (session.amount_total !== expectedAmountCents || session.currency?.toLowerCase() !== expectedCurrency) {
+    throw new Error(`Project quote payment metadata mismatch for ${projectId}`);
+  }
+
+  const jobRef = adminDb.collection('transcriptions').doc(projectId);
+  const result = await adminDb.runTransaction(async transaction => {
+    const snapshot = await transaction.get(jobRef);
+    if (!snapshot.exists) throw new Error(`Document Workspace project not found: ${projectId}`);
+    const job = snapshot.data() || {};
+    if (job.type !== 'office' || job.acceptedQuoteId !== quoteId) throw new Error(`Accepted quote mismatch for ${projectId}`);
+    const storedAmountCents = Math.round(Number(job.acceptedQuoteSnapshot?.total || 0) * 100);
+    if (storedAmountCents !== expectedAmountCents || expectedCurrency !== 'cad') throw new Error(`Stored quote amount mismatch for ${projectId}`);
+    if (job.stripeCheckoutSessionId !== session.id) throw new Error(`Checkout session mismatch for ${projectId}`);
+    if (job.paymentStatus === 'paid') return { newlyPaid: false, job };
+
+    const paymentIntentId = typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id;
+    transaction.update(jobRef, {
+      paymentStatus: 'paid', paidAt: FieldValue.serverTimestamp(), paidAmountCents: expectedAmountCents,
+      paidCurrency: expectedCurrency, stripePaymentIntentId: paymentIntentId || null,
+      ...(job.officeCompletedDocumentPath ? { status: 'complete', officeStatus: 'completed', completedAt: FieldValue.serverTimestamp() } : {}),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    return { newlyPaid: true, job: { ...job, stripePaymentIntentId: paymentIntentId } };
+  });
+  if (!result.newlyPaid) return;
+
+  await recordDocumentWorkspaceAudit(projectId, 'payment-confirmed', 'stripe', {
+    quoteId, sessionId: session.id, paymentIntentId: result.job.stripePaymentIntentId || null,
+    amountCents: expectedAmountCents, currency: expectedCurrency,
+  });
+  if (result.job.officeCompletedDocumentPath && result.job.completionEmailStatus !== 'sent') {
+    const client = await adminDb.collection('users').doc(String(result.job.userId || '')).get();
+    const clientEmail = client.data()?.email;
+    if (clientEmail) {
+      try {
+        const email = await sendDocumentWorkspaceClientEmail({ kind: 'payment-received-ready', clientEmail, projectId, serviceLabel: result.job.acceptedQuoteSnapshot?.outputType, total: expectedAmountCents / 100, dashboardUrl: publicProjectUrl(projectId) });
+        await jobRef.update({ completionEmailStatus: email.ok ? 'sent' : 'failed', completionEmailSentAt: email.ok ? FieldValue.serverTimestamp() : null, completionEmailMessageId: email.messageId || null, updatedAt: FieldValue.serverTimestamp() });
+        await recordDocumentWorkspaceAudit(projectId, email.ok ? 'email-sent' : 'email-failed', 'stripe', { notification: 'payment-received-ready', messageId: email.messageId || null });
+      } catch (emailError) {
+        console.error('[WEBHOOK]', requestId, 'Payment confirmed but completion notification tracking failed:', emailError);
+      }
+    }
+  }
+  console.log('[WEBHOOK]', requestId, 'Document Workspace quote payment confirmed:', projectId);
 }
 
 // =============================================================================
@@ -428,6 +486,14 @@ async function handlePaymentIntentFailed(
 
   // Optionally log to Firestore for admin review
   const userId = paymentIntent.metadata.userId;
+  const projectId = paymentIntent.metadata.projectId;
+  if (paymentIntent.metadata.type === 'document-workspace-quote' && projectId) {
+    const jobRef = adminDb.collection('transcriptions').doc(projectId);
+    const snapshot = await jobRef.get();
+    if (snapshot.exists && snapshot.data()?.paymentStatus !== 'paid') {
+      await jobRef.update({ paymentStatus: 'failed', updatedAt: FieldValue.serverTimestamp() });
+    }
+  }
   if (userId) {
     try {
       await adminDb.collection('failed_payments').add({

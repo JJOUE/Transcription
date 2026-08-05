@@ -672,15 +672,6 @@ export default function UploadPage() {
         
         const jobId = await createTranscriptionJobAPI(jobData);
 
-        // Update minutes used for tracking
-        const { updateDoc, doc } = await import('firebase/firestore');
-        const { db } = await import('@/lib/firebase/config');
-        const { increment } = await import('firebase/firestore');
-
-        await updateDoc(doc(db, 'users', user.uid), {
-          minutesUsedThisMonth: increment(billingMinutes)
-        });
-
         // Deduct from wallet balance
         if (!isAdminInternalUser && billingMinutes > 0) {
           const deductionResult = await deductForTranscription(

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb, adminStorage } from '@/lib/firebase/admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { sendDocumentWorkspaceClientEmail } from '@/lib/email/simple-email';
+import { publicProjectUrl, recordDocumentWorkspaceAudit } from '@/lib/document-workspace/workflow';
 
 const MAX_COMPLETED_DOCUMENT_SIZE = 50 * 1024 * 1024;
 const ALLOWED_COMPLETED_DOCUMENT_TYPES = new Map([
@@ -59,16 +61,13 @@ export async function GET(
       );
     }
 
-    if (job.userId !== userId) {
-      const userDoc = await adminDb.collection('users').doc(userId).get();
-      const userData = userDoc.data();
-
-      if (userData?.role !== 'admin') {
+    const userDoc = await adminDb.collection('users').doc(userId).get();
+    const isAdmin = userDoc.data()?.role === 'admin';
+    if (job.userId !== userId && !isAdmin) {
         return NextResponse.json(
           { error: 'You do not have permission to download this document' },
           { status: 403 }
         );
-      }
     }
 
     if (job.filesDeletedAt || job.deletionStatus === 'deleted' || job.deletionRequestStatus === 'processed' || job.deletionRequestStatus === 'completed') {
@@ -86,6 +85,18 @@ export async function GET(
 
     if (requestedFileId && !requestedVersion) {
       return NextResponse.json({ error: 'Completed document version not found' }, { status: 404 });
+    }
+
+    if (!isAdmin && job.officeQuote) {
+      const quoteTotal = Number(job.acceptedQuoteSnapshot?.total ?? job.officeQuote.total ?? 0);
+      const paid = job.paymentStatus === 'paid';
+      const courtesyApproved = quoteTotal === 0 && Boolean(job.courtesyApprovedAt);
+      if (quoteTotal > 0 && !paid) {
+        return NextResponse.json({ error: 'Payment is required before download' }, { status: 402 });
+      }
+      if (quoteTotal === 0 && !courtesyApproved) {
+        return NextResponse.json({ error: 'Courtesy approval is required before download' }, { status: 423 });
+      }
     }
 
     const documentPath = requestedVersion?.path || job.officeCompletedDocumentPath;
@@ -127,7 +138,11 @@ export async function GET(
     const filename = requestedVersion?.filename || job.officeCompletedFilename || metadata.name?.split('/').pop() || 'completed-document';
     const contentType = metadata.contentType || 'application/octet-stream';
 
-    return new NextResponse(contents, {
+    await recordDocumentWorkspaceAudit(id, 'completed-file-released', userId, {
+      fileId: requestedFileId || 'latest', adminAccess: isAdmin,
+    });
+
+    return new NextResponse(new Uint8Array(contents), {
       status: 200,
       headers: {
         'Content-Type': contentType,
@@ -266,12 +281,15 @@ export async function POST(
         isLatest: true,
       },
     ];
+    const quoteTotalBeforeUpload = Number(job.acceptedQuoteSnapshot?.total ?? job.officeQuote?.total ?? 0);
+    const hasQuote = Boolean(job.officeQuote);
+    const deliveryAllowedBeforeUpload = !hasQuote || job.paymentStatus === 'paid' || (quoteTotalBeforeUpload === 0 && Boolean(job.courtesyApprovedAt));
 
     await jobRef.update({
-      status: 'complete',
+      status: deliveryAllowedBeforeUpload ? 'complete' : 'pending-review',
       completedAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
-      officeStatus: 'completed',
+      officeStatus: deliveryAllowedBeforeUpload ? 'completed' : 'waiting_review',
       officeCompletedDocumentPath: documentPath,
       officeCompletedFilename: filename,
       officeCompletedDocumentContentType: contentType,
@@ -280,6 +298,23 @@ export async function POST(
       officeCompletedDocumentUploadedBy: decodedToken.uid,
       completedFiles,
     });
+
+    await recordDocumentWorkspaceAudit(id, 'completed-file-uploaded', decodedToken.uid, { fileId, filename, size: uploadedFile.size });
+    const quoteTotal = Number(job.acceptedQuoteSnapshot?.total ?? job.officeQuote?.total ?? 0);
+    const deliveryAllowed = job.paymentStatus === 'paid' || (quoteTotal === 0 && Boolean(job.courtesyApprovedAt));
+    if (deliveryAllowed && job.completionEmailStatus !== 'sent') {
+      const client = await adminDb.collection('users').doc(job.userId).get();
+      const clientEmail = client.data()?.email;
+      if (clientEmail) {
+        try {
+          const email = await sendDocumentWorkspaceClientEmail({ kind: 'payment-received-ready', clientEmail, projectId: id, serviceLabel: job.acceptedQuoteSnapshot?.outputType || job.officeQuote?.outputType, total: quoteTotal, dashboardUrl: publicProjectUrl(id) });
+          await jobRef.update({ completionEmailStatus: email.ok ? 'sent' : 'failed', completionEmailSentAt: email.ok ? FieldValue.serverTimestamp() : null, completionEmailMessageId: email.messageId || null });
+          await recordDocumentWorkspaceAudit(id, email.ok ? 'email-sent' : 'email-failed', decodedToken.uid, { notification: 'payment-received-ready', messageId: email.messageId || null });
+        } catch (emailError) {
+          console.error('[Manual Document Delivery] File delivered but notification tracking failed:', emailError);
+        }
+      }
+    }
 
     return NextResponse.json({
       ok: true,

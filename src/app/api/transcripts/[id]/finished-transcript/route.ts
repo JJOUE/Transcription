@@ -51,16 +51,20 @@ export async function GET(
       return NextResponse.json({ error: 'Transcript project not found' }, { status: 404 });
     }
 
-    const job = jobDoc.data();
-    if (job?.type === 'office') {
+    const job = jobDoc.data() || {};
+    if (job.type === 'office') {
       return NextResponse.json({ error: 'Finished transcripts are not available for Document Workspace projects' }, { status: 400 });
     }
 
-    if (job?.userId !== decodedToken.uid) {
-      const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
-      if (userDoc.data()?.role !== 'admin') {
-        return NextResponse.json({ error: 'You do not have permission to download this transcript' }, { status: 403 });
-      }
+    const requesterDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
+    const isAdmin = requesterDoc.data()?.role === 'admin';
+    if (job.userId !== decodedToken.uid && !isAdmin) {
+      return NextResponse.json({ error: 'You do not have permission to download this transcript' }, { status: 403 });
+    }
+
+    const explicitlyUnpaid = ['pending', 'failed', 'payment-failed', 'requested'].includes(String(job.paymentStatus || ''));
+    if (!isAdmin && explicitlyUnpaid) {
+      return NextResponse.json({ error: 'Payment must be confirmed before downloading completed work' }, { status: 402 });
     }
 
     if (job?.filesDeletedAt || job?.deletionStatus === 'deleted' || job?.deletionRequestStatus === 'processed' || job?.deletionRequestStatus === 'completed') {
@@ -100,7 +104,7 @@ export async function GET(
       requestedVersion?.filename || job.finishedTranscriptFilename || metadata.name?.split('/').pop() || 'finished-transcript'
     );
 
-    return new NextResponse(contents, {
+    return new NextResponse(new Uint8Array(contents), {
       status: 200,
       headers: {
         'Content-Type': metadata.contentType || job.finishedTranscriptContentType || 'application/octet-stream',

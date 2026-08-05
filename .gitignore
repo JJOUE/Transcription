@@ -12,6 +12,9 @@
 
 # testing
 /coverage
+/tests/node_modules/
+/tests/firestore-debug.log
+/tests/.compiled/
 
 # next.js
 /.next/

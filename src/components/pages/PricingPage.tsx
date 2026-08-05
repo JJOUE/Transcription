@@ -263,15 +263,13 @@ const getTypeInfo = (type: string) => {
               </p>
               
               <div className="text-3xl font-bold text-[#003366] mb-4">
-                CA$2.50
+                CA$25
               </div>
               
   <div className="space-y-2 text-sm text-gray-600">
-    <p>Document Workspace: starting at CA$2.50 per finished page</p>
-    <p>Simple typed documents from clear audio instructions: starting at CA$2.50 per finished page</p>
-    <p>Copy typing: starting at CA$2.50 per page</p>
-    <p>Handwriting transcription: starting at CA$3.50 per page</p>
-    <p>Complex, long, legal, or heavily formatted documents: custom quote</p>
+    <p>Finished document preparation starts at CA$25. Pricing depends on the document type, length, template and formatting required.</p>
+    <p>Letters, case notes, reports, memos, supplied templates, copy typing, handwriting and other finished documents require an administrator-approved quote.</p>
+    <p>Transcript-only projects continue to use the transcription rates shown above.</p>
   </div>
 </div>
 

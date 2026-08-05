@@ -199,9 +199,8 @@ export default function AudioInstructionsDocumentPreparationPage() {
                 Pricing note
               </h2>
               <p className="text-gray-700 mb-5">
-                Projects based on audio instructions are quoted after review because pricing
-                depends on the instructions, template, length, formatting, file quality, turnaround
-                time, and final document required.
+                Finished document preparation starts at CA$25. Pricing depends on the document type,
+                length, template and formatting required. Projects based on audio instructions require an administrator-approved quote.
               </p>
               <Link
                 href="/pricing#document-workspace"

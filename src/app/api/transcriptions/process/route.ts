@@ -6,6 +6,7 @@ export const maxDuration = 300;
 import { buildProjectDictionaryVocabulary, speechmaticsService, type SpeechmaticsConfig } from '@/lib/speechmatics/service';
 import { getTranscriptionByIdAdmin, updateTranscriptionStatusAdmin, TranscriptionMode } from '@/lib/firebase/transcriptions-admin';
 import { ProcessTranscriptionJobSchema, validateData } from '@/lib/validation/schemas';
+import { adminAuth, adminDb } from '@/lib/firebase/admin';
 
 /**
  * Handle OPTIONS requests for CORS preflight
@@ -102,6 +103,25 @@ export async function POST(request: NextRequest) {
     }
 
     const { jobId, language, operatingPoint } = validation.data;
+
+    const token = request.cookies.get('auth-token')?.value ||
+      request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
+    if (!token) {
+      return NextResponse.json({ error: 'Authentication required', requestId }, { status: 401 });
+    }
+    const decoded = await adminAuth.verifyIdToken(token);
+    const authorizationJob = await getTranscriptionByIdAdmin(jobId);
+    if (!authorizationJob) {
+      return NextResponse.json({ error: 'Transcription job not found', requestId }, { status: 404 });
+    }
+    const requester = await adminDb.collection('users').doc(decoded.uid).get();
+    const isAdmin = requester.data()?.role === 'admin';
+    if (authorizationJob.userId !== decoded.uid && !isAdmin) {
+      return NextResponse.json({ error: 'You do not have access to this transcription job', requestId }, { status: 403 });
+    }
+    if (!isAdmin && !['paid', 'free-trial', 'admin-comped'].includes(String(authorizationJob.paymentStatus || ''))) {
+      return NextResponse.json({ error: 'Payment must be confirmed before transcription processing', requestId }, { status: 402 });
+    }
 
     console.log(`[POST][${requestId}] Request validated successfully`, {
       jobId,

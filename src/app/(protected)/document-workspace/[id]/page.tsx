@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getTranscriptionById, requestFileDeletion, TranscriptionJob } from '@/lib/firebase/transcriptions';
 import { formatDuration } from '@/lib/utils';
 import { formatRetentionLabel, isRetentionDeleted, toRetentionDate } from '@/lib/utils/retention';
+import { QuoteAndPayment } from '@/components/document-workspace/QuoteAndPayment';
 
 const getOfficeServiceLabel = (serviceType?: string) => {
   switch (serviceType) {
@@ -96,8 +97,14 @@ export default function DocumentWorkspaceProjectPage() {
     ? `/api/document-workspace/${project?.id}/completed-document?fileId=${encodeURIComponent(latestCompletedDocument.id)}`
     : project?.officeCompletedDocumentPath
     ? `/api/document-workspace/${project.id}/completed-document`
+    : project?.officeQuote
+    ? undefined
     : project?.officeCompletedDocumentURL;
   const completedDocumentAvailable = Boolean(completedDocumentDownloadHref && !retentionDeleted);
+  const quoteTotal = Number(project?.acceptedQuoteSnapshot?.total ?? project?.officeQuote?.total ?? 0);
+  const quotedDeliveryLocked = Boolean(project?.officeQuote) && (
+    quoteTotal > 0 ? project?.paymentStatus !== 'paid' : !project?.courtesyApprovedAt
+  );
   const sourceFileDownloadHref = project?.filePath
     ? `/api/document-workspace/${project.id}/source-file`
     : project?.downloadURL;
@@ -216,7 +223,9 @@ export default function DocumentWorkspaceProjectPage() {
           </div>
         </div>
 
-        {project.paymentStatus === 'quote-required' && (
+        {project.officeQuote ? (
+          <QuoteAndPayment project={project} isAdmin={userData?.role === 'admin'} />
+        ) : project.paymentStatus === 'quote-required' && (
           <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
             Pricing confirmation is required before production begins. Talk to Text Canada will review the submitted materials and contact you about the quote.
           </div>
@@ -389,6 +398,13 @@ export default function DocumentWorkspaceProjectPage() {
                         <p className="mt-2 text-sm text-gray-600">{retentionLabel}</p>
                       )}
                     </div>
+                    {quotedDeliveryLocked ? (
+                      <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                        {quoteTotal > 0
+                          ? 'Your completed document is ready. Payment is required before download.'
+                          : 'Your completed document is ready. Courtesy approval is pending.'}
+                      </div>
+                    ) : (
                     <Button asChild className="w-full bg-[#003366] hover:bg-[#002244]">
                       <a
                         href={completedDocumentDownloadHref}
@@ -402,6 +418,7 @@ export default function DocumentWorkspaceProjectPage() {
                         Download Completed Document
                       </a>
                     </Button>
+                    )}
                     {previousCompletedDocuments.length > 0 && (
                       <div className="border-t border-gray-200 pt-4">
                         <p className="text-sm font-semibold text-[#003366]">Previous versions</p>
@@ -412,12 +429,12 @@ export default function DocumentWorkspaceProjectPage() {
                                 <p className="text-sm font-medium text-gray-800">{file.label}</p>
                                 <p className="text-xs text-gray-500">{file.filename}</p>
                               </div>
-                              <Button variant="outline" size="sm" asChild>
+                              {!quotedDeliveryLocked && <Button variant="outline" size="sm" asChild>
                                 <a href={`/api/document-workspace/${project.id}/completed-document?fileId=${encodeURIComponent(file.id)}`}>
                                   <Download className="h-4 w-4 mr-1" />
                                   Download
                                 </a>
-                              </Button>
+                              </Button>}
                             </div>
                           ))}
                         </div>
