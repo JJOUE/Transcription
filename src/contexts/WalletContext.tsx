@@ -181,6 +181,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
               const purchasedAtDate = toDate(pkg.purchasedAt);
               return {
                 ...pkg,
+                minutesRemaining: Math.max(0, Number(pkg.minutesRemaining || 0) - Number(pkg.minutesReserved || 0)),
                 purchasedAt: purchasedAtDate,
                 expiresAt: expiresAtDate,
                 active: pkg.active && expiresAtDate > now && pkg.minutesRemaining > 0
@@ -250,6 +251,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
             const purchasedAtDate = toDate(pkg.purchasedAt);
             return {
               ...pkg,
+              minutesRemaining: Math.max(0, Number(pkg.minutesRemaining || 0) - Number(pkg.minutesReserved || 0)),
               purchasedAt: purchasedAtDate,
               expiresAt: expiresAtDate,
               active: pkg.active && expiresAtDate > now && pkg.minutesRemaining > 0

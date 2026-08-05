@@ -7,6 +7,7 @@ import { buildProjectDictionaryVocabulary, speechmaticsService, type Speechmatic
 import { getTranscriptionByIdAdmin, updateTranscriptionStatusAdmin, TranscriptionMode } from '@/lib/firebase/transcriptions-admin';
 import { ProcessTranscriptionJobSchema, validateData } from '@/lib/validation/schemas';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { startTranscriptionProcessing } from '@/lib/transcription/start-processing';
 
 /**
  * Handle OPTIONS requests for CORS preflight
@@ -119,8 +120,27 @@ export async function POST(request: NextRequest) {
     if (authorizationJob.userId !== decoded.uid && !isAdmin) {
       return NextResponse.json({ error: 'You do not have access to this transcription job', requestId }, { status: 403 });
     }
+    if (authorizationJob.billingType === 'package-pending-add-on' && authorizationJob.paymentStatus !== 'paid') {
+      return NextResponse.json({ error: 'Add-on payment must be confirmed before transcription processing', requestId }, { status: 402 });
+    }
+    if (Number(authorizationJob.addOnCost || 0) > 0 && authorizationJob.hasPackage === true && authorizationJob.packageReservationStatus !== 'consumed') {
+      return NextResponse.json({ error: 'Reserved package minutes must be consumed before transcription processing', requestId }, { status: 409 });
+    }
     if (!isAdmin && !['paid', 'free-trial', 'admin-comped'].includes(String(authorizationJob.paymentStatus || ''))) {
       return NextResponse.json({ error: 'Payment must be confirmed before transcription processing', requestId }, { status: 402 });
+    }
+
+    if (authorizationJob.mode === 'hybrid') {
+      const processingResult = await startTranscriptionProcessing({ jobId, language, operatingPoint, request });
+      if (!processingResult.success) {
+        const status = ['PAYMENT_REQUIRED', 'ADD_ON_PAYMENT_REQUIRED'].includes(processingResult.error || '') ? 402 : 500;
+        return NextResponse.json({ error: processingResult.error || 'Failed to process transcription job', requestId }, { status });
+      }
+      return NextResponse.json({
+        success: true, duplicate: processingResult.duplicate === true,
+        jobId, speechmaticsJobId: processingResult.speechmaticsJobId,
+        status: processingResult.status, requestId,
+      }, { headers: { 'Access-Control-Allow-Origin': '*' } });
     }
 
     console.log(`[POST][${requestId}] Request validated successfully`, {

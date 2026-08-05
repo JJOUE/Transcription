@@ -4,7 +4,9 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimiters } from '@/lib/middleware/rate-limit';
 import { CreateTranscriptionJobSchema, validateData } from '@/lib/validation/schemas';
 import { sendSimpleNotification } from '@/lib/email/simple-email';
-import { supportsTranscriptionAddOns } from '@/lib/billing/transcription-rates';
+import { PACKAGE_ADD_ON_DISABLED_MESSAGE, supportsTranscriptionAddOns, transcriptionAddOnQuote } from '@/lib/billing/transcription-rates';
+import { packageAvailableMinutes } from '@/lib/billing/package-reservations';
+import { isPackageAddOnCheckoutEnabled } from '@/lib/billing/package-add-on-feature';
 
 function redactProjectDictionaryTerms(value: unknown): unknown {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -104,30 +106,40 @@ export async function POST(request: NextRequest) {
     // Add-on fields are server-normalized so manipulated AI requests cannot retain them.
     const supportsAddOns = supportsTranscriptionAddOns(validatedBody.mode);
     const { addOnCost: _ignoredAddOnCost, ...clientJobFields } = validatedBody;
-    const hasMatchingPackage = supportsAddOns && Array.isArray(userData?.packages) && userData.packages.some(
-      (pkg: { type?: string; active?: boolean; minutesRemaining?: number }) =>
-        pkg?.type === validatedBody.mode && pkg?.active !== false && Number(pkg?.minutesRemaining || 0) > 0,
-    );
+    const billingMinutes = Math.max(1, Math.ceil(Number(validatedBody.duration || 0) / 60));
+    const matchingPackageMinutes = supportsAddOns && Array.isArray(userData?.packages)
+      ? userData.packages
+        .filter((pkg: { type?: string; active?: boolean }) => pkg?.type === validatedBody.mode && pkg?.active !== false)
+        .reduce((sum: number, pkg: { minutesRemaining?: number; minutesReserved?: number }) => sum + packageAvailableMinutes(pkg), 0)
+      : 0;
+    const hasSufficientMatchingPackage = matchingPackageMinutes >= billingMinutes;
     const requestedPaidAddOn = supportsAddOns && (
       validatedBody.rushDelivery === true || Number(validatedBody.speakerCount || 1) >= 5
     );
 
-    if (!isAdminUser && hasMatchingPackage && requestedPaidAddOn) {
-      return NextResponse.json({
-        error: 'Rush service and recordings with more than four speakers require a separate payment. Please contact support before submitting.',
-        code: 'PACKAGE_ADD_ON_PAYMENT_REQUIRED',
-      }, { status: 400 });
+    const packageAddOnPending = !isAdminUser && hasSufficientMatchingPackage && requestedPaidAddOn;
+    if (packageAddOnPending && !isPackageAddOnCheckoutEnabled()) {
+      return NextResponse.json(
+        { error: PACKAGE_ADD_ON_DISABLED_MESSAGE, code: 'PACKAGE_ADD_ON_CHECKOUT_DISABLED' },
+        { status: 503 }
+      );
     }
+    const addOnQuote = transcriptionAddOnQuote(validatedBody.mode, billingMinutes, {
+      rushDelivery: validatedBody.rushDelivery === true,
+      speakerCount: Number(validatedBody.speakerCount || 1),
+    });
 
     // Create the transcription job with server timestamp
-    const serverInitialStatus = validatedBody.mode === 'human' ? 'pending-transcription' : 'processing';
+    const serverInitialStatus = packageAddOnPending
+      ? 'pending-add-on-payment'
+      : validatedBody.mode === 'human' ? 'pending-transcription' : 'processing';
     const jobData = {
       ...clientJobFields,
       rushDelivery: supportsAddOns ? validatedBody.rushDelivery === true : false,
       multipleSpeakers: supportsAddOns
         ? Number(validatedBody.speakerCount || 1) >= 5
         : false,
-      ...(supportsAddOns ? { addOnCost: 0 } : {}),
+      ...(supportsAddOns ? { addOnCost: packageAddOnPending ? addOnQuote.subtotalCents / 100 : 0 } : {}),
       // Billing and workflow state is established by trusted server routes,
       // never by values supplied in the browser request.
       status: serverInitialStatus,
@@ -135,6 +147,16 @@ export async function POST(request: NextRequest) {
       billingType: 'pending',
       freeTrialMinutesUsed: 0,
       hasPackage: false,
+      ...(packageAddOnPending && {
+        paymentStatus: 'pending',
+        billingType: 'package-pending-add-on',
+        hasPackage: true,
+        addOnPaymentStatus: 'pending',
+        addOnRushCents: addOnQuote.rushCents,
+        addOnSpeakerCents: addOnQuote.speakerCents,
+        addOnSubtotalCents: addOnQuote.subtotalCents,
+        addOnCurrency: 'cad',
+      }),
       ...(isAdminUser && {
         creditsUsed: 0,
         ...(supportsAddOns ? { addOnCost: 0 } : {}),

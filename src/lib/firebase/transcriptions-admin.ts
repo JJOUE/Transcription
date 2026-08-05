@@ -2,7 +2,7 @@
 import { adminDb } from './admin';
 import { FieldValue } from 'firebase-admin/firestore';
 
-export type TranscriptionStatus = 'processing' | 'pending-review' | 'pending-transcription' | 'complete' | 'failed';
+export type TranscriptionStatus = 'processing' | 'pending-review' | 'pending-transcription' | 'pending-add-on-payment' | 'payment-reconciliation-required' | 'complete' | 'failed';
 export type TranscriptionMode = 'ai' | 'hybrid' | 'human';
 export type TranscriptionDomain = 'general' | 'medical' | 'legal';
 export type OfficeServiceType = 'dictation-cleanup' | 'copy-typing' | 'handwriting-transcription' | 'document-preparation';
@@ -85,6 +85,10 @@ export interface TranscriptionJob {
   multipleSpeakers?: boolean; // Whether the five-or-more-speakers surcharge was selected
   speakerCount?: number; // Number of speakers in the recording
   addOnCost?: number; // Additional cost for add-ons in CAD
+  addOnPaymentStatus?: 'pending' | 'requested' | 'paid' | 'failed' | 'expired' | 'checkout-error' | 'paid-reconciliation-required';
+  packageReservationStatus?: 'reserved' | 'consumed' | 'released';
+  packageReservedMinutes?: number;
+  packageReservationId?: string;
   hasPackage?: boolean; // Whether user has active package (add-ons are free)
   // Template/reference file and Document Workspace fields
   templatePath?: string;

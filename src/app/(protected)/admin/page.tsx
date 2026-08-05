@@ -106,7 +106,7 @@ export default function AdminPage() {
       const transcriptionsRef = collection(db, 'transcriptions');
 
       // Only fetch jobs with statuses that could need admin action
-      const actionableStatuses = ['pending-review', 'under-review', 'pending-transcription', 'processing', 'failed', 'queued'];
+      const actionableStatuses = ['pending-review', 'under-review', 'pending-transcription', 'processing', 'failed', 'queued', 'payment-reconciliation-required'];
       const allJobsQuery = query(
         transcriptionsRef,
         where('status', 'in', actionableStatuses),

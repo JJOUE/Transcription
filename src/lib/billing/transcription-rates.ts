@@ -21,3 +21,26 @@ export function transcriptionAddOnRate(
   if (Number(options.speakerCount || 1) >= 5) rate += SPEAKER_SURCHARGE_RATES[mode];
   return rate;
 }
+
+
+export function transcriptionAddOnQuote(
+  mode: string,
+  minutes: number,
+  options: { rushDelivery?: boolean; speakerCount?: number },
+) {
+  const safeMinutes = Math.max(0, Number(minutes) || 0);
+  if (!supportsTranscriptionAddOns(mode)) {
+    return { rushCents: 0, speakerCents: 0, subtotalCents: 0 };
+  }
+
+  const rushCents = options.rushDelivery === true
+    ? Math.round(safeMinutes * RUSH_SURCHARGE_RATES[mode] * 100)
+    : 0;
+  const speakerCents = Number(options.speakerCount || 1) >= 5
+    ? Math.round(safeMinutes * SPEAKER_SURCHARGE_RATES[mode] * 100)
+    : 0;
+
+  return { rushCents, speakerCents, subtotalCents: rushCents + speakerCents };
+}
+export const PACKAGE_ADD_ON_DISABLED_MESSAGE =
+  'Rush service and recordings with more than four speakers require a separate payment. Please contact support before submitting.';
