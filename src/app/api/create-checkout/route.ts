@@ -128,8 +128,8 @@ async function createCheckoutSession(request: NextRequest, decodedToken: any) {
     price_data: {
       currency: 'cad',
       product_data: {
-        name: 'Wallet Top-up',
-        description: `Add CA$${amount} to your transcription wallet`
+        name: 'Pay-as-you-go Transcription',
+        description: `Prepayment for pay-as-you-go transcription services (CA$${amount})`
       },
       unit_amount: Math.round(amount * 100),
     },

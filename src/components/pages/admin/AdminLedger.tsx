@@ -142,7 +142,7 @@ export function AdminLedger() {
   const handleExportReport = () => {
     try {
       // Create CSV content
-      const headers = ['Date', 'Time', 'User', 'Type', 'Description', 'Credits', 'Revenue', 'Job ID'];
+      const headers = ['Date', 'Time', 'User', 'Type', 'Description', 'Amount', 'Revenue', 'Job ID'];
       const csvContent = [
         headers.join(','),
         ...filteredTransactions.map(transaction => [
@@ -162,7 +162,7 @@ export function AdminLedger() {
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.setAttribute('href', url);
-      link.setAttribute('download', `credit-ledger-${new Date().toISOString().slice(0, 10)}.csv`);
+      link.setAttribute('download', `billing-ledger-${new Date().toISOString().slice(0, 10)}.csv`);
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
@@ -272,7 +272,7 @@ export function AdminLedger() {
             <CardContent className="p-12 text-center">
               <div className="text-red-500 text-6xl mb-4">⚠️</div>
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
-              <p className="text-gray-600">You must be an administrator to view the credit ledger.</p>
+              <p className="text-gray-600">You must be an administrator to view the billing ledger.</p>
             </CardContent>
           </Card>
         </div>
@@ -290,10 +290,10 @@ export function AdminLedger() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-[#003366] mb-2">
-                Credit Ledger
+                Billing Ledger
               </h1>
               <p className="text-gray-600">
-                Track all credit transactions and revenue across the platform.
+                Track package minutes, legacy account credit, transactions, and revenue across the platform.
               </p>
             </div>
             <div className="flex space-x-2">
@@ -414,7 +414,7 @@ export function AdminLedger() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="wallet_topup">Wallet Topups</SelectItem>
+                    <SelectItem value="wallet_topup">Legacy Account Credit Purchases</SelectItem>
                     <SelectItem value="package_purchase">Package Purchases</SelectItem>
                     <SelectItem value="transcription">Transcriptions</SelectItem>
                     <SelectItem value="refund">Refunds</SelectItem>
@@ -521,7 +521,7 @@ export function AdminLedger() {
                     <th className="text-left py-3 px-4 font-medium text-gray-600">User</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600">Type</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600">Description</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">Credits</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">Amount</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600">Revenue</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600">Job ID</th>
                   </tr>
@@ -575,7 +575,7 @@ export function AdminLedger() {
                           transaction.type === 'consumption' ? 'bg-blue-100 text-blue-800' : // legacy
                           'bg-gray-100 text-gray-800'
                         }`}>
-                          {transaction.type === 'wallet_topup' ? 'Wallet Topup' :
+                          {transaction.type === 'wallet_topup' ? 'Legacy Account Credit Purchase' :
                            transaction.type === 'package_purchase' ? 'Package' :
                            transaction.type === 'transcription' ? 'Transcription' :
                            transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)}

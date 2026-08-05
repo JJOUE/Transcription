@@ -5498,7 +5498,7 @@ export default function TranscriptViewerPage() {
                     <span>{formatDuration(transcription.duration)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Credits Used:</span>
+                    <span className="text-gray-600">Service cost:</span>
                     <CreditDisplay amount={transcription.creditsUsed} size="sm" />
                   </div>
                   <div className="flex justify-between">

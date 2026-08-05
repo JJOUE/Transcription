@@ -5,13 +5,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useWallet } from '@/contexts/WalletContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { RefreshCw, Package, Wallet, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { RefreshCw, Package, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 
 export default function DebugPackagesPage() {
   const { user, userData } = useAuth();
-  const { walletBalance, packages, freeTrialMinutes, freeTrialActive, refreshWallet } = useWallet();
+  const { packages, freeTrialMinutes, freeTrialActive, refreshWallet } = useWallet();
   const [loading, setLoading] = useState(false);
   const [debugData, setDebugData] = useState<any>(null);
 
@@ -59,7 +59,7 @@ export default function DebugPackagesPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-[#003366]">Package Debug Tool</h1>
-          <p className="text-gray-600 mt-2">Check your purchased packages and wallet status</p>
+          <p className="text-gray-600 mt-2">Check your purchased packages and transcription minutes</p>
         </div>
 
         {/* Action Buttons */}
@@ -70,7 +70,7 @@ export default function DebugPackagesPage() {
             className="flex items-center gap-2"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            Refresh Wallet Data
+            Refresh Transcription Minutes
           </Button>
 
           <Button
@@ -88,19 +88,13 @@ export default function DebugPackagesPage() {
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Wallet className="h-5 w-5" />
-              Current Wallet State (Client-side)
+              <Package className="h-5 w-5" />
+              Current Transcription Minutes (Client-side)
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {/* Wallet Balance */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600">Wallet Balance</p>
-                  <p className="text-2xl font-bold text-[#003366]">CA${walletBalance.toFixed(2)}</p>
-                </div>
-
+              <div className="grid grid-cols-1 gap-4">
                 <div className="bg-green-50 p-4 rounded-lg">
                   <p className="text-sm text-gray-600">Free Trial</p>
                   <p className="text-2xl font-bold text-green-600">
@@ -116,7 +110,7 @@ export default function DebugPackagesPage() {
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                     <p className="text-yellow-800">⚠️ No packages found in client-side state</p>
                     <p className="text-sm text-yellow-600 mt-1">
-                      If you just purchased a package, try clicking "Refresh Wallet Data" above
+                      If you just purchased a package, try clicking "Refresh Transcription Minutes" above
                     </p>
                   </div>
                 ) : (
@@ -181,11 +175,7 @@ export default function DebugPackagesPage() {
                 <div className="space-y-4">
                   {/* Summary */}
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div>
-                        <p className="text-xs text-gray-600">Wallet Balance</p>
-                        <p className="text-lg font-semibold">CA${debugData.walletBalance?.toFixed(2)}</p>
-                      </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
                         <p className="text-xs text-gray-600">Total Packages</p>
                         <p className="text-lg font-semibold">{debugData.debug?.packagesCount || 0}</p>
@@ -227,7 +217,7 @@ export default function DebugPackagesPage() {
                         ) : (
                           <XCircle className="h-4 w-4 text-red-600" />
                         )}
-                        <span>walletBalance field exists</span>
+                        <span>Legacy account credit field exists</span>
                       </div>
                     </div>
                   </div>
@@ -250,7 +240,9 @@ export default function DebugPackagesPage() {
                         debugData.recentTransactions?.map((tx: any) => (
                           <div key={tx.id} className="flex items-center justify-between bg-gray-50 p-3 rounded">
                             <div>
-                              <p className="text-sm font-medium">{tx.description}</p>
+                              <p className="text-sm font-medium">
+                                {tx.type === 'wallet_topup' ? 'Pay-as-you-go transcription purchase' : tx.description}
+                              </p>
                               <p className="text-xs text-gray-500">{tx.createdAt?.toDate?.()?.toLocaleString() || new Date(tx.createdAt).toLocaleString()}</p>
                             </div>
                             <div className={`font-semibold ${
@@ -280,7 +272,7 @@ export default function DebugPackagesPage() {
           <CardContent className="p-6">
             <h3 className="font-semibold text-blue-900 mb-2">How to Use This Tool:</h3>
             <ol className="list-decimal list-inside space-y-1 text-sm text-blue-800">
-              <li>Click "Refresh Wallet Data" to reload your packages from the database</li>
+              <li>Click "Refresh Transcription Minutes" to reload your packages from the database</li>
               <li>Click "Check Server Data" to see exactly what's stored in Firestore</li>
               <li>Compare the two sections to identify any sync issues</li>
               <li>If packages show in Server Data but not Client State, try logging out and back in</li>

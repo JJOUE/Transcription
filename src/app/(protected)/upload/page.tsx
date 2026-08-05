@@ -23,6 +23,7 @@ import { createTranscriptionJobAPI, getModeDetails } from '@/lib/api/transcripti
 import { TranscriptionMode, TranscriptionJob, TranscriptionDomain } from '@/lib/firebase/transcriptions';
 import { formatDuration, getBillingMinutes } from '@/lib/utils';
 import { PricingSettings, getPricingSettings } from '@/lib/firebase/settings';
+import { supportsTranscriptionAddOns, transcriptionAddOnRate } from '@/lib/billing/transcription-rates';
 import {
   ClientDictionaryTerm,
   dedupeDictionaryTerms,
@@ -100,6 +101,13 @@ export default function UploadPage() {
   const [rushDelivery, setRushDelivery] = useState(false);
   const [multipleSpeakers, setMultipleSpeakers] = useState(false);
   const [speakerCount, setSpeakerCount] = useState(5);
+
+  useEffect(() => {
+    if (!supportsTranscriptionAddOns(transcriptionMode)) {
+      setRushDelivery(false);
+      setMultipleSpeakers(false);
+    }
+  }, [transcriptionMode]);
   const { user, userData, refreshUser } = useAuth();
   const { consumeCredits } = useCredits();
   const {
@@ -278,6 +286,13 @@ export default function UploadPage() {
   const activePackage = getActivePackageForMode(transcriptionMode as TranscriptionMode);
   const hasPackage = !!activePackage;
 
+  useEffect(() => {
+    if (hasPackage) {
+      setRushDelivery(false);
+      setMultipleSpeakers(false);
+    }
+  }, [hasPackage]);
+
   // Check balance and calculate costs (includes FREE TRIAL logic)
   const balanceCheck = checkSufficientBalance(
     transcriptionMode as TranscriptionMode,
@@ -288,21 +303,18 @@ export default function UploadPage() {
   const freeTrialMinutesUsed = isAdminInternalUser ? 0 : balanceCheck.freeTrialMinutes;
   const packageMinutesUsed = isAdminInternalUser ? 0 : balanceCheck.packageMinutes;
   const walletMinutesUsed = isAdminInternalUser ? 0 : totalBillingMinutes - freeTrialMinutesUsed - packageMinutesUsed;
-  const hasSpeakerSurcharge = multipleSpeakers && speakerCount >= 5;
+  const supportsAddOns = supportsTranscriptionAddOns(transcriptionMode);
+  const hasSpeakerSurcharge = supportsAddOns && multipleSpeakers && speakerCount >= 5;
 
   // Calculate add-on costs (only if NOT using package or free trial for those minutes)
-  let addOnCostPerMinute = 0;
-  if (!hasPackage && (transcriptionMode === 'hybrid' || transcriptionMode === 'human')) {
-    if (rushDelivery) {
-      addOnCostPerMinute += transcriptionMode === 'hybrid' ? 0.50 : 0.75;
-    }
-    if (hasSpeakerSurcharge) {
-      addOnCostPerMinute += transcriptionMode === 'hybrid' ? 0.25 : 0.30;
-    }
-  }
+  const addOnCostPerMinute = transcriptionAddOnRate(transcriptionMode, {
+    rushDelivery,
+    speakerCount: hasSpeakerSurcharge ? speakerCount : 1,
+  });
 
-  // Add-ons only apply to wallet minutes (not free trial or package)
-  const addOnCost = isAdminInternalUser ? 0 : walletMinutesUsed * addOnCostPerMinute;
+  // Package add-ons require a separate payment flow and are blocked until that flow exists.
+  const packageAddOnBlocked = hasPackage && supportsAddOns && (rushDelivery || hasSpeakerSurcharge);
+  const addOnCost = isAdminInternalUser || hasPackage ? 0 : totalBillingMinutes * addOnCostPerMinute;
 
   // Total cost from balanceCheck + add-ons
   const totalCost = isAdminInternalUser ? 0 : balanceCheck.totalCost + addOnCost;
@@ -471,6 +483,15 @@ export default function UploadPage() {
       return;
     }
 
+    if (!isAdminInternalUser && packageAddOnBlocked) {
+      toast({
+        title: 'Separate add-on payment required',
+        description: 'Rush service and recordings with more than four speakers require a separate payment. Please contact support before submitting.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (!user) {
       toast({
         title: "Authentication required",
@@ -556,15 +577,10 @@ export default function UploadPage() {
         const billingMinutes = getBillingMinutes(uploadFile.duration);
 
         // Calculate add-on cost for this file
-        let fileAddOnCost = 0;
-        if (!hasPackage && (transcriptionMode === 'hybrid' || transcriptionMode === 'human')) {
-          if (rushDelivery) {
-            fileAddOnCost += billingMinutes * (transcriptionMode === 'hybrid' ? 0.50 : 0.75);
-          }
-          if (hasSpeakerSurcharge) {
-            fileAddOnCost += billingMinutes * (transcriptionMode === 'hybrid' ? 0.25 : 0.30);
-          }
-        }
+        const fileAddOnCost = hasPackage ? 0 : billingMinutes * transcriptionAddOnRate(transcriptionMode, {
+          rushDelivery,
+          speakerCount: hasSpeakerSurcharge ? speakerCount : 1,
+        });
 
         const costForFile = isAdminInternalUser ? 0 : (billingMinutes * costPerMinute) + fileAddOnCost;
         
@@ -624,10 +640,10 @@ export default function UploadPage() {
             expectedSpeakerCount: Number(expectedSpeakerCount) as 1 | 2 | 3 | 4 | 5
           }),
           // Add-on options
-          rushDelivery: (transcriptionMode === 'hybrid' || transcriptionMode === 'human') ? rushDelivery : false,
-          multipleSpeakers: (transcriptionMode === 'hybrid' || transcriptionMode === 'human') ? hasSpeakerSurcharge : false,
-          speakerCount: multipleSpeakers ? speakerCount : 1,
-          addOnCost: fileAddOnCost,
+          rushDelivery: supportsAddOns ? rushDelivery : false,
+          multipleSpeakers: supportsAddOns ? hasSpeakerSurcharge : false,
+          speakerCount: supportsAddOns && multipleSpeakers ? speakerCount : 1,
+          ...(supportsAddOns ? { addOnCost: fileAddOnCost } : {}),
           hasPackage: hasPackage,
           // Template for human transcription
           ...templateData,
@@ -1463,16 +1479,16 @@ export default function UploadPage() {
           </Card>
 
           {/* Add-on Options (for Hybrid and Human only) */}
-          {(transcriptionMode === 'hybrid' || transcriptionMode === 'human') && (
+          {supportsAddOns && (
             <Card className="border-0 shadow-sm">
               <CardHeader>
                 <CardTitle className="text-lg font-semibold text-[#003366]">
                   ⚡ Premium Add-ons
                 </CardTitle>
                 <p className="text-sm text-gray-600 mt-2">
-                  {userData?.hasActivePackage
-                    ? "Rush service and speaker add-ons are included with eligible transcription packages."
-                    : "Select optional add-ons (additional charges apply)"}
+                  {hasPackage
+                    ? 'Rush service and recordings with more than four speakers require a separate payment. Please contact support before submitting.'
+                    : 'Select optional Hybrid or Human add-ons. Charges are separate from transcription minutes.'}
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -1483,16 +1499,9 @@ export default function UploadPage() {
                       <div className="flex items-center gap-2">
                         <span className="text-xl">🚀</span>
                         <h4 className="font-medium text-gray-900">Rush Delivery</h4>
-                        {!userData?.hasActivePackage && (
-                          <span className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600">
-                            +CA${transcriptionMode === 'hybrid' ? '0.50' : '0.75'}/min
-                          </span>
-                        )}
-                        {userData?.hasActivePackage && (
-                          <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full font-medium">
-                            FREE with package
-                          </span>
-                        )}
+                        <span className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600">
+                          +CA${transcriptionMode === 'hybrid' ? '0.50' : '0.75'}/min
+                        </span>
                       </div>
                       <p className="text-sm text-gray-600 mt-1">
                         Get your transcription in 24-48 hours instead of 3-5 business days
@@ -1502,6 +1511,7 @@ export default function UploadPage() {
                       <input
                         type="checkbox"
                         checked={rushDelivery}
+                        disabled={hasPackage}
                         onChange={(e) => setRushDelivery(e.target.checked)}
                         className="sr-only peer"
                       />
@@ -1517,25 +1527,19 @@ export default function UploadPage() {
                       <div className="flex items-center gap-2">
                         <span className="text-xl">👥</span>
                         <h4 className="font-medium text-gray-900">Five or more speakers</h4>
-                        {!userData?.hasActivePackage && (
-                          <span className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600">
-                            +CA${transcriptionMode === 'hybrid' ? '0.25' : '0.30'}/min
-                          </span>
-                        )}
-                        {userData?.hasActivePackage && (
-                          <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full font-medium">
-                            FREE with package
-                          </span>
-                        )}
+                        <span className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600">
+                          +CA${transcriptionMode === 'hybrid' ? '0.25' : '0.30'}/min
+                        </span>
                       </div>
                       <p className="text-sm text-gray-600 mt-1">
-                        Recordings with one to four speakers have no extra speaker charge. Pay-as-you-go recordings with five or more speakers include an additional speaker surcharge.
+                        Hybrid and Human recordings with one to four speakers have no extra speaker charge. Recordings with more than four speakers include an additional speaker surcharge.
                       </p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer ml-4">
                       <input
                         type="checkbox"
                         checked={multipleSpeakers}
+                        disabled={hasPackage}
                         onChange={(e) => setMultipleSpeakers(e.target.checked)}
                         className="sr-only peer"
                       />
@@ -1553,6 +1557,7 @@ export default function UploadPage() {
                           min="5"
                           max="10"
                           value={speakerCount}
+                          disabled={hasPackage}
                           onChange={(e) => setSpeakerCount(Math.max(5, Math.min(10, parseInt(e.target.value) || 5)))}
                           className="w-20 px-3 py-1 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-[#b29dd9] focus:border-transparent"
                         />
@@ -1562,7 +1567,7 @@ export default function UploadPage() {
                 </div>
 
                 {/* Cost Summary for Add-ons */}
-                {(rushDelivery || hasSpeakerSurcharge) && !userData?.hasActivePackage && (
+                {(rushDelivery || hasSpeakerSurcharge) && (
                   <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                     <div className="flex items-start space-x-2">
                       <div className="text-amber-600 mt-0.5">💰</div>
@@ -1581,20 +1586,6 @@ export default function UploadPage() {
                   </div>
                 )}
 
-                {/* Package Benefit Notice */}
-                {(rushDelivery || hasSpeakerSurcharge) && userData?.hasActivePackage && (
-                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex items-start space-x-2">
-                      <div className="text-green-600 mt-0.5">✨</div>
-                      <div>
-                        <p className="text-sm text-green-800 font-medium">Package benefits active</p>
-                        <p className="text-sm text-green-700 mt-1">
-                          Rush service and speaker add-ons are included with eligible transcription packages.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
           )}
@@ -1819,16 +1810,16 @@ export default function UploadPage() {
                   <div className="pt-2 space-y-2">
                     {/* Show current balances */}
                     <div className="text-sm space-y-1">
-                      {/* Free AI Trial Balance */}
+                      {/* Free AI trial minutes */}
                       {freeTrialActive && freeTrialMinutes > 0 && (
                         <div className="flex justify-between items-center bg-green-50 p-2 rounded border border-green-200">
-                          <span className="text-green-700 font-medium">🎉 Free AI Trial Balance:</span>
+                          <span className="text-green-700 font-medium">AI trial minutes:</span>
                           <span className="text-green-800 font-bold">{freeTrialMinutes} minutes</span>
                         </div>
                       )}
                       {activePackage && (
                         <div className="flex justify-between items-center">
-                          <span className="text-gray-500">Package Balance:</span>
+                          <span className="text-gray-500">Package minutes:</span>
                           <span className="text-gray-700">{activePackage.minutesRemaining} minutes</span>
                         </div>
                       )}
@@ -1848,10 +1839,9 @@ export default function UploadPage() {
                       )}
                     </div>
 
-                    {/* Package benefits for add-ons */}
-                    {activePackage && (rushDelivery || hasSpeakerSurcharge) && (transcriptionMode === 'hybrid' || transcriptionMode === 'human') && (
-                      <div className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
-                        Rush service and speaker add-ons included with eligible package
+                    {activePackage && supportsAddOns && (
+                      <div className="text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded">
+                        Rush service and recordings with more than four speakers require a separate payment. Please contact support before submitting.
                       </div>
                     )}
                   </div>
@@ -1900,7 +1890,7 @@ export default function UploadPage() {
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={isUploading || uploadedFiles.length === 0 || hasInsufficientBalance}
+              disabled={isUploading || uploadedFiles.length === 0 || hasInsufficientBalance || packageAddOnBlocked}
               className={`text-white px-8 py-3 relative overflow-hidden ${
                 isUploading ? 'bg-gray-400' : 'bg-[#003366] hover:bg-[#002244]'
               }`}

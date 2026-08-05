@@ -4,6 +4,18 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   const token = request.cookies.get('auth-token');
   const pathname = request.nextUrl.pathname;
+  const isProductionDebugRoute = process.env.NODE_ENV === 'production' && (
+    pathname === '/debug-packages' ||
+    pathname.startsWith('/debug-packages/') ||
+    pathname === '/test-transcription' ||
+    pathname.startsWith('/test-transcription/') ||
+    pathname.startsWith('/api/debug/')
+  );
+
+  if (isProductionDebugRoute) {
+    return new NextResponse(null, { status: 404 });
+  }
+
   const isAuthPage = request.nextUrl.pathname.startsWith('/signin') || 
                      request.nextUrl.pathname.startsWith('/signup');
   const protectedRoutePrefixes = [
@@ -47,6 +59,7 @@ export const config = {
     '/billing/:path*',
     '/dashboard/:path*',
     '/debug-packages/:path*',
+    '/api/debug/:path*',
     '/document-workspace/:path*',
     '/office/:path*',
     '/profile/:path*',

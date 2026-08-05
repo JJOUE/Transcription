@@ -36,9 +36,9 @@ export async function loadApprovedServiceData() {
       document: 'Prepares a finished document from dictation, handwriting, copy typing, instructions, or a supplied template. The result is a document, not a transcript.',
       separation: 'The workspaces are separate. Files and projects do not transfer between them automatically, and they do not share an editor.',
     },
-    speakerRule: { threshold: 'One to four speakers have no extra speaker charge. Five or more speakers may have a surcharge for eligible pay-as-you-go Hybrid or Human work.', perAudioMinute: SPEAKER_SURCHARGE_RATES },
+    speakerRule: { threshold: 'AI Transcription has no speaker surcharge. Hybrid and Human recordings with one to four speakers have no extra speaker charge. More than four speakers may have a surcharge for eligible pay-as-you-go Hybrid or Human work.', perAudioMinute: SPEAKER_SURCHARGE_RATES },
     rushPerAudioMinute: RUSH_SURCHARGE_RATES,
-    packages: 'Package eligibility depends on service type. Package minutes are reduced by submitted audio duration. Do not assume one workspace or package applies to another.',
+    packages: 'Package eligibility depends on service type. Package minutes are reduced only by submitted audio duration. Package customers must contact support for rush service or recordings with more than four speakers until separate add-on checkout is available.',
     uploads: {
       transcript: { accepted: ['audio', 'video'], route: '/upload' },
       document: { accepted: ['audio', 'video', 'DOC', 'DOCX', 'PDF', 'TXT', 'JPG', 'PNG', 'HEIC'], maxPrimaryFile: '1 GB', maxTemplate: '50 MB', route: '/office/upload' },

@@ -349,7 +349,7 @@ export default function TranscriptionsPage() {
                         <p className="text-[#003366]">{formatDuration(transcription.duration)}</p>
                       </div>
                       <div>
-                        <span className="text-gray-600 font-medium">Credits Used:</span>
+                        <span className="text-gray-600 font-medium">Service cost:</span>
                         <CreditDisplay amount={transcription.creditsUsed} size="sm" />
                       </div>
                       <div>

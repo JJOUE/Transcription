@@ -689,7 +689,7 @@ export function UserDashboard() {
           <Card className="border-0 shadow-sm">
             <CardHeader className="flex flex-row items-start justify-between">
               <CardTitle className="text-lg font-semibold text-[#003366]">
-                Recent Credit Activity
+                Recent Billing Activity
               </CardTitle>
               <Button 
                 size="sm" 
@@ -710,7 +710,9 @@ export function UserDashboard() {
                   >
                     <div>
                       <p className="font-medium text-[#003366]">
-                        {transaction.description}
+                        {transaction.type === 'wallet_topup'
+                          ? 'Pay-as-you-go transcription purchase'
+                          : transaction.description}
                       </p>
                       <p className="text-sm text-gray-600">
                         {transaction.createdAt?.toISOString?.()?.slice(0, 10) || 'Unknown date'}

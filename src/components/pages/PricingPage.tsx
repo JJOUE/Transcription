@@ -90,13 +90,13 @@ export function PricingPage() {
   const addOns = [
     {
       type: 'Rush Delivery',
-      description: '24-48 hour turnaround',
+      description: 'Available for Hybrid and Human Transcription only',
       hybrid: '+$0.50/minute',
       human: '+$0.75/minute'
     },
     {
       type: 'Multiple Speakers',
-      description: 'No extra speaker charge for 1 to 4 speakers; pay-as-you-go recordings with 5 or more include a surcharge',
+      description: 'Hybrid and Human only: no charge for 1 to 4 speakers; pay-as-you-go recordings with more than 4 may include a surcharge',
       hybrid: '+$0.25/minute',
       human: '+$0.30/minute'
     }
@@ -479,7 +479,7 @@ const getTypeInfo = (type: string) => {
               Premium Add-ons
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              <strong className="text-green-600">FREE with all packages</strong> • Additional charges apply for pay-as-you-go
+              Available for Hybrid and Human Transcription. Charges are separate from transcription minutes.
             </p>
           </div>
 
@@ -495,13 +495,8 @@ const getTypeInfo = (type: string) => {
                       <p className="text-gray-600">{addon.description}</p>
                     </div>
                     <div className="text-right">
-                      <div className="mb-2">
-                        <span className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
-                          FREE with packages
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-500">Pay-as-you-go: Hybrid {addon.hybrid}</p>
-                      <p className="text-sm text-gray-500">Pay-as-you-go: Human {addon.human}</p>
+                      <p className="text-sm text-gray-500">Hybrid {addon.hybrid}</p>
+                      <p className="text-sm text-gray-500">Human {addon.human}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -509,7 +504,7 @@ const getTypeInfo = (type: string) => {
             ))}
             <div className="mt-8 p-6 bg-blue-50 rounded-lg border border-blue-200">
               <p className="text-sm text-blue-800">
-                <strong>Package Benefit:</strong> All minute packages include rush delivery and multiple speaker detection at no additional cost. This benefit alone can save hundreds of dollars!
+                <strong>Package minutes:</strong> Cover transcription duration only. Package customers must contact support for rush service or recordings with more than four speakers until separate add-on checkout is available.
               </p>
             </div>
           </div>
@@ -707,7 +702,7 @@ const getTypeInfo = (type: string) => {
               <p className="text-gray-600">
                 Choose your transcription service and submit a project without purchasing a package.
                 The final amount depends on the audio minutes, selected service, and any order surcharge.
-                Recordings with one to four speakers have no extra speaker charge. Pay-as-you-go recordings with five or more speakers include an additional speaker surcharge. Rush service and speaker add-ons are included with eligible transcription packages.
+                AI Transcription has no rush or speaker surcharge. Hybrid and Human recordings with one to four speakers have no extra speaker charge; recordings with more than four speakers may include an additional speaker surcharge. Package customers must contact support for paid add-ons until separate checkout is available.
               </p>
             </div>
 

@@ -4,6 +4,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimiters } from '@/lib/middleware/rate-limit';
 import { CreateTranscriptionJobSchema, validateData } from '@/lib/validation/schemas';
 import { sendSimpleNotification } from '@/lib/email/simple-email';
+import { supportsTranscriptionAddOns } from '@/lib/billing/transcription-rates';
 
 function redactProjectDictionaryTerms(value: unknown): unknown {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -100,10 +101,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Add-on fields are server-normalized so manipulated AI requests cannot retain them.
+    const supportsAddOns = supportsTranscriptionAddOns(validatedBody.mode);
+    const { addOnCost: _ignoredAddOnCost, ...clientJobFields } = validatedBody;
+    const hasMatchingPackage = supportsAddOns && Array.isArray(userData?.packages) && userData.packages.some(
+      (pkg: { type?: string; active?: boolean; minutesRemaining?: number }) =>
+        pkg?.type === validatedBody.mode && pkg?.active !== false && Number(pkg?.minutesRemaining || 0) > 0,
+    );
+    const requestedPaidAddOn = supportsAddOns && (
+      validatedBody.rushDelivery === true || Number(validatedBody.speakerCount || 1) >= 5
+    );
+
+    if (!isAdminUser && hasMatchingPackage && requestedPaidAddOn) {
+      return NextResponse.json({
+        error: 'Rush service and recordings with more than four speakers require a separate payment. Please contact support before submitting.',
+        code: 'PACKAGE_ADD_ON_PAYMENT_REQUIRED',
+      }, { status: 400 });
+    }
+
     // Create the transcription job with server timestamp
     const serverInitialStatus = validatedBody.mode === 'human' ? 'pending-transcription' : 'processing';
     const jobData = {
-      ...validatedBody,
+      ...clientJobFields,
+      rushDelivery: supportsAddOns ? validatedBody.rushDelivery === true : false,
+      multipleSpeakers: supportsAddOns
+        ? Number(validatedBody.speakerCount || 1) >= 5
+        : false,
+      ...(supportsAddOns ? { addOnCost: 0 } : {}),
       // Billing and workflow state is established by trusted server routes,
       // never by values supplied in the browser request.
       status: serverInitialStatus,
@@ -111,10 +135,9 @@ export async function POST(request: NextRequest) {
       billingType: 'pending',
       freeTrialMinutesUsed: 0,
       hasPackage: false,
-      addOnCost: 0,
       ...(isAdminUser && {
         creditsUsed: 0,
-        addOnCost: 0,
+        ...(supportsAddOns ? { addOnCost: 0 } : {}),
         hasPackage: false,
         paymentStatus: 'admin-comped',
         billingType: 'internal-admin',
@@ -139,7 +162,7 @@ export async function POST(request: NextRequest) {
         mode: validatedBody.mode,
         originalFilename: validatedBody.originalFilename,
         durationMinutes: validatedBody.duration / 60,
-        rushDelivery: validatedBody.rushDelivery,
+        rushDelivery: false,
       });
     }
 

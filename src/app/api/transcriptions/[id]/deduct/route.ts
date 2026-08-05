@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
-import { RUSH_SURCHARGE_RATES, SPEAKER_SURCHARGE_RATES, TRANSCRIPTION_MODE_RATES } from '@/lib/billing/transcription-rates';
+import { TRANSCRIPTION_MODE_RATES, supportsTranscriptionAddOns, transcriptionAddOnRate } from '@/lib/billing/transcription-rates';
 
 function billingMinutes(seconds: number) {
   if (!seconds || seconds <= 0) return 1;
@@ -76,14 +76,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         remaining -= used;
       }
 
-      const hasPackageCoverage = packageMinutesUsed > 0;
-      let addOnRate = 0;
-      if (!hasPackageCoverage && (mode === 'hybrid' || mode === 'human')) {
-        if (job.rushDelivery === true) addOnRate += RUSH_SURCHARGE_RATES[mode];
-        if (Number(job.speakerCount || 1) >= 5) addOnRate += SPEAKER_SURCHARGE_RATES[mode];
-      }
-      const walletUsed = remaining * (TRANSCRIPTION_MODE_RATES[mode] + addOnRate);
-      const addOnCost = remaining * addOnRate;
+      const addOnRate = transcriptionAddOnRate(mode, {
+        rushDelivery: job.rushDelivery,
+        speakerCount: job.speakerCount,
+      });
+      if (packageMinutesUsed > 0 && addOnRate > 0) throw new Error('PACKAGE_ADD_ON_PAYMENT_REQUIRED');
+      const addOnCost = minutes * addOnRate;
+      const walletUsed = (remaining * TRANSCRIPTION_MODE_RATES[mode]) + addOnCost;
       const currentWallet = Number(user.walletBalance || 0);
       if (currentWallet < walletUsed) throw new Error('PAYMENT_REQUIRED');
 
@@ -102,7 +101,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
       const billingType = freeTrialMinutesUsed === minutes
         ? 'ai-free-trial'
-        : packageMinutesUsed > 0 && walletUsed === 0
+        : packageMinutesUsed > 0 && remaining === 0
           ? 'package'
           : 'pay-as-you-go';
       transaction.update(userRef, userUpdates);
@@ -111,7 +110,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         billingType,
         freeTrialMinutesUsed,
         hasPackage: packageMinutesUsed > 0,
-        addOnCost,
+        ...(supportsTranscriptionAddOns(mode) ? { addOnCost } : {}),
         creditsUsed: Math.round(walletUsed * 100),
         updatedAt: FieldValue.serverTimestamp(),
       });
@@ -140,6 +139,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       JOB_NOT_FOUND: [404, 'Transcription job not found'], USER_NOT_FOUND: [404, 'User profile not found'],
       FORBIDDEN: [403, 'You do not own this transcription job'], INVALID_MODE: [400, 'Unsupported transcription mode'],
       PAYMENT_REQUIRED: [402, 'Insufficient pay-as-you-go balance for this transcription'],
+      PACKAGE_ADD_ON_PAYMENT_REQUIRED: [400, 'Rush service and recordings with more than four speakers require a separate payment. Please contact support before submitting.'],
     };
     if (responses[code]) return NextResponse.json({ ok: false, error: responses[code][1] }, { status: responses[code][0] });
     console.error('[Transcription Billing] Deduction failed:', error);

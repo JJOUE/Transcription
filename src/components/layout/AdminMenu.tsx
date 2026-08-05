@@ -42,7 +42,7 @@ export function AdminMenu() {
         <DropdownMenuItem asChild>
           <Link href="/admin/ledger" className="flex items-center">
             <DollarSign className="mr-2 h-4 w-4" />
-            Credit Ledger
+            Billing Ledger
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
