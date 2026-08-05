@@ -3,7 +3,7 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimiters } from '@/lib/middleware/rate-limit';
 import { CreateTranscriptionJobSchema, validateData } from '@/lib/validation/schemas';
-import { sendDocumentWorkspaceNotification, sendSimpleNotification } from '@/lib/email/simple-email';
+import { sendSimpleNotification } from '@/lib/email/simple-email';
 
 function redactProjectDictionaryTerms(value: unknown): unknown {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -70,6 +70,13 @@ export async function POST(request: NextRequest) {
 
     const validatedBody = validation.data;
 
+    if (validatedBody.type === 'office' && validatedBody.officeServiceType) {
+      return NextResponse.json(
+        { error: 'Document Workspace projects must use the protected Document Workspace submission route' },
+        { status: 400 }
+      );
+    }
+
     // Ensure userId matches authenticated user
     if (validatedBody.userId && validatedBody.userId !== userId) {
       return NextResponse.json(
@@ -115,19 +122,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`[API] Created transcription job ${docRef.id} for user ${userId}`);
 
-    if (!isAdminUser && validatedBody.type === 'office' && validatedBody.officeServiceType) {
-      await sendDocumentWorkspaceNotification({
-        jobId: docRef.id,
-        clientName: userData?.name,
-        clientEmail: userData?.email,
-        serviceType: validatedBody.officeServiceType,
-        originalFilename: validatedBody.originalFilename,
-        hasWrittenInstructions: Boolean(validatedBody.specialInstructions?.trim() || validatedBody.officeNotes?.trim()),
-        hasVoiceInstructions: Boolean(validatedBody.hasVoiceInstructions),
-        hasTemplate: Boolean(validatedBody.templateURL || validatedBody.templateFilename),
-        rushDelivery: validatedBody.rushDelivery,
-      });
-    } else if (!isAdminUser && validatedBody.mode === 'ai') {
+    if (!isAdminUser && validatedBody.mode === 'ai') {
       await sendSimpleNotification({
         jobId: docRef.id,
         clientName: userData?.name,

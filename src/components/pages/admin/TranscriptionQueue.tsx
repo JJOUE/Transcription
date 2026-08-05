@@ -796,6 +796,11 @@ export function TranscriptionQueue() {
                         <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-[#b29dd9] text-white border border-[#9d87c7]">
                           🏢 Document Workspace
                         </span>
+                        {item.paymentStatus === 'quote-required' && (
+                          <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">
+                            Quote Required
+                          </span>
+                        )}
                         {/* Add-on indicators */}
                         {item.rushDelivery && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
@@ -836,16 +841,18 @@ export function TranscriptionQueue() {
                             <Eye className="h-4 w-4 mr-1" />
                             Review
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="text-green-600"
-                            onClick={() => item.id && handleAction(item.id, 'approve-review')}
-                            disabled={isLoading}
-                          >
-                            <CheckCircle className="h-4 w-4 mr-1" />
-                            Approve
-                          </Button>
+                          {item.paymentStatus !== 'quote-required' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-green-600"
+                              onClick={() => item.id && handleAction(item.id, 'approve-review')}
+                              disabled={isLoading}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Approve
+                            </Button>
+                          )}
                         </>
                       )}
                       {item.status === 'pending-transcription' && (

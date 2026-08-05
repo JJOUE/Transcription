@@ -13,13 +13,13 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCredits } from '@/contexts/CreditContext';
 import { useWallet } from '@/contexts/WalletContext';
 import { generateFilePath } from '@/lib/firebase/storage';
-import { createTranscriptionJobAPI } from '@/lib/api/transcriptions';
+import { submitDocumentWorkspaceJobAPI } from '@/lib/api/transcriptions';
 import { TranscriptionJob } from '@/lib/firebase/transcriptions';
 import { formatDuration, getBillingMinutes } from '@/lib/utils';
 import { PricingSettings, getPricingSettings } from '@/lib/firebase/settings';
+import { clearGuidedIntakeDraft, loadGuidedIntakeDraft } from '@/lib/intake/session-draft';
 
 interface UploadFile {
   file: File;
@@ -56,6 +56,7 @@ const MAIN_FILE_ACCEPT = 'audio/*,video/*,.doc,.docx,.pdf,.txt,.jpg,.jpeg,.png,.
 const DOCUMENT_EXTENSIONS = ['.doc', '.docx', '.pdf', '.txt'];
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.heic'];
 const MAX_VOICE_INSTRUCTIONS_SECONDS = 10 * 60;
+const OFFICE_SUBMISSION_KEY_STORAGE = 'ttc-office-submission-key-v1';
 
 const getOfficeServiceLabel = (serviceType?: OfficeServiceType) =>
   OFFICE_SERVICE_TYPES.find(service => service.value === serviceType)?.label || 'Document Workspace';
@@ -90,6 +91,7 @@ export default function OfficeUploadPage() {
   const [isVoicePreviewPlaying, setIsVoicePreviewPlaying] = useState(false);
   const [isRecordingVoiceInstructions, setIsRecordingVoiceInstructions] = useState(false);
   const [microphoneError, setMicrophoneError] = useState('');
+  const [isGuidedIntake, setIsGuidedIntake] = useState(false);
   const voicePreviewAudioRef = useRef<HTMLAudioElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingStreamRef = useRef<MediaStream | null>(null);
@@ -100,17 +102,69 @@ export default function OfficeUploadPage() {
   // Pricing and wallet
   const [pricingSettings, setPricingSettings] = useState<PricingSettings | null>(null);
   const { user, userData, refreshUser } = useAuth();
-  const { consumeCredits } = useCredits();
   const {
     walletBalance,
     packages,
-    checkSufficientBalance,
-    deductForTranscription,
     refreshWallet
   } = useWallet();
   const { toast } = useToast();
   const router = useRouter();
   const isAdminInternalUser = userData?.role === 'admin';
+
+  const getOrCreateSubmissionKey = () => {
+    const fingerprint = JSON.stringify({
+      service: officeServiceType,
+      files: uploadedFiles.map(item => ({ size: item.file.size, modified: item.file.lastModified })),
+      template: templateFile ? { size: templateFile.size, modified: templateFile.lastModified } : null,
+    });
+    try {
+      const saved = window.sessionStorage.getItem(OFFICE_SUBMISSION_KEY_STORAGE);
+      if (saved) {
+        const parsed = JSON.parse(saved) as { key?: string; fingerprint?: string };
+        if (parsed.key && parsed.fingerprint === fingerprint) return parsed.key;
+      }
+    } catch {
+      // Continue with a new key when session storage is unavailable.
+    }
+    const key = `${Date.now()}_${crypto.randomUUID()}`;
+    try {
+      window.sessionStorage.setItem(OFFICE_SUBMISSION_KEY_STORAGE, JSON.stringify({ key, fingerprint }));
+    } catch {
+      // The server still validates the generated key for this page session.
+    }
+    return key;
+  };
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('guided') !== '1') return;
+    setIsGuidedIntake(true);
+    const draft = loadGuidedIntakeDraft();
+    if (!draft) return;
+
+    const mappedService: OfficeServiceType = draft.outcome === 'copy-typing'
+      ? 'copy-typing'
+      : draft.outcome === 'handwriting'
+        ? 'handwriting-transcription'
+        : draft.outcome === 'dictation-document' || draft.outcome === 'transcript-document'
+          ? 'dictation-cleanup'
+          : 'document-preparation';
+    setOfficeServiceType(mappedService);
+    setRushDelivery(Boolean(draft.rushRequested));
+
+    const instructions = [
+      draft.documentInstructions || draft.instructions,
+      draft.requestedOutputFormat && `Requested output format: ${draft.requestedOutputFormat}`,
+      draft.preferredFilename && `Preferred filename: ${draft.preferredFilename}`,
+    ].filter(Boolean).join('\n');
+    if (instructions) setFormattingInstructions(instructions);
+
+    const reselectionNotes = [
+      draft.outcome === 'transcript-document' && 'Guided outcome: Human transcript plus finished document',
+      draft.selectedTemplateFileName && `Template to reselect: ${draft.selectedTemplateFileName}`,
+      draft.selectedSupportingFileNames?.length && `Supporting files to reselect: ${draft.selectedSupportingFileNames.join(', ')}`,
+    ].filter(Boolean).join('\n');
+    if (reselectionNotes) setOfficeNotes(reselectionNotes);
+  }, []);
 
   // Load pricing settings
   useEffect(() => {
@@ -142,17 +196,21 @@ export default function OfficeUploadPage() {
 
   // Calculate billing against packages and pay-as-you-go credit.
   const totalDuration = uploadedFiles.reduce((sum, f) => sum + f.duration, 0);
+  const hasTooManyPrimaryFiles = uploadedFiles.length > 1;
   const hasDocumentSourceFiles = uploadedFiles.some(f => !f.isMedia);
-  const activePackage = packages.find(p => p.active);
-  const packageMinutes = activePackage ? activePackage.minutesRemaining : 0;
+  const activeHumanPackages = packages.filter(p => p.active && p.type === 'human');
+  const packageMinutes = activeHumanPackages.reduce((sum, pkg) => sum + pkg.minutesRemaining, 0);
+  const hasHumanPackage = activeHumanPackages.length > 0;
+  const rushAvailable = isAdminInternalUser || hasHumanPackage;
+  const effectiveRushDelivery = rushDelivery && rushAvailable;
   const billingMinutes = Math.ceil(totalDuration / 60);
-  const totalCost = isAdminInternalUser ? 0 : (totalDuration / 60) * costPerMinute;
-  const rushCost = !isAdminInternalUser && !activePackage && rushDelivery ? billingMinutes * 0.50 : 0;
-  const totalWithRush = totalCost + rushCost;
+  const totalCost = isAdminInternalUser || hasHumanPackage ? 0 : (totalDuration / 60) * costPerMinute;
+  const requiresCustomQuote = hasDocumentSourceFiles || officeServiceType !== 'dictation-cleanup' || billingMinutes === 0;
 
-  const minutesFromWallet = isAdminInternalUser ? 0 : Math.max(0, billingMinutes - packageMinutes);
+  const minutesFromWallet = isAdminInternalUser || hasHumanPackage || requiresCustomQuote ? 0 : billingMinutes;
   const walletAmountNeeded = minutesFromWallet * costPerMinute;
-  const hasInsufficientBalance = !isAdminInternalUser && walletAmountNeeded > walletBalance;
+  const hasInsufficientPackageMinutes = !isAdminInternalUser && !requiresCustomQuote && hasHumanPackage && packageMinutes < billingMinutes;
+  const hasInsufficientBalance = !isAdminInternalUser && !requiresCustomQuote && (hasInsufficientPackageMinutes || (!hasHumanPackage && walletAmountNeeded > walletBalance));
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -387,10 +445,19 @@ export default function OfficeUploadPage() {
       return;
     }
 
-    if (hasInsufficientBalance) {
+    if (hasTooManyPrimaryFiles) {
       toast({
-        title: "Additional purchase required",
-        description: "Your available package and pay-as-you-go minutes do not cover this project.",
+        title: "One main source file per project",
+        description: "Please keep one main source file and remove the others before submitting.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!formattingInstructions.trim() && !officeNotes.trim() && !voiceInstructionBlob) {
+      toast({
+        title: "Instructions required",
+        description: "Please provide written or voice instructions for this Document Workspace project.",
         variant: "destructive"
       });
       return;
@@ -407,6 +474,26 @@ export default function OfficeUploadPage() {
 
     setIsUploading(true);
     setProcessingProgress({ current: 0, total: uploadedFiles.length, stage: 'Preparing files...' });
+    const submissionKey = getOrCreateSubmissionKey();
+    const uploadedAttemptPaths: string[] = [];
+    const cleanupAttemptUploads = async () => {
+      if (uploadedAttemptPaths.length === 0) return;
+      const cleanupResponse = await fetch('/api/document-workspace/submit', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          submissionKey,
+          paths: Array.from(new Set(uploadedAttemptPaths)),
+        }),
+      });
+      const cleanupResult = await cleanupResponse.json().catch(() => null);
+      if (!cleanupResponse.ok || cleanupResult?.ok === false) {
+        console.error('Current-attempt upload cleanup was incomplete', {
+          status: cleanupResponse.status,
+          failed: cleanupResult?.failed,
+        });
+      }
+    };
 
     try {
       let uploadedVoiceInstructions: {
@@ -425,6 +512,7 @@ export default function OfficeUploadPage() {
         const storage = await import('firebase/storage');
         const filename = `voice-instructions-${Date.now()}.webm`;
         const path = generateFilePath(user.uid, `voice-instructions/${filename}`);
+        uploadedAttemptPaths.push(path);
         const ref = storage.ref(await import('@/lib/firebase/config').then(m => m.storage), path);
         const uploadTask = storage.uploadBytesResumable(ref, voiceInstructionBlob, {
           contentType: voiceInstructionBlob.type || 'audio/webm'
@@ -449,7 +537,7 @@ export default function OfficeUploadPage() {
         };
       }
 
-      // Upload all files
+      // The first-release workflow permits exactly one primary source file.
       const uploadPromises = uploadedFiles.map(async (uploadFile, index) => {
         setProcessingProgress(prev => ({
           ...prev,
@@ -460,6 +548,7 @@ export default function OfficeUploadPage() {
         try {
           const storage = await import('firebase/storage');
           const path = generateFilePath(user.uid, uploadFile.file.name);
+          uploadedAttemptPaths.push(path);
           const ref = storage.ref(await import('@/lib/firebase/config').then(m => m.storage), path);
 
           const uploadTask = storage.uploadBytesResumable(ref, uploadFile.file);
@@ -491,80 +580,69 @@ export default function OfficeUploadPage() {
       });
 
       const uploadResults = await Promise.all(uploadPromises);
-      setProcessingProgress(prev => ({ ...prev, stage: 'Creating jobs...' }));
+      setProcessingProgress(prev => ({ ...prev, stage: 'Creating project...' }));
+      const result = uploadResults[0];
+      const uploadFile = uploadedFiles[0];
 
-      // Create jobs for each uploaded file
-      for (let i = 0; i < uploadResults.length; i++) {
-        const result = uploadResults[i];
-        const uploadFile = uploadedFiles[i];
+      const jobData: Omit<TranscriptionJob, 'id' | 'createdAt' | 'updatedAt'> = {
+        userId: user.uid,
+        filename: result.name,
+        originalFilename: uploadFile.file.name,
+        filePath: result.path,
+        downloadURL: result.url,
+        status: 'pending-review',
+        type: 'office',
+        mode: 'human',
+        duration: uploadFile.duration,
+        creditsUsed: isAdminInternalUser ? 0 : Math.round(((uploadFile.duration / 60) * costPerMinute) * 100),
+        rushDelivery: effectiveRushDelivery,
+        // Office-specific fields
+        officeServiceType,
+        specialInstructions: formattingInstructions || undefined,
+        officeNotes: officeNotes || undefined,
+        hasVoiceInstructions: Boolean(uploadedVoiceInstructions),
+        voiceInstructionsPath: uploadedVoiceInstructions?.path,
+        voiceInstructionsURL: uploadedVoiceInstructions?.url,
+        voiceInstructionsFilename: uploadedVoiceInstructions?.name,
+        voiceInstructionsDuration: uploadedVoiceInstructions?.duration
+      };
 
-        const jobData: Omit<TranscriptionJob, 'id' | 'createdAt' | 'updatedAt'> = {
-          userId: user.uid,
-          filename: result.name,
-          originalFilename: uploadFile.file.name,
-          filePath: result.path,
-          downloadURL: result.url,
-          status: 'pending-review',
-          type: 'office',
-          mode: 'human',
-          duration: uploadFile.duration,
-          creditsUsed: isAdminInternalUser ? 0 : Math.round(((uploadFile.duration / 60) * costPerMinute) * 100),
-          rushDelivery,
-          // Office-specific fields
-          officeServiceType,
-          specialInstructions: formattingInstructions || undefined,
-          officeNotes: officeNotes || undefined,
-          hasVoiceInstructions: Boolean(uploadedVoiceInstructions),
-          voiceInstructionsPath: uploadedVoiceInstructions?.path,
-          voiceInstructionsURL: uploadedVoiceInstructions?.url,
-          voiceInstructionsFilename: uploadedVoiceInstructions?.name,
-          voiceInstructionsDuration: uploadedVoiceInstructions?.duration
-        };
-
-        // Add template if provided
-        if (templateFile) {
-          try {
-            const storage = await import('firebase/storage');
-            const templatePath = generateFilePath(user.uid, `templates/${templateFile.name}`);
-            const templateRef = storage.ref(await import('@/lib/firebase/config').then(m => m.storage), templatePath);
+      // A template belongs to this project; it is not another primary source job.
+      if (templateFile) {
+        try {
+          const storage = await import('firebase/storage');
+          const templatePath = generateFilePath(user.uid, `templates/${templateFile.name}`);
+          uploadedAttemptPaths.push(templatePath);
+          const templateRef = storage.ref(await import('@/lib/firebase/config').then(m => m.storage), templatePath);
             
-            const uploadTask = storage.uploadBytesResumable(templateRef, templateFile);
+          const uploadTask = storage.uploadBytesResumable(templateRef, templateFile);
             
-            const templateUrl = await new Promise<string>((resolve, reject) => {
-              uploadTask.on('state_changed',
-                () => {},
-                (error) => reject(error),
-                async () => {
-                  const url = await storage.getDownloadURL(templateRef);
-                  resolve(url);
-                }
-              );
-            });
+          const templateUrl = await new Promise<string>((resolve, reject) => {
+            uploadTask.on('state_changed',
+              () => {},
+              (error) => reject(error),
+              async () => {
+                const url = await storage.getDownloadURL(templateRef);
+                resolve(url);
+              }
+            );
+          });
 
-            jobData.templatePath = templatePath;
-            jobData.templateURL = templateUrl;
-            jobData.templateFilename = templateFile.name;
-          } catch (error) {
-            console.error('Template upload error:', error);
-          }
+          jobData.templatePath = templatePath;
+          jobData.templateURL = templateUrl;
+          jobData.templateFilename = templateFile.name;
+        } catch (error) {
+          console.error('Template upload error:', error);
+          throw new Error('Template upload failed. Please try again before submitting the project.');
         }
+      }
 
-        const jobId = await createTranscriptionJobAPI(jobData);
-
-        // Deduct using the existing human-mode wallet flow used for Document Workspace pricing.
-        const fileBillingMinutes = getBillingMinutes(uploadFile.duration);
-        if (!isAdminInternalUser && fileBillingMinutes > 0) {
-          const deductionResult = await deductForTranscription(
-            'human',
-            fileBillingMinutes,
-            jobId
-          );
-
-          if (!deductionResult.success) {
-            console.error('Failed to deduct payment:', deductionResult.error);
-            throw new Error(deductionResult.error || 'Payment failed');
-          }
-        }
+      const fileBillingMinutes = getBillingMinutes(uploadFile.duration);
+      const submission = await submitDocumentWorkspaceJobAPI(jobData, submissionKey, fileBillingMinutes);
+      if (submission.duplicate) {
+        await cleanupAttemptUploads().catch(cleanupError => {
+          console.error('Redundant retry upload cleanup failed', cleanupError);
+        });
       }
 
       await refreshWallet();
@@ -572,14 +650,29 @@ export default function OfficeUploadPage() {
 
       toast({
         title: "Success",
-        description: `${uploadResults.length} file(s) uploaded successfully!`,
+        description: submission.quoteRequired
+          ? 'Your quote request was submitted. Talk to Text Canada will confirm pricing before production begins.'
+          : 'Your project was uploaded and submitted successfully!',
       });
 
       setUploadedFiles([]);
       resetVoiceInstructionRecording();
+      try {
+        window.sessionStorage.removeItem(OFFICE_SUBMISSION_KEY_STORAGE);
+      } catch {
+        // Submission succeeded; an unavailable session store needs no cleanup.
+      }
+      if (isGuidedIntake) clearGuidedIntakeDraft();
       router.push('/dashboard');
     } catch (error) {
       console.error('Upload failed:', error);
+      if (uploadedAttemptPaths.length > 0) {
+        try {
+          await cleanupAttemptUploads();
+        } catch (cleanupError) {
+          console.error('Current-attempt upload cleanup failed', cleanupError);
+        }
+      }
       toast({
         title: "Upload failed",
         description: error instanceof Error ? error.message : 'An error occurred',
@@ -618,6 +711,12 @@ export default function OfficeUploadPage() {
             If you only need audio or video converted into text, use AI Transcription instead.
           </p>
         </div>
+
+        {isGuidedIntake && (
+          <div className="mb-6 rounded-md border border-[#ddd3ed] bg-[#f7f4fb] p-4 text-sm text-gray-700">
+            Your guided answers have been added where this form has matching fields. Please reselect the source file and optional template before submitting.
+          </div>
+        )}
 
         {/* Office-Specific Fields */}
         <Card className="mb-6 border-0 shadow-sm">
@@ -790,7 +889,7 @@ export default function OfficeUploadPage() {
             {/* Formatting Instructions */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Instructions or formatting notes (Optional)
+                Instructions or formatting notes {voiceInstructionBlob ? '(Optional when voice instructions are included)' : '(Required)'}
               </label>
               <Textarea
                 value={formattingInstructions}
@@ -819,7 +918,7 @@ export default function OfficeUploadPage() {
                 >
                   <FileUp className="h-5 w-5 text-gray-400 mr-2" />
                   <span className="text-sm text-gray-600">
-                    {templateFile ? templateFile.name : 'Upload optional template or reference'}
+                    {templateFile ? `${templateFile.name} — Selected — not uploaded` : 'Not provided — upload optional template or reference'}
                   </span>
                 </label>
               </div>
@@ -833,12 +932,15 @@ export default function OfficeUploadPage() {
               <input
                 type="checkbox"
                 id="rush-delivery"
-                checked={rushDelivery}
+                checked={effectiveRushDelivery}
                 onChange={(e) => setRushDelivery(e.target.checked)}
+                disabled={!rushAvailable}
                 className="h-4 w-4 text-[#003366] rounded border-gray-300"
               />
               <label htmlFor="rush-delivery" className="ml-2 text-sm text-gray-700">
-                Rush Delivery (+${rushCost.toFixed(2)}) - 24-48 hour turnaround
+                {rushAvailable
+                  ? 'Rush service — included with eligible package'
+                  : 'Rush service is currently available with eligible packages. Contact us for other rush requests.'}
               </label>
             </div>
 
@@ -927,6 +1029,11 @@ export default function OfficeUploadPage() {
                             {file.isMedia ? `${formatDuration(file.duration)} · ` : 'Custom quote may apply · '}
                             {(file.file.size / 1024 / 1024).toFixed(2)} MB
                           </p>
+                          <p className="text-xs font-medium text-[#003366]">
+                            {(uploadProgress[file.file.name] || 0) >= 100
+                              ? 'Uploaded securely'
+                              : 'Selected — not uploaded'}
+                          </p>
                         </div>
                       </div>
                       <button
@@ -938,6 +1045,11 @@ export default function OfficeUploadPage() {
                     </div>
                   ))}
                 </div>
+                {hasTooManyPrimaryFiles && (
+                  <div className="mt-4 rounded-md border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+                    Please submit one main source file per project. You may include a template and supporting documents with that file. Create a separate project for another main recording or document.
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
@@ -957,9 +1069,15 @@ export default function OfficeUploadPage() {
                 <div>
                   <p className="text-sm text-gray-600">Order summary</p>
                   <div className="text-sm space-y-1 mt-1">
-                    <p className="flex justify-between gap-4"><span>Transcription: {billingMinutes} minutes</span><strong>CA${totalCost.toFixed(2)}</strong></p>
-                    {rushDelivery && <p className="flex justify-between gap-4"><span>Rush service</span><strong>{activePackage ? 'Included with package' : `CA$${rushCost.toFixed(2)}`}</strong></p>}
-                    <p className="flex justify-between gap-4 border-t pt-1 text-[#003366]"><span>Total</span><strong>CA${totalWithRush.toFixed(2)}</strong></p>
+                    {requiresCustomQuote ? (
+                      <p className="font-medium text-amber-800">Quote required before production begins</p>
+                    ) : (
+                      <>
+                        <p className="flex justify-between gap-4"><span>Transcription: {billingMinutes} minutes</span><strong>{hasHumanPackage ? 'Covered by Human package' : `CA$${totalCost.toFixed(2)}`}</strong></p>
+                        {effectiveRushDelivery && <p className="flex justify-between gap-4"><span>Rush service</span><strong>Included with package</strong></p>}
+                        <p className="flex justify-between gap-4 border-t pt-1 text-[#003366]"><span>Project total</span><strong>{hasHumanPackage ? 'Package minutes' : `CA$${totalCost.toFixed(2)}`}</strong></p>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -967,7 +1085,7 @@ export default function OfficeUploadPage() {
               {packages.length > 0 && (
                 <div className="text-sm text-gray-600 pt-4 border-t border-gray-200">
                   <p className="mb-2">
-                    Package: <span className="font-medium">{packageMinutes} minutes remaining</span>
+                    Human package: <span className="font-medium">{packageMinutes} minutes remaining</span>
                   </p>
                   {minutesFromWallet > 0 && (
                     <p>
@@ -993,7 +1111,7 @@ export default function OfficeUploadPage() {
                 <div className="mt-4 flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
                   <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
                   <span>
-                    Additional pay-as-you-go transcription must be purchased before submitting this project.
+                    The server will verify your Human package or pay-as-you-go balance before creating this project. If more minutes are required, nothing will be submitted or deducted.
                   </span>
                 </div>
               )}
@@ -1030,18 +1148,20 @@ export default function OfficeUploadPage() {
         <div className="flex gap-3">
           <Button
             onClick={handleSubmit}
-            disabled={isUploading || isRecordingVoiceInstructions || uploadedFiles.length === 0 || hasInsufficientBalance}
+            disabled={isUploading || isRecordingVoiceInstructions || uploadedFiles.length !== 1}
             className="flex-1 bg-[#003366] hover:bg-[#002244] text-white font-medium py-2"
           >
             {isUploading ? 'Uploading...' : `Upload ${uploadedFiles.length} File(s)`}
           </Button>
-          <Button
-            variant="outline"
-            asChild
-            className="border border-gray-300"
-          >
-            <Link href="/dashboard">Cancel</Link>
-          </Button>
+          {isUploading ? (
+            <Button variant="outline" disabled className="border border-gray-300">
+              Cancel
+            </Button>
+          ) : (
+            <Button variant="outline" asChild className="border border-gray-300">
+              <Link href="/dashboard">Cancel</Link>
+            </Button>
+          )}
         </div>
       </div>
 

@@ -45,6 +45,28 @@ export async function createTranscriptionJobAPI(
   }
 }
 
+export async function submitDocumentWorkspaceJobAPI(
+  job: Omit<TranscriptionJob, 'id' | 'createdAt' | 'updatedAt'>,
+  submissionKey: string,
+  billingMinutes: number
+): Promise<{ jobId: string; quoteRequired: boolean; duplicate: boolean }> {
+  const response = await fetch('/api/document-workspace/submit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ job, submissionKey, billingMinutes }),
+  });
+  const data = await response.json();
+  if (!response.ok || !data.ok || !data.jobId) {
+    throw new Error(data.error || `Document Workspace submission failed (${response.status})`);
+  }
+  return {
+    jobId: data.jobId,
+    quoteRequired: Boolean(data.quoteRequired),
+    duplicate: Boolean(data.duplicate),
+  };
+}
+
 /**
  * Process a transcription job via API endpoint
  */

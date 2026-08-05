@@ -104,10 +104,10 @@ function LandingPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
             <div className="text-center lg:text-left">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-                Canadian Transcription & Document Preparation Services
+                Your words, professionally prepared.
               </h1>
               <p className="text-lg md:text-xl text-gray-300 mb-4 max-w-xl mx-auto lg:mx-0">
-                Turn audio, video, handwritten notes, scanned documents, and typed drafts into clean transcripts and organized documents.
+                Tell us what you need, and we will guide you through the right transcription or document-preparation service.
               </p>
 
               <div className="max-w-xl mx-auto lg:mx-0 mb-6 rounded-3xl border border-white/20 bg-white/15 p-5 text-left shadow-lg backdrop-blur-sm">
@@ -172,7 +172,7 @@ function LandingPage() {
                   size="lg"
                   className="bg-[#b29dd9] hover:bg-[#9d87c7] text-white text-lg px-15 py-4"
                 >
-                  <Link href="/signin">
+                  <Link href="/start-project">
                     Start a Project
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
@@ -183,7 +183,7 @@ function LandingPage() {
                   size="lg"
                   className="border-2 border-white !bg-white !text-[#003366] hover:!bg-gray-50 hover:!text-[#003366] text-lg px-8 py-4 font-medium opacity-100"
                 >
-                  <Link href="/signup">Create Account</Link>
+                  <Link href="/start-project">Tell us what you need help with</Link>
                 </Button>
               </div>
 

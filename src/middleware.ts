@@ -31,7 +31,11 @@ export function middleware(request: NextRequest) {
 
   // Redirect to dashboard if accessing auth pages with token
   if (isAuthPage && token) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    const requestedNext = request.nextUrl.searchParams.get('next');
+    const safeNext = requestedNext?.startsWith('/') && !requestedNext.startsWith('//') && !requestedNext.includes('\\')
+      ? requestedNext
+      : '/dashboard';
+    return NextResponse.redirect(new URL(safeNext, request.url));
   }
 
   return NextResponse.next();

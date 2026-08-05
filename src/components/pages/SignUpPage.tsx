@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,21 +22,24 @@ export function SignUpPage() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { signUp, signUpWithGoogle, isLoading, user } = useAuth();
+  const { signUp, signUpWithGoogle, isLoading, user, userData } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedNext = searchParams.get('next');
+  const safeNext = requestedNext?.startsWith('/') && !requestedNext.startsWith('//') && !requestedNext.includes('\\') ? requestedNext : null;
 
   // Redirect if already signed in
   useEffect(() => {
     if (user && !isLoading) {
       console.log('🔄 User already signed in, redirecting from signup...');
-      if (user.role === 'admin') {
-        router.replace('/admin');
+      if (userData?.role === 'admin') {
+        router.replace(safeNext || '/admin');
       } else {
-        router.replace('/dashboard');
+        router.replace(safeNext || '/dashboard');
       }
     }
-  }, [user, isLoading, router]);
+  }, [user, userData, isLoading, router, safeNext]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,7 +70,7 @@ export function SignUpPage() {
         title: "Account created successfully!",
         description: "Welcome to Talk To Text Canada.",
       });
-      router.push('/dashboard');
+      router.push(safeNext || '/dashboard');
     } catch (error: unknown) {
       console.error('🚫 Signup error in page:', error);
       
@@ -76,15 +79,15 @@ export function SignUpPage() {
           title: "Verify your email",
           description: "We've sent a verification link to your inbox. Please verify, then sign in.",
         });
-        router.push('/signin');
+        router.push(safeNext ? `/signin?next=${encodeURIComponent(safeNext)}` : '/signin');
         return;
       }
       
       // Log more details about the error
+      const errorDetails = error instanceof Error ? error : null;
       console.error('Error details:', {
-        code: error?.code,
-        message: error?.message,
-        stack: error?.stack
+        message: errorDetails?.message,
+        stack: errorDetails?.stack
       });
       
       toast({
@@ -102,7 +105,7 @@ export function SignUpPage() {
         title: "Account created successfully!",
         description: "Welcome to Talk To Text Canada.",
       });
-      router.push('/dashboard');
+      router.push(safeNext || '/dashboard');
     } catch {
       toast({
         title: "Google sign-up failed",
@@ -274,7 +277,7 @@ export function SignUpPage() {
               <p className="text-sm text-gray-600">
                 Already have an account?{' '}
                 <Link
-                  href="/signin"
+                  href={safeNext ? `/signin?next=${encodeURIComponent(safeNext)}` : '/signin'}
                   className="font-medium text-[#b29dd9] hover:text-[#9d87c7]"
                 >
                   Sign in here

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,9 @@ export function SignInPage() {
   const { signIn, user, userData, isLoading, isInitialized } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedNext = searchParams.get('next');
+  const safeNext = requestedNext?.startsWith('/') && !requestedNext.startsWith('//') && !requestedNext.includes('\\') ? requestedNext : null;
 
   // Handle navigation after successful sign-in
   useEffect(() => {
@@ -29,13 +32,13 @@ export function SignInPage() {
         role: userData?.role 
       });
       
-      const targetRoute = userData?.role === 'admin' ? '/admin' : '/dashboard';
+      const targetRoute = safeNext || (userData?.role === 'admin' ? '/admin' : '/dashboard');
       console.log('➡️ Navigating to:', targetRoute);
       
       // Use replace to prevent back navigation to signin
       router.replace(targetRoute);
     }
-  }, [user, userData, isLoading, isInitialized, router]);
+  }, [user, userData, isLoading, isInitialized, router, safeNext]);
 
   const getErrorMessage = (errorMessage: string) => {
     // Map Firebase error codes to user-friendly messages
@@ -244,7 +247,7 @@ export function SignInPage() {
               <p className="text-sm text-gray-600">
                 Don&apos;t have an account?{' '}
                 <Link
-                  href="/signup"
+                  href={safeNext ? `/signup?next=${encodeURIComponent(safeNext)}` : '/signup'}
                   className="font-medium text-[#b29dd9] hover:text-[#9d87c7]"
                 >
                   Sign up here

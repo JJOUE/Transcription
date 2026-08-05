@@ -216,6 +216,12 @@ export default function DocumentWorkspaceProjectPage() {
           </div>
         </div>
 
+        {project.paymentStatus === 'quote-required' && (
+          <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            Pricing confirmation is required before production begins. Talk to Text Canada will review the submitted materials and contact you about the quote.
+          </div>
+        )}
+
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="space-y-6">
             <Card className="border-0 shadow-sm">

@@ -574,6 +574,11 @@ export function UserDashboard() {
                               {job.originalFilename}
                             </h3>
                             <StatusBadge status={isCompletedOfficeJob(job) ? 'complete' : job.status} />
+                            {job.paymentStatus === 'quote-required' && (
+                              <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800">
+                                Quote requested — pricing confirmation required
+                              </span>
+                            )}
                             {isCompletedOfficeJob(job) && (job.officeCompletedDocumentPath || job.officeCompletedDocumentURL) && !isRetentionDeleted(job) && (
                               <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-semibold text-green-700">
                                 {job.completedFiles?.find(file => file.isLatest)?.label || (job.mode === 'human' ? 'Finished transcript ready' : 'Completed work ready')}
@@ -590,7 +595,13 @@ export function UserDashboard() {
                             <span>
                               {new Date(job.createdAt).toLocaleDateString()}
                             </span>
-                            <span className="text-[#003366] font-medium">CA${((job.creditsUsed || 0) / 100).toFixed(2)}</span>
+                            <span className="text-[#003366] font-medium">
+                              {job.paymentStatus === 'quote-required'
+                                ? 'Quote required'
+                                : job.billingType === 'human-package'
+                                  ? 'Human package'
+                                  : `CA$${((job.creditsUsed || 0) / 100).toFixed(2)}`}
+                            </span>
                             {formatRetentionLabel(job) && (
                               <span className={isRetentionDeleted(job) ? 'text-red-600 font-medium' : 'text-gray-500'}>
                                 {formatRetentionLabel(job)}

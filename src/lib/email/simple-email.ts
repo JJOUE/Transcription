@@ -155,6 +155,7 @@ interface DocumentWorkspaceNotificationInput {
   hasTemplate: boolean;
   rushDelivery?: boolean;
   dueDate?: string;
+  quoteRequired?: boolean;
 }
 
 const getOfficeServiceLabel = (serviceType?: string) => {
@@ -188,8 +189,11 @@ export async function sendDocumentWorkspaceNotification(
     const adminQueueUrl = `${appUrl.replace(/\/$/, '')}/admin`;
     const clientEmail = notification.clientEmail || 'Not available';
 
+    const subject = notification.quoteRequired
+      ? 'New Document Workspace quote request received'
+      : 'New Document Workspace project received';
     const text = `
-New Document Workspace project received
+${subject}
 
 Client name: ${notification.clientName || 'Not available'}
 Client email: ${clientEmail}
@@ -200,6 +204,7 @@ Written instructions included: ${notification.hasWrittenInstructions ? 'Yes' : '
 Voice instructions included: ${notification.hasVoiceInstructions ? 'Yes' : 'No'}
 Template/reference file included: ${notification.hasTemplate ? 'Yes' : 'No'}
 Rush requested: ${notification.rushDelivery ? 'Yes' : 'No'}
+Pricing status: ${notification.quoteRequired ? 'Quote required before production' : 'Payment or package confirmed'}
 Due date: ${notification.dueDate || 'Not set'}
 
 Open the admin dashboard/job queue:
@@ -217,7 +222,7 @@ Do not reply with confidential file contents. Review uploaded materials inside t
       body: JSON.stringify({
         from: emailConfig.from,
         to: emailConfig.to,
-        subject: 'New Document Workspace project received',
+        subject,
         text,
         reply_to: notification.clientEmail,
       }),
