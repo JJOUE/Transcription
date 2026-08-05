@@ -19,7 +19,6 @@ import { submitDocumentWorkspaceJobAPI } from '@/lib/api/transcriptions';
 import { TranscriptionJob } from '@/lib/firebase/transcriptions';
 import { formatDuration, getBillingMinutes } from '@/lib/utils';
 import { PricingSettings, getPricingSettings } from '@/lib/firebase/settings';
-import { clearGuidedIntakeDraft, loadGuidedIntakeDraft } from '@/lib/intake/session-draft';
 
 interface UploadFile {
   file: File;
@@ -91,7 +90,6 @@ export default function OfficeUploadPage() {
   const [isVoicePreviewPlaying, setIsVoicePreviewPlaying] = useState(false);
   const [isRecordingVoiceInstructions, setIsRecordingVoiceInstructions] = useState(false);
   const [microphoneError, setMicrophoneError] = useState('');
-  const [isGuidedIntake, setIsGuidedIntake] = useState(false);
   const voicePreviewAudioRef = useRef<HTMLAudioElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingStreamRef = useRef<MediaStream | null>(null);
@@ -134,37 +132,6 @@ export default function OfficeUploadPage() {
     }
     return key;
   };
-
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('guided') !== '1') return;
-    setIsGuidedIntake(true);
-    const draft = loadGuidedIntakeDraft();
-    if (!draft) return;
-
-    const mappedService: OfficeServiceType = draft.outcome === 'copy-typing'
-      ? 'copy-typing'
-      : draft.outcome === 'handwriting'
-        ? 'handwriting-transcription'
-        : draft.outcome === 'dictation-document' || draft.outcome === 'transcript-document'
-          ? 'dictation-cleanup'
-          : 'document-preparation';
-    setOfficeServiceType(mappedService);
-    setRushDelivery(Boolean(draft.rushRequested));
-
-    const instructions = [
-      draft.documentInstructions || draft.instructions,
-      draft.requestedOutputFormat && `Requested output format: ${draft.requestedOutputFormat}`,
-      draft.preferredFilename && `Preferred filename: ${draft.preferredFilename}`,
-    ].filter(Boolean).join('\n');
-    if (instructions) setFormattingInstructions(instructions);
-
-    const reselectionNotes = [
-      draft.outcome === 'transcript-document' && 'Guided outcome: Human transcript plus finished document',
-      draft.selectedTemplateFileName && `Template to reselect: ${draft.selectedTemplateFileName}`,
-      draft.selectedSupportingFileNames?.length && `Supporting files to reselect: ${draft.selectedSupportingFileNames.join(', ')}`,
-    ].filter(Boolean).join('\n');
-    if (reselectionNotes) setOfficeNotes(reselectionNotes);
-  }, []);
 
   // Load pricing settings
   useEffect(() => {
@@ -662,7 +629,6 @@ export default function OfficeUploadPage() {
       } catch {
         // Submission succeeded; an unavailable session store needs no cleanup.
       }
-      if (isGuidedIntake) clearGuidedIntakeDraft();
       router.push('/dashboard');
     } catch (error) {
       console.error('Upload failed:', error);
@@ -714,12 +680,6 @@ export default function OfficeUploadPage() {
             Need help preparing your files? <Link href="/guide#document-workspace" className="font-semibold text-[#003366] underline underline-offset-4">Open the Help &amp; Guide.</Link>
           </p>
         </div>
-
-        {isGuidedIntake && (
-          <div className="mb-6 rounded-md border border-[#ddd3ed] bg-[#f7f4fb] p-4 text-sm text-gray-700">
-            Your guided answers have been added where this form has matching fields. Please reselect the source file and optional template before submitting.
-          </div>
-        )}
 
         {/* Office-Specific Fields */}
         <Card className="mb-6 border-0 shadow-sm">

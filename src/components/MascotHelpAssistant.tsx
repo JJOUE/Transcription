@@ -8,7 +8,7 @@ import { BookOpen, ChevronLeft, MessageCircle, X } from 'lucide-react';
 import { HELP_FALLBACK, HELP_TOPICS, type HelpTopic } from '@/lib/help-topics';
 import { trackHelpEvent } from '@/lib/help-events';
 
-const exactRoutes = new Set(['/', '/start-project', '/pricing', '/dashboard', '/upload', '/office/upload', '/billing', '/transcriptions']);
+const exactRoutes = new Set(['/', '/pricing', '/dashboard', '/upload', '/office/upload', '/billing', '/transcriptions']);
 const isSupportedRoute = (pathname: string) => exactRoutes.has(pathname) || pathname.startsWith('/transcript/') || pathname.startsWith('/document-workspace/');
 
 export function MascotHelpAssistant() {

@@ -42,7 +42,7 @@ const transcriptSteps = [
 ];
 
 const documentSteps = [
-  'Choose Start a Project and answer the guided questions, or use the standard Document Workspace form.',
+  'Open Document Workspace and use the secure project form.',
   'Sign in before files are uploaded securely to your project.',
   'Choose Document Workspace for audio instructions for document preparation, copy typing, handwriting transcription, or document preparation from notes or files.',
   'Upload audio, video, documents, scans, handwriting images, PDFs, TXT, DOC, DOCX, JPG, PNG, or HEIC files where supported.',
@@ -91,7 +91,7 @@ export default function GuidePage() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/start-project"
+                href="/upload"
                 className="inline-flex items-center justify-center rounded-md bg-[#003366] px-6 py-3 font-semibold text-white hover:bg-[#00264d]"
               >
                 Start a Project

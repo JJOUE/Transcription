@@ -31,7 +31,6 @@ import {
   parseDictionaryTermsInput,
   saveClientDictionaryTerms,
 } from '@/lib/firebase/client-dictionary';
-import { clearGuidedIntakeDraft, loadGuidedIntakeDraft } from '@/lib/intake/session-draft';
 
 interface UploadFile {
   file: File;
@@ -101,7 +100,6 @@ export default function UploadPage() {
   const [rushDelivery, setRushDelivery] = useState(false);
   const [multipleSpeakers, setMultipleSpeakers] = useState(false);
   const [speakerCount, setSpeakerCount] = useState(5);
-  const [isGuidedIntake, setIsGuidedIntake] = useState(false);
   const { user, userData, refreshUser } = useAuth();
   const { consumeCredits } = useCredits();
   const {
@@ -119,30 +117,6 @@ export default function UploadPage() {
   const { toast } = useToast();
   const router = useRouter();
   const isAdminInternalUser = userData?.role === 'admin';
-
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('guided') !== '1') return;
-    setIsGuidedIntake(true);
-    const draft = loadGuidedIntakeDraft();
-    if (!draft) return;
-
-    if (draft.service) setTranscriptionMode(draft.service);
-    if (draft.speakerCount) {
-      setExpectedSpeakerCount(draft.speakerCount >= 5 ? '5' : String(draft.speakerCount) as ExpectedSpeakerCountChoice);
-      setMultipleSpeakers(draft.speakerCount >= 5);
-      if (draft.speakerCount >= 5) setSpeakerCount(draft.speakerCount);
-    }
-    setRushDelivery(Boolean(draft.rushRequested));
-
-    const guidedNotes = [
-      draft.instructions,
-      draft.documentInstructions && `Document instructions: ${draft.documentInstructions}`,
-      draft.requestedOutputFormat && `Requested output format: ${draft.requestedOutputFormat}`,
-      draft.preferredFilename && `Preferred filename: ${draft.preferredFilename}`,
-      draft.selectedTemplateFileName && `Guided intake template to reselect: ${draft.selectedTemplateFileName}`,
-    ].filter(Boolean).join('\n');
-    if (guidedNotes) setSpecialInstructions(guidedNotes);
-  }, []);
 
   useEffect(() => {
     const loadClientDictionary = async () => {
@@ -919,8 +893,6 @@ export default function UploadPage() {
       setSelectedClientDictionaryTerms(new Set());
       setUploadProgress({});
 
-      if (isGuidedIntake) clearGuidedIntakeDraft();
-
       router.push('/transcriptions');
     } catch (error: any) {
       console.error('Upload error:', error);
@@ -977,12 +949,6 @@ export default function UploadPage() {
             Need help uploading your file? <Link href="/guide#uploads" className="font-semibold text-[#003366] underline underline-offset-4">View the step-by-step guide.</Link>
           </p>
         </div>
-
-        {isGuidedIntake && (
-          <div className="mb-6 rounded-md border border-[#ddd3ed] bg-[#f7f4fb] p-4 text-sm text-gray-700">
-            Your guided answers have been added where this form has matching fields. Please reselect every file and confirm all details before submitting.
-          </div>
-        )}
 
         <div className="space-y-8">
           {/* File Upload */}

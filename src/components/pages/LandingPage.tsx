@@ -172,7 +172,7 @@ function LandingPage() {
                   size="lg"
                   className="bg-[#b29dd9] hover:bg-[#9d87c7] text-white text-lg px-15 py-4"
                 >
-                  <Link href="/start-project">
+                  <Link href="/upload">
                     Start a Project
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
@@ -183,7 +183,7 @@ function LandingPage() {
                   size="lg"
                   className="border-2 border-white !bg-white !text-[#003366] hover:!bg-gray-50 hover:!text-[#003366] text-lg px-8 py-4 font-medium opacity-100"
                 >
-                  <Link href="/start-project">Tell us what you need help with</Link>
+                  <Link href="/contact">Tell us what you need help with</Link>
                 </Button>
               </div>
 
