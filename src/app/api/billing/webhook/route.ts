@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
-import { sendDocumentWorkspaceClientEmail } from '@/lib/email/simple-email';
+import { sendDocumentWorkspaceClientEmail, sendSimpleNotification } from '@/lib/email/simple-email';
 import { publicProjectUrl, recordDocumentWorkspaceAudit } from '@/lib/document-workspace/workflow';
+import { consumePackageReservation, releasePackageReservation } from '@/lib/billing/package-reservations';
+import { startTranscriptionProcessing } from '@/lib/transcription/start-processing';
 
 // =============================================================================
 // STRIPE WEBHOOK HANDLER - PRODUCTION-READY IMPLEMENTATION
@@ -190,6 +192,10 @@ async function handleWebhookEvent(event: Stripe.Event, requestId: string): Promi
       await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session, requestId);
       break;
 
+    case 'checkout.session.expired':
+      await handleCheckoutSessionExpired(event.data.object as Stripe.Checkout.Session, requestId);
+      break;
+
     case 'payment_intent.succeeded':
       await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent, requestId);
       break;
@@ -231,6 +237,11 @@ async function handleCheckoutSessionCompleted(
 
   if (paymentType === 'document-workspace-quote') {
     await processDocumentWorkspaceQuotePayment(session, requestId);
+    return;
+  }
+
+  if (paymentType === 'transcription-package-add-ons') {
+    await processTranscriptionAddOnPayment(session, requestId);
     return;
   }
 
@@ -332,6 +343,144 @@ async function processDocumentWorkspaceQuotePayment(session: Stripe.Checkout.Ses
     }
   }
   console.log('[WEBHOOK]', requestId, 'Document Workspace quote payment confirmed:', projectId);
+}
+
+async function processTranscriptionAddOnPayment(session: Stripe.Checkout.Session, requestId: string): Promise<void> {
+  const jobId = session.metadata?.jobId;
+  const userId = session.metadata?.userId;
+  const expectedSubtotalCents = Number(session.metadata?.expectedSubtotalCents);
+  const expectedCurrency = String(session.metadata?.expectedCurrency || 'cad').toLowerCase();
+  const billingMinutes = Number(session.metadata?.billingMinutes);
+  const reservationId = session.metadata?.reservationId;
+  if (!jobId || !userId || !reservationId || !Number.isInteger(expectedSubtotalCents) || !Number.isInteger(billingMinutes)) {
+    throw new Error('Missing transcription add-on payment metadata');
+  }
+  if (session.payment_status !== 'paid') {
+    console.warn('[WEBHOOK]', requestId, `Ignoring unpaid add-on Checkout completion for ${jobId}`);
+    return;
+  }
+  if (session.amount_subtotal !== expectedSubtotalCents || session.currency?.toLowerCase() !== expectedCurrency) {
+    throw new Error(`Transcription add-on payment amount mismatch for ${jobId}`);
+  }
+
+  const jobRef = adminDb.collection('transcriptions').doc(jobId);
+  const userRef = adminDb.collection('users').doc(userId);
+  const ledgerRef = adminDb.collection('transactions').doc(`transcription_billing_${jobId}`);
+  const result = await adminDb.runTransaction(async transaction => {
+    const [jobSnapshot, userSnapshot, ledgerSnapshot] = await Promise.all([
+      transaction.get(jobRef), transaction.get(userRef), transaction.get(ledgerRef),
+    ]);
+    if (!jobSnapshot.exists || !userSnapshot.exists) throw new Error(`Add-on job or user missing for ${jobId}`);
+    const job = jobSnapshot.data() || {};
+    const user = userSnapshot.data() || {};
+    if (job.userId !== userId || !['hybrid', 'human'].includes(job.mode)) throw new Error(`Add-on ownership or mode mismatch for ${jobId}`);
+    if (job.stripeAddOnCheckoutSessionId !== session.id) throw new Error(`Add-on Checkout Session mismatch for ${jobId}`);
+    if (Number(job.addOnSubtotalCents) !== expectedSubtotalCents || job.addOnCurrency !== expectedCurrency) {
+      throw new Error(`Stored add-on quote mismatch for ${jobId}`);
+    }
+    const paymentIntentId = typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id;
+    if (job.paymentStatus === 'paid' && job.packageReservationStatus === 'consumed' && ledgerSnapshot.exists) return { newlyPaid: false, reconciliation: false, job };
+    const allocations = Array.isArray(job.packageReservationAllocations) ? job.packageReservationAllocations : [];
+    const consumed = job.packageReservationStatus === 'reserved' && job.packageReservationId === reservationId
+      ? consumePackageReservation(Array.isArray(user.packages) ? user.packages : [], allocations)
+      : null;
+    if (!consumed || consumed.minutesConsumed !== billingMinutes) {
+      transaction.update(jobRef, {
+        status: 'payment-reconciliation-required', paymentStatus: 'paid-reconciliation-required',
+        addOnPaymentStatus: 'paid-reconciliation-required', stripeAddOnPaymentIntentId: paymentIntentId || null,
+        paidAmountCents: session.amount_total || expectedSubtotalCents, paidCurrency: expectedCurrency,
+        paymentReconciliationReason: 'Package reservation could not be consumed after verified Stripe payment',
+        paymentReconciliationRequiredAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
+      });
+      return { newlyPaid: false, reconciliation: true, job };
+    }
+
+    transaction.update(userRef, {
+      packages: consumed.packages, minutesUsedThisMonth: FieldValue.increment(billingMinutes), updatedAt: FieldValue.serverTimestamp(),
+    });
+    transaction.update(jobRef, {
+      status: 'pending-transcription', paymentStatus: 'paid', billingType: 'package', hasPackage: true,
+      addOnPaymentStatus: 'paid', addOnPaidAt: FieldValue.serverTimestamp(),
+      packageReservationStatus: 'consumed', packageReservationConsumedAt: FieldValue.serverTimestamp(),
+      stripeAddOnPaymentIntentId: paymentIntentId || null,
+      paidAmountCents: session.amount_total || expectedSubtotalCents,
+      paidCurrency: expectedCurrency, packageMinutesUsed: billingMinutes,
+      creditsUsed: expectedSubtotalCents, updatedAt: FieldValue.serverTimestamp(),
+    });
+    if (!ledgerSnapshot.exists) transaction.create(ledgerRef, {
+      userId, type: 'transcription', amount: -(consumed.packageValueUsed + expectedSubtotalCents / 100),
+      description: `${String(job.mode).toUpperCase()} package transcription: ${billingMinutes} minutes plus paid add-ons`,
+      jobId, packageMinutesUsed: billingMinutes, walletUsed: 0, minutesUsed: billingMinutes,
+      billingType: 'package', addOnCost: expectedSubtotalCents / 100,
+      stripeCheckoutSessionId: session.id, stripePaymentIntentId: paymentIntentId || null,
+      paidAmountCents: session.amount_total || expectedSubtotalCents, paidCurrency: expectedCurrency,
+      costDeducted: consumed.packageValueUsed + expectedSubtotalCents / 100, createdAt: FieldValue.serverTimestamp(),
+    });
+    return { newlyPaid: true, reconciliation: false, job };
+  });
+
+  if (result.reconciliation) {
+    console.error('[WEBHOOK]', requestId, `Paid add-on job requires reconciliation: ${jobId}`);
+    return;
+  }
+  if (result.job.mode === 'hybrid') {
+    const processing = await startTranscriptionProcessing({
+      jobId,
+      language: result.job.language || 'en',
+      operatingPoint: result.job.operatingPoint || 'enhanced',
+    });
+    if (!processing.success) {
+      console.error('[WEBHOOK]', requestId, `Paid Hybrid job requires processing retry: ${jobId}`);
+    }
+  }
+  if (!result.newlyPaid) return;
+  try {
+    const client = await adminDb.collection('users').doc(userId).get();
+    const email = await sendSimpleNotification({
+      jobId, clientName: client.data()?.name, clientEmail: client.data()?.email,
+      mode: result.job.mode, originalFilename: result.job.originalFilename || result.job.filename || 'Uploaded recording',
+      durationMinutes: billingMinutes, rushDelivery: result.job.rushDelivery === true,
+    });
+    await jobRef.update({
+      adminSubmissionNotificationStatus: email.ok ? 'sent' : 'failed',
+      ...(email.ok ? { adminSubmissionNotifiedAt: FieldValue.serverTimestamp() } : {}),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  } catch (error) {
+    console.error('[WEBHOOK]', requestId, 'Add-on payment confirmed but admin notification failed');
+  }
+}
+
+async function handleCheckoutSessionExpired(session: Stripe.Checkout.Session, requestId: string): Promise<void> {
+  if (session.metadata?.type !== 'transcription-package-add-ons') return;
+  const jobId = session.metadata.jobId;
+  const userId = session.metadata.userId;
+  const reservationId = session.metadata.reservationId;
+  if (!jobId || !userId || !reservationId) return;
+  const jobRef = adminDb.collection('transcriptions').doc(jobId);
+  const userRef = adminDb.collection('users').doc(userId);
+  await adminDb.runTransaction(async transaction => {
+    const [jobSnapshot, userSnapshot] = await Promise.all([transaction.get(jobRef), transaction.get(userRef)]);
+    if (!jobSnapshot.exists || !userSnapshot.exists) return;
+    const job = jobSnapshot.data() || {};
+    if (job.paymentStatus === 'paid' || job.packageReservationStatus === 'consumed') return;
+    if (job.stripeAddOnCheckoutSessionId !== session.id || job.packageReservationId !== reservationId || job.packageReservationStatus !== 'reserved') return;
+    const packages = releasePackageReservation(userSnapshot.data()?.packages || [], job.packageReservationAllocations || []);
+    if (!packages) {
+      transaction.update(jobRef, {
+        status: 'payment-reconciliation-required', paymentReconciliationReason: 'Expired Checkout reservation could not be released',
+        paymentReconciliationRequiredAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+    transaction.update(userRef, { packages, updatedAt: FieldValue.serverTimestamp() });
+    transaction.update(jobRef, {
+      packageReservationStatus: 'released', packageReservationReleasedAt: FieldValue.serverTimestamp(),
+      addOnPaymentStatus: 'expired', stripeAddOnCheckoutUrl: FieldValue.delete(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  });
+  console.log('[WEBHOOK]', requestId, `Released expired add-on reservation for ${jobId}`);
 }
 
 // =============================================================================
@@ -492,6 +641,14 @@ async function handlePaymentIntentFailed(
     const snapshot = await jobRef.get();
     if (snapshot.exists && snapshot.data()?.paymentStatus !== 'paid') {
       await jobRef.update({ paymentStatus: 'failed', updatedAt: FieldValue.serverTimestamp() });
+    }
+  }
+  const addOnJobId = paymentIntent.metadata.jobId;
+  if (paymentIntent.metadata.type === 'transcription-package-add-ons' && addOnJobId) {
+    const jobRef = adminDb.collection('transcriptions').doc(addOnJobId);
+    const snapshot = await jobRef.get();
+    if (snapshot.exists && snapshot.data()?.paymentStatus !== 'paid') {
+      await jobRef.update({ addOnPaymentStatus: 'failed', updatedAt: FieldValue.serverTimestamp() });
     }
   }
   if (userId) {

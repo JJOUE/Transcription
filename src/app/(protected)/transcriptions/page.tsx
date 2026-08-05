@@ -19,6 +19,7 @@ import { TranscriptionJob, updateTranscriptionStatus } from '@/lib/firebase/tran
 import { Timestamp } from 'firebase/firestore';
 import { formatDuration } from '@/lib/utils';
 import { formatRetentionLabel, isRetentionDeleted } from '@/lib/utils/retention';
+import { PACKAGE_ADD_ON_DISABLED_MESSAGE } from '@/lib/billing/transcription-rates';
 
 
 export default function TranscriptionsPage() {
@@ -33,6 +34,8 @@ export default function TranscriptionsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteTarget, setDeleteTarget] = useState<TranscriptionJob | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [paymentJobId, setPaymentJobId] = useState<string | null>(null);
+  const [packageAddOnCheckoutEnabled, setPackageAddOnCheckoutEnabled] = useState(false);
   const itemsPerPage = 10;
 
   // Load transcriptions from Firestore
@@ -46,7 +49,7 @@ export default function TranscriptionsPage() {
       
       // Check if there are any processing jobs
       const hasProcessingJobs = userTranscriptions.some(t => 
-        t.status === 'processing'
+        t.status === 'processing' || t.status === 'pending-add-on-payment'
       );
       setIsPolling(hasProcessingJobs);
       
@@ -68,6 +71,13 @@ export default function TranscriptionsPage() {
     loadTranscriptions();
   }, [user]);
 
+  useEffect(() => {
+    fetch('/api/transcriptions/add-on-capability', { credentials: 'include', cache: 'no-store' })
+      .then(response => response.ok ? response.json() : null)
+      .then(data => setPackageAddOnCheckoutEnabled(data?.packageAddOnCheckoutEnabled === true))
+      .catch(() => setPackageAddOnCheckoutEnabled(false));
+  }, []);
+
   // Auto-refresh when there are processing jobs
   useEffect(() => {
     if (!isPolling || !user) return;
@@ -82,6 +92,25 @@ export default function TranscriptionsPage() {
       clearInterval(interval);
     };
   }, [isPolling, user]);
+
+  const continueAddOnPayment = async (jobId: string) => {
+    if (!packageAddOnCheckoutEnabled) {
+      toast({ title: 'Separate payment required', description: PACKAGE_ADD_ON_DISABLED_MESSAGE, variant: 'destructive' });
+      return;
+    }
+    try {
+      setPaymentJobId(jobId);
+      const response = await fetch(`/api/transcriptions/${encodeURIComponent(jobId)}/add-on-checkout`, {
+        method: 'POST', credentials: 'include',
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.checkoutUrl) throw new Error(result.error || 'Unable to continue payment');
+      window.location.assign(result.checkoutUrl);
+    } catch (error) {
+      toast({ title: 'Payment unavailable', description: error instanceof Error ? error.message : 'Please try again.', variant: 'destructive' });
+      setPaymentJobId(null);
+    }
+  };
 
   // Filter transcriptions based on search and filters
   const filteredTranscriptions = useMemo(() => {
@@ -415,10 +444,21 @@ export default function TranscriptionsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleRetry(transcription.id)}
+                        onClick={() => transcription.id && handleRetry(transcription.id)}
                         className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
                       >
                         Retry
+                      </Button>
+                    )}
+
+                    {transcription.status === 'pending-add-on-payment' && packageAddOnCheckoutEnabled && (
+                      <Button
+                        size="sm"
+                        onClick={() => continueAddOnPayment(transcription.id!)}
+                        disabled={paymentJobId === transcription.id}
+                        className="bg-[#003366] text-white hover:bg-[#002244]"
+                      >
+                        {paymentJobId === transcription.id ? 'Opening checkout...' : 'Continue add-on payment'}
                       </Button>
                     )}
 

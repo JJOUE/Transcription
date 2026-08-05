@@ -2,7 +2,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 
 interface StatusBadgeProps {
-  status: 'queued' | 'processing' | 'under-review' | 'complete' | 'failed' | 'cancelled' | 'pending-review' | 'pending-transcription';
+  status: 'queued' | 'processing' | 'under-review' | 'complete' | 'failed' | 'cancelled' | 'pending-review' | 'pending-transcription' | 'pending-add-on-payment' | 'payment-reconciliation-required';
   className?: string;
 }
 
@@ -27,6 +27,14 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
     'pending-transcription': {
       label: 'Pending Transcription',
       className: 'bg-purple-100 text-purple-800 border-purple-200'
+    },
+    'pending-add-on-payment': {
+      label: 'Add-on Payment Required',
+      className: 'bg-amber-100 text-amber-900 border-amber-300'
+    },
+    'payment-reconciliation-required': {
+      label: 'Payment Review Required',
+      className: 'bg-red-100 text-red-900 border-red-300'
     },
     complete: {
       label: 'Complete',

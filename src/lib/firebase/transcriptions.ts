@@ -1,7 +1,7 @@
 import { collection, doc, addDoc, getDocs, getDoc, updateDoc, query, where, orderBy, Timestamp, deleteDoc } from 'firebase/firestore';
 import { db } from './config';
 
-export type TranscriptionStatus = 'processing' | 'pending-review' | 'pending-transcription' | 'complete' | 'failed';
+export type TranscriptionStatus = 'processing' | 'pending-review' | 'pending-transcription' | 'pending-add-on-payment' | 'payment-reconciliation-required' | 'complete' | 'failed';
 export type TranscriptionMode = 'ai' | 'hybrid' | 'human';
 export type TranscriptionDomain = 'general' | 'medical' | 'legal';
 export type OfficeStatus = 'submitted' | 'assigned' | 'in_progress' | 'waiting_review' | 'completed' | 'delivered';
@@ -131,6 +131,18 @@ export interface TranscriptionJob {
   multipleSpeakers?: boolean; // Whether the five-or-more-speakers surcharge was selected
   speakerCount?: number; // Number of speakers in the recording
   addOnCost?: number; // Additional cost for add-ons in CAD
+  addOnPaymentStatus?: 'pending' | 'requested' | 'paid' | 'failed' | 'expired' | 'checkout-error' | 'paid-reconciliation-required';
+  addOnRushCents?: number;
+  addOnSpeakerCents?: number;
+  addOnSubtotalCents?: number;
+  addOnCurrency?: string;
+  packageReservationStatus?: 'reserved' | 'consumed' | 'released';
+  packageReservedMinutes?: number;
+  packageReservationId?: string;
+  packageReservationAllocations?: Array<{ packageId: string; packageIndex: number; minutes: number }>;
+  packageReservationCreatedAt?: Timestamp;
+  packageReservationExpiresAt?: Timestamp;
+  packageId?: string;
   hasPackage?: boolean; // Whether user has active package (add-ons are free)
   // Template for human transcription
   templatePath?: string; // Path to template file in Storage

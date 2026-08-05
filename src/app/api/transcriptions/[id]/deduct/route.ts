@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { TRANSCRIPTION_MODE_RATES, supportsTranscriptionAddOns, transcriptionAddOnRate } from '@/lib/billing/transcription-rates';
+import { packageAvailableMinutes } from '@/lib/billing/package-reservations';
 
 function billingMinutes(seconds: number) {
   if (!seconds || seconds <= 0) return 1;
@@ -43,13 +44,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       if (job.userId !== decoded.uid) throw new Error('FORBIDDEN');
       if (!['ai', 'hybrid', 'human'].includes(job.mode)) throw new Error('INVALID_MODE');
       if (ledgerSnapshot.exists) return { duplicate: true, ...(ledgerSnapshot.data() || {}) };
+      if (job.packageReservationStatus === 'reserved') throw new Error('ADD_ON_CHECKOUT_REQUIRED');
+      if (job.packageReservationStatus === 'consumed') throw new Error('PAYMENT_RECONCILIATION_REQUIRED');
 
       const mode = job.mode as keyof typeof TRANSCRIPTION_MODE_RATES;
       const minutes = billingMinutes(Number(job.duration || 0));
       const packages = Array.isArray(user.packages) ? [...user.packages] : [];
       const eligible = packages
         .map((pkg, index) => ({ pkg, index }))
-        .filter(({ pkg }) => pkg?.type === mode && pkg?.active !== false && Number(pkg?.minutesRemaining || 0) > 0 && expiryMillis(pkg?.expiresAt) > Date.now())
+        .filter(({ pkg }) => pkg?.type === mode && pkg?.active !== false && packageAvailableMinutes(pkg) > 0 && expiryMillis(pkg?.expiresAt) > Date.now())
         .sort((a, b) => Number(a.pkg?.rate || 0) - Number(b.pkg?.rate || 0));
 
       let remaining = minutes;
@@ -65,7 +68,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
       for (const { pkg, index } of eligible) {
         if (remaining <= 0) break;
-        const used = Math.min(remaining, Number(pkg.minutesRemaining || 0));
+        const used = Math.min(remaining, packageAvailableMinutes(pkg));
         packages[index] = {
           ...pkg,
           minutesUsed: Number(pkg.minutesUsed || 0) + used,
@@ -80,7 +83,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         rushDelivery: job.rushDelivery,
         speakerCount: job.speakerCount,
       });
-      if (packageMinutesUsed > 0 && addOnRate > 0) throw new Error('PACKAGE_ADD_ON_PAYMENT_REQUIRED');
+      if (packageMinutesUsed > 0 && addOnRate > 0) throw new Error('ADD_ON_CHECKOUT_REQUIRED');
       const addOnCost = minutes * addOnRate;
       const walletUsed = (remaining * TRANSCRIPTION_MODE_RATES[mode]) + addOnCost;
       const currentWallet = Number(user.walletBalance || 0);
@@ -139,7 +142,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       JOB_NOT_FOUND: [404, 'Transcription job not found'], USER_NOT_FOUND: [404, 'User profile not found'],
       FORBIDDEN: [403, 'You do not own this transcription job'], INVALID_MODE: [400, 'Unsupported transcription mode'],
       PAYMENT_REQUIRED: [402, 'Insufficient pay-as-you-go balance for this transcription'],
-      PACKAGE_ADD_ON_PAYMENT_REQUIRED: [400, 'Rush service and recordings with more than four speakers require a separate payment. Please contact support before submitting.'],
+      ADD_ON_CHECKOUT_REQUIRED: [409, 'Complete the secure add-on checkout before submitting this package-funded job.'],
+      PAYMENT_RECONCILIATION_REQUIRED: [409, 'This paid package job requires billing reconciliation before it can continue.'],
     };
     if (responses[code]) return NextResponse.json({ ok: false, error: responses[code][1] }, { status: responses[code][0] });
     console.error('[Transcription Billing] Deduction failed:', error);
