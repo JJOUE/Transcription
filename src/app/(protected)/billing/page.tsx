@@ -488,14 +488,7 @@ export default function BillingPage() {
                                       <SecureCheckoutButton
                                         amount={pkg.price}
                                         type="package"
-                                        packageData={{
-                                          id: pkg.id,
-                                          type: key,
-                                          name: `${typeInfo.name} - ${pkg.minutes} minutes`,
-                                          minutes: pkg.minutes,
-                                          rate: pkg.perMinuteRate,
-                                          price: pkg.price
-                                        }}
+                                        packageId={pkg.id}
                                         className={`w-full ${pkg.popular ? 'bg-[#b29dd9] hover:bg-[#9d87c7]' : 'bg-[#003366] hover:bg-[#002244]'} text-white py-3 px-4 rounded-lg font-medium transition-all`}
                                       >
                                         Purchase {pkg.minutes} Minutes

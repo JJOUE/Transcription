@@ -53,11 +53,11 @@ export async function POST(request: NextRequest) {
 
 async function createCheckoutSession(request: NextRequest, decodedToken: any) {
   try {
-    const { amount, type = 'wallet', packageData } = await request.json();
+    const { amount, type = 'wallet', packageId } = await request.json();
 
-    console.log('[Create Checkout] Request:', { amount, type, packageData });
+    console.log('[Create Checkout] Request:', { type, packageId });
 
-    if (!amount || amount < 1) {
+    if (type !== 'package' && (!amount || amount < 1)) {
       return NextResponse.json({
         error: 'Invalid amount'
       }, { status: 400 });
@@ -72,14 +72,15 @@ async function createCheckoutSession(request: NextRequest, decodedToken: any) {
       minutes: number;
       rate: number;
       price: number;
+      id: string;
     } | null = null;
 
     if (type === 'package') {
-      if (!packageData?.id || typeof packageData.id !== 'string') {
+      if (!packageId || typeof packageId !== 'string') {
         return NextResponse.json({ error: 'A valid package selection is required' }, { status: 400 });
       }
 
-      const packageSnapshot = await adminDb.collection('packages').doc(packageData.id).get();
+      const packageSnapshot = await adminDb.collection('packages').doc(packageId).get();
       if (!packageSnapshot.exists) {
         return NextResponse.json({ error: 'The selected package is no longer available' }, { status: 400 });
       }
@@ -94,13 +95,16 @@ async function createCheckoutSession(request: NextRequest, decodedToken: any) {
       const rate = Number(catalogPackage.perMinuteRate);
       const price = Number(catalogPackage.price);
       if (![minutes, rate, price].every(Number.isFinite) || minutes <= 0 || rate <= 0 || price <= 0) {
-        console.error('[Create Checkout] Invalid package catalog data:', packageData.id);
+        console.error('[Create Checkout] Invalid package catalog data:', packageId);
         return NextResponse.json({ error: 'The selected package is not configured correctly' }, { status: 500 });
       }
 
       verifiedPackage = {
+        id: packageSnapshot.id,
         type: packageType,
-        name: `${packageType === 'ai' ? 'AI Transcription' : packageType === 'hybrid' ? 'Hybrid Review' : 'Human Transcription'} - ${minutes} minutes`,
+        name: typeof catalogPackage.name === 'string' && catalogPackage.name.trim()
+          ? catalogPackage.name.trim()
+          : `${packageType === 'ai' ? 'AI Transcription' : packageType === 'hybrid' ? 'Hybrid Review' : 'Human Transcription'} - ${minutes} minutes`,
         minutes,
         rate,
         price,
@@ -148,6 +152,7 @@ async function createCheckoutSession(request: NextRequest, decodedToken: any) {
         // Package-specific metadata
         ...(type === 'package' && verifiedPackage ? {
           packageType: verifiedPackage.type,
+          packageId: verifiedPackage.id,
           packageMinutes: String(verifiedPackage.minutes),
           packageRate: String(verifiedPackage.rate),
           packageName: verifiedPackage.name

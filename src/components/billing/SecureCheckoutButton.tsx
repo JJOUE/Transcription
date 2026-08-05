@@ -6,14 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 interface SecureCheckoutButtonProps {
   amount: number;
   type?: 'wallet' | 'package';
-  packageData?: {
-    id: string;
-    type: string;
-    name: string;
-    minutes: number;
-    rate: number;
-    price: number;
-  };
+  packageId?: string;
   className?: string;
   children?: React.ReactNode;
 }
@@ -21,7 +14,7 @@ interface SecureCheckoutButtonProps {
 export default function SecureCheckoutButton({
   amount,
   type = 'wallet',
-  packageData,
+  packageId,
   className = '',
   children
 }: SecureCheckoutButtonProps) {
@@ -42,7 +35,7 @@ export default function SecureCheckoutButton({
       // Get auth token
       const token = await user.getIdToken();
 
-      console.log('[SecureCheckout] Creating checkout for:', { amount, type, packageData });
+      console.log('[SecureCheckout] Creating checkout for:', { type, packageId });
 
       // Create checkout session with userId always included
       const response = await fetch('/api/create-checkout', {
@@ -51,11 +44,9 @@ export default function SecureCheckoutButton({
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          amount,
-          type,
-          packageData
-        })
+        body: JSON.stringify(type === 'package'
+          ? { type, packageId }
+          : { type, amount })
       });
 
       console.log('[SecureCheckout] Response status:', response.status);
