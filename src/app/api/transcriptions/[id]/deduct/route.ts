@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
-
-const MODE_RATES = { ai: 0.40, hybrid: 1.50, human: 2.50 } as const;
+import { RUSH_SURCHARGE_RATES, SPEAKER_SURCHARGE_RATES, TRANSCRIPTION_MODE_RATES } from '@/lib/billing/transcription-rates';
 
 function billingMinutes(seconds: number) {
   if (!seconds || seconds <= 0) return 1;
@@ -45,7 +44,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       if (!['ai', 'hybrid', 'human'].includes(job.mode)) throw new Error('INVALID_MODE');
       if (ledgerSnapshot.exists) return { duplicate: true, ...(ledgerSnapshot.data() || {}) };
 
-      const mode = job.mode as keyof typeof MODE_RATES;
+      const mode = job.mode as keyof typeof TRANSCRIPTION_MODE_RATES;
       const minutes = billingMinutes(Number(job.duration || 0));
       const packages = Array.isArray(user.packages) ? [...user.packages] : [];
       const eligible = packages
@@ -80,10 +79,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const hasPackageCoverage = packageMinutesUsed > 0;
       let addOnRate = 0;
       if (!hasPackageCoverage && (mode === 'hybrid' || mode === 'human')) {
-        if (job.rushDelivery === true) addOnRate += mode === 'hybrid' ? 0.50 : 0.75;
-        if (Number(job.speakerCount || 1) >= 5) addOnRate += mode === 'hybrid' ? 0.25 : 0.30;
+        if (job.rushDelivery === true) addOnRate += RUSH_SURCHARGE_RATES[mode];
+        if (Number(job.speakerCount || 1) >= 5) addOnRate += SPEAKER_SURCHARGE_RATES[mode];
       }
-      const walletUsed = remaining * (MODE_RATES[mode] + addOnRate);
+      const walletUsed = remaining * (TRANSCRIPTION_MODE_RATES[mode] + addOnRate);
       const addOnCost = remaining * addOnRate;
       const currentWallet = Number(user.walletBalance || 0);
       if (currentWallet < walletUsed) throw new Error('PAYMENT_REQUIRED');

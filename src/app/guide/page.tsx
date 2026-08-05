@@ -215,6 +215,23 @@ export default function GuidePage() {
             </p>
           </div>
 
+          <div id="workspace-comparison" className="scroll-mt-24 rounded-2xl border border-[#ddd3ed] bg-[#f7f4fb] p-8 shadow-sm mb-12">
+            <h2 className="text-3xl font-bold text-[#003366] mb-4">Compare the Workspaces</h2>
+            <div className="grid gap-6 md:grid-cols-2">
+              <div>
+                <h3 className="text-xl font-semibold text-[#003366]">Transcript Workspace</h3>
+                <p className="mt-2 text-gray-700">Converts audio or video into a transcript using AI, Hybrid, or Human Transcription. Eligible transcripts can be reviewed, edited, formatted, and downloaded.</p>
+                <Link href="/upload" className="mt-4 inline-flex font-semibold text-[#003366] underline underline-offset-4">Create a transcript</Link>
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-[#003366]">Document Workspace</h3>
+                <p className="mt-2 text-gray-700">Prepares a finished document from dictation, handwriting, copy typing, instructions, or a supplied template. The final product is a document, not a transcript.</p>
+                <Link href="/office/upload" className="mt-4 inline-flex font-semibold text-[#003366] underline underline-offset-4">Prepare a finished document</Link>
+              </div>
+            </div>
+            <p className="mt-6 rounded-md border border-[#cfc2e6] bg-white p-4 text-sm text-gray-700">The workspaces are separate. A project, file, or editor in one workspace does not transfer to the other automatically.</p>
+          </div>
+
           <div className="grid lg:grid-cols-2 gap-8 mb-12">
             <div id="uploads" className="scroll-mt-24 rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
               <Upload className="mb-4 h-8 w-8 text-[#b29dd9]" />

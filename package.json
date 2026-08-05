@@ -12,6 +12,8 @@
     "test:api": "node tests/api-test.js",
     "test:security": "node tests/security.test.js",
     "test:firestore-rules": "npm --prefix tests run test:firestore-rules",
+    "test:help-assistant": "node tests/help-assistant.test.mjs",
+    "test:transcription-rates": "node tests/transcription-rates.test.mjs",
     "test:rate-limit": "node tests/rate-limit.test.js",
     "verify:storage": "bash scripts/verify-storage.sh",
     "pre-deploy": "npm run type-check && npm run lint && npm run build"

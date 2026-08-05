@@ -233,6 +233,11 @@ service cloud.firestore {
       allow read, delete: if isAdmin();
     }
 
+    // Server-only counters for the public help assistant. Admin SDK writes bypass rules.
+    match /_helpRateLimits/{counterId} {
+      allow read, write: if false;
+    }
+
     // Remove the overly permissive demo rule - demo users should follow same rules
     // Demo users are identified by email in other rules, not by bypassing security
   }
