@@ -20,6 +20,7 @@ import {
 import { db } from '@/lib/firebase/config';
 import { TranscriptionMode } from '@/lib/firebase/transcriptions';
 import { PricingSettings, subscribeToPricingSettings } from '@/lib/firebase/settings';
+import { loadNormalizedUserPackages, normalizeUserPackages } from '@/lib/firebase/user-packages';
 
 // Package types
 interface Package {
@@ -29,9 +30,10 @@ interface Package {
   minutesTotal: number;
   minutesUsed: number;
   minutesRemaining: number;
+  availableMinutesRemaining?: number;
   rate: number; // Cost per minute in CAD
-  purchasedAt: Date;
-  expiresAt: Date;
+  purchasedAt?: Date;
+  expiresAt?: Date;
   active: boolean;
 }
 
@@ -172,24 +174,11 @@ export function WalletProvider({ children }: WalletProviderProps) {
         setFreeTrialUsed(trialUsed);
         setFreeTrialTotal(trialTotal);
 
-        // Load packages
-        if (data.packages && Array.isArray(data.packages)) {
-          const now = new Date();
-          const activePackages = data.packages
-            .map((pkg: any) => {
-              const expiresAtDate = toDate(pkg.expiresAt);
-              const purchasedAtDate = toDate(pkg.purchasedAt);
-              return {
-                ...pkg,
-                minutesRemaining: Math.max(0, Number(pkg.minutesRemaining || 0) - Number(pkg.minutesReserved || 0)),
-                purchasedAt: purchasedAtDate,
-                expiresAt: expiresAtDate,
-                active: pkg.active && expiresAtDate > now && pkg.minutesRemaining > 0
-              };
-            })
-            .filter((pkg: Package) => pkg.active);
-          setPackages(activePackages);
-        }
+        // Merge the current embedded package array with legacy/newer package subcollection records.
+        const normalizedPackages = await loadNormalizedUserPackages(user.uid, data.packages);
+        setPackages(normalizedPackages.filter(pkg => pkg.active) as Package[]);
+      } else {
+        setPackages([]);
       }
 
       // Load recent transactions
@@ -242,29 +231,21 @@ export function WalletProvider({ children }: WalletProviderProps) {
         setFreeTrialTotal(userData.freeTrialMinutesTotal);
       }
 
-      // Sync packages from userData (processes dates properly)
-      if (userData.packages && Array.isArray(userData.packages)) {
-        const now = new Date();
-        const activePackages = userData.packages
-          .map((pkg: any) => {
-            const expiresAtDate = toDate(pkg.expiresAt);
-            const purchasedAtDate = toDate(pkg.purchasedAt);
-            return {
-              ...pkg,
-              minutesRemaining: Math.max(0, Number(pkg.minutesRemaining || 0) - Number(pkg.minutesReserved || 0)),
-              purchasedAt: purchasedAtDate,
-              expiresAt: expiresAtDate,
-              active: pkg.active && expiresAtDate > now && pkg.minutesRemaining > 0
-            };
-          })
-          .filter((pkg: Package) => pkg.active);
-        setPackages(activePackages);
-      }
+      // An empty embedded array must not suppress packages loaded from the subcollection.
+      setPackages(current => normalizeUserPackages(userData.packages, current)
+        .filter(pkg => pkg.active) as Package[]);
 
       // Mark as not loading once we have userData
       setLoading(false);
     }
   }, [userData]);
+
+  // Refresh when the client returns to the tab after an administrator changes a balance.
+  useEffect(() => {
+    const refreshOnFocus = () => void loadWalletData();
+    window.addEventListener('focus', refreshOnFocus);
+    return () => window.removeEventListener('focus', refreshOnFocus);
+  }, [loadWalletData]);
 
   // Subscribe to pricing settings
   useEffect(() => {
@@ -281,11 +262,11 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
     // Find packages that match the mode and have minutes remaining
     const eligiblePackages = packages.filter(pkg => {
-      const expiresAt = toDate(pkg.expiresAt);
+      const expiresAt = pkg.expiresAt ? toDate(pkg.expiresAt) : null;
       return pkg.type === mode &&
         pkg.active &&
-        pkg.minutesRemaining > 0 &&
-        expiresAt > now;
+        (pkg.availableMinutesRemaining ?? pkg.minutesRemaining) > 0 &&
+        (!expiresAt || expiresAt > now);
     });
 
     // Return package with best rate (lowest)
@@ -320,7 +301,10 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
     // PRIORITY 2: Use package minutes for remaining (mode-specific)
     if (remainingMinutes > 0 && activePackage) {
-      packageMinutes = Math.min(remainingMinutes, activePackage.minutesRemaining);
+      packageMinutes = Math.min(
+        remainingMinutes,
+        activePackage.availableMinutesRemaining ?? activePackage.minutesRemaining,
+      );
       remainingMinutes -= packageMinutes;
       // Calculate cost for package minutes (for tracking purposes)
       totalCost += packageMinutes * activePackage.rate;

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { normalizeUserPackages } from '@/lib/firebase/user-packages';
 
 interface Props { client: UserData; onClose: () => void; onSaved: () => void; }
 
@@ -21,7 +22,7 @@ const reasons = [
 export function TranscriptionBalanceAdjustment({ client, onClose, onSaved }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const packages = client.packages || [];
+  const packages = normalizeUserPackages(client.packages);
   const [balanceType, setBalanceType] = useState<'package' | 'free-trial'>('package');
   const [packageId, setPackageId] = useState(packages[0]?.id || '');
   const [direction, setDirection] = useState<'increase' | 'decrease'>('increase');

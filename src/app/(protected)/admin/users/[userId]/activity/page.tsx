@@ -15,6 +15,7 @@ import { collection, query, where, orderBy, getDocs, doc, getDoc } from 'firebas
 import { db } from '@/lib/firebase/config';
 import { getTranscriptionsByUser, TranscriptionJob } from '@/lib/firebase/transcriptions';
 import { UserData } from '@/lib/firebase/auth';
+import { loadNormalizedUserPackages, NormalizedUserPackage } from '@/lib/firebase/user-packages';
 import Link from 'next/link';
 
 interface CreditTransaction {
@@ -25,19 +26,6 @@ interface CreditTransaction {
   createdAt: any;
   jobId?: string;
   packageMinutes?: number;
-}
-
-interface UserPackage {
-  id: string;
-  type: 'ai' | 'hybrid' | 'human';
-  name: string;
-  minutesTotal: number;
-  minutesRemaining: number;
-  minutesUsed: number;
-  rate: number;
-  active: boolean;
-  purchasedAt: any;
-  expiresAt: any;
 }
 
 export default function UserActivityPage() {
@@ -51,7 +39,7 @@ export default function UserActivityPage() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
   const [transcriptions, setTranscriptions] = useState<TranscriptionJob[]>([]);
-  const [packages, setPackages] = useState<UserPackage[]>([]);
+  const [packages, setPackages] = useState<NormalizedUserPackage[]>([]);
 
   useEffect(() => {
     // Check if current user is admin
@@ -82,14 +70,14 @@ export default function UserActivityPage() {
         setUserData(user);
 
         // Load transactions, transcriptions, and packages in parallel
-        const [transactionsSnapshot, userTranscriptions, packagesSnapshot] = await Promise.all([
+        const [transactionsSnapshot, userTranscriptions, normalizedPackages] = await Promise.all([
           getDocs(query(
             collection(db, 'transactions'),
             where('userId', '==', userId),
             orderBy('createdAt', 'desc')
           )),
           getTranscriptionsByUser(userId),
-          getDocs(collection(db, 'users', userId, 'packages')),
+          loadNormalizedUserPackages(userId, user.packages),
         ]);
 
         setTransactions(transactionsSnapshot.docs.map(doc => ({
@@ -97,10 +85,7 @@ export default function UserActivityPage() {
           ...doc.data(),
         } as CreditTransaction)));
         setTranscriptions(userTranscriptions);
-        setPackages(packagesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-        } as UserPackage)));
+        setPackages(normalizedPackages);
 
       } catch (error) {
         console.error('Error loading user activity:', error);
@@ -165,9 +150,9 @@ export default function UserActivityPage() {
   }
 
   const activePackages = packages.filter(pkg => pkg.active);
-  const remainingPackageMinutes = (type: UserPackage['type']) => activePackages
+  const remainingPackageMinutes = (type: NormalizedUserPackage['type']) => activePackages
     .filter(pkg => pkg.type === type)
-    .reduce((sum, pkg) => sum + Math.max(0, pkg.minutesRemaining || 0), 0);
+    .reduce((sum, pkg) => sum + pkg.availableMinutesRemaining, 0);
   const aiMinutesRemaining = remainingPackageMinutes('ai');
   const hybridMinutesRemaining = remainingPackageMinutes('hybrid');
   const humanMinutesRemaining = remainingPackageMinutes('human');
@@ -347,22 +332,31 @@ export default function UserActivityPage() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {activePackages.map((pkg) => {
-                  const expiresAt = pkg.expiresAt?.toDate ? pkg.expiresAt.toDate() : new Date(pkg.expiresAt);
-                  const daysRemaining = Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-                  const usagePercent = ((pkg.minutesUsed / pkg.minutesTotal) * 100).toFixed(0);
+                  const expiresAtValue = pkg.expiresAt as { toDate?: () => Date } | string | number | Date | undefined;
+                  const expiresAt = expiresAtValue
+                    ? (typeof expiresAtValue === 'object' && 'toDate' in expiresAtValue && expiresAtValue.toDate
+                      ? expiresAtValue.toDate()
+                      : new Date(expiresAtValue as string | number | Date))
+                    : null;
+                  const daysRemaining = expiresAt && !Number.isNaN(expiresAt.getTime())
+                    ? Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                    : null;
+                  const usagePercent = pkg.minutesTotal > 0
+                    ? ((pkg.minutesUsed / pkg.minutesTotal) * 100).toFixed(0)
+                    : '0';
 
                   return (
                     <div key={pkg.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium capitalize text-[#003366]">{pkg.type} Package</span>
-                        {daysRemaining <= 7 && (
+                        {daysRemaining !== null && daysRemaining <= 7 && (
                           <span className="text-xs bg-yellow-500 text-white px-2 py-0.5 rounded">
                             {daysRemaining}d left
                           </span>
                         )}
                       </div>
                       <div className="text-xl font-bold text-[#003366] mb-1">
-                        {pkg.minutesRemaining} / {pkg.minutesTotal} min
+                        {pkg.availableMinutesRemaining} / {pkg.minutesTotal} min
                       </div>
                       <div className="text-xs text-gray-600 mb-2">
                         CA${pkg.rate.toFixed(2)}/min • {usagePercent}% used

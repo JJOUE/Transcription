@@ -14,6 +14,7 @@ import { useWallet } from '@/contexts/WalletContext';
 import { getTranscriptionsByUser, TranscriptionJob } from '@/lib/firebase/transcriptions';
 import { formatRetentionLabel, isRetentionDeleted } from '@/lib/utils/retention';
 import { Timestamp } from 'firebase/firestore';
+import { normalizeUserPackages } from '@/lib/firebase/user-packages';
 
 
 // Transaction interface now comes from CreditContext
@@ -78,15 +79,8 @@ export function UserDashboard() {
 
   // Get active packages
   const activePackages = packages.filter(pkg => pkg.active);
-  type BalancePackage = {
-    type: 'ai' | 'hybrid' | 'human';
-    minutesTotal: number;
-    minutesUsed: number;
-    minutesRemaining: number;
-    active: boolean;
-  };
-  const storedActivePackages = ((userData?.packages || activePackages) as BalancePackage[])
-    .filter(pkg => pkg.active && pkg.minutesRemaining > 0);
+  const storedActivePackages = normalizeUserPackages(userData?.packages, activePackages)
+    .filter(pkg => pkg.active && pkg.availableMinutesRemaining > 0);
   const packageBalances = (['ai', 'hybrid', 'human'] as const)
     .map(type => {
       const matchingPackages = storedActivePackages.filter(pkg => pkg.type === type);
@@ -94,7 +88,7 @@ export function UserDashboard() {
         type,
         purchased: matchingPackages.reduce((sum, pkg) => sum + pkg.minutesTotal, 0),
         used: matchingPackages.reduce((sum, pkg) => sum + pkg.minutesUsed, 0),
-        remaining: matchingPackages.reduce((sum, pkg) => sum + pkg.minutesRemaining, 0),
+        remaining: matchingPackages.reduce((sum, pkg) => sum + pkg.availableMinutesRemaining, 0),
       };
     })
     .filter(balance => balance.purchased > 0);

@@ -25,6 +25,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { DollarSign } from 'lucide-react';
 import { TranscriptionBalanceAdjustment } from '@/components/admin/TranscriptionBalanceAdjustment';
+import { getUserPackageMinuteBalances } from '@/lib/firebase/user-packages';
 
 type MinuteBalances = { ai: number; hybrid: number; human: number; trial: number };
 
@@ -36,13 +37,10 @@ const getMinuteBalances = (client: UserData): MinuteBalances => {
     trial: Math.max(0, Number(client.freeTrialMinutes) || 0),
   };
 
-  for (const pkg of client.packages || []) {
-    if (pkg.active === false) continue;
-    const remaining = Math.max(0, Number(pkg.minutesRemaining) || 0);
-    if (pkg.type === 'ai') balances.ai += remaining;
-    if (pkg.type === 'hybrid') balances.hybrid += remaining;
-    if (pkg.type === 'human') balances.human += remaining;
-  }
+  const packageBalances = getUserPackageMinuteBalances(client.packages);
+  balances.ai = packageBalances.ai;
+  balances.hybrid = packageBalances.hybrid;
+  balances.human = packageBalances.human;
 
   return balances;
 };
