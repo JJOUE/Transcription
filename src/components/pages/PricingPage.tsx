@@ -504,7 +504,7 @@ const getTypeInfo = (type: string) => {
             ))}
             <div className="mt-8 p-6 bg-blue-50 rounded-lg border border-blue-200">
               <p className="text-sm text-blue-800">
-                <strong>Package minutes:</strong> Cover transcription duration only. Hybrid and Human rush or 5+ speaker services are paid separately through secure checkout.
+                <strong>Package minutes:</strong> Cover transcription duration only. Hybrid and Human rush delivery is paid separately through secure checkout. Recordings with more than four speakers require a custom quote.
               </p>
             </div>
           </div>
@@ -702,7 +702,7 @@ const getTypeInfo = (type: string) => {
               <p className="text-gray-600">
                 Choose your transcription service and submit a project without purchasing a package.
                 The final amount depends on the audio minutes, selected service, and any order surcharge.
-                AI Transcription has no rush or speaker surcharge. Hybrid and Human recordings with one to four speakers have no extra speaker charge; recordings with more than four speakers may include an additional speaker surcharge. Package add-ons are paid separately through secure checkout.
+                AI Transcription has no rush or speaker surcharge. Hybrid and Human recordings with one to four speakers are included. Recordings with more than four speakers require a custom quote. Rush delivery is paid separately through secure checkout.
               </p>
             </div>
 

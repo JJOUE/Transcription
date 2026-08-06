@@ -264,7 +264,7 @@ export default function BillingPage() {
             <p>2. <strong>Upload files for transcription</strong> and review the service and order charges before submitting</p>
             <p>3. <strong>Use package minutes</strong> for the matching AI, Hybrid, or Human transcription service</p>
             <p className="text-sm text-gray-600 mt-3">
-              <strong>Package minutes:</strong> Cover transcription duration only. Hybrid and Human rush or 5+ speaker services are paid separately through secure checkout.
+              <strong>Package minutes:</strong> Cover transcription duration only. Hybrid and Human rush delivery is paid separately through secure checkout. Recordings with more than four speakers require a custom quote.
             </p>
             <p className="text-sm text-gray-500 mt-1">
               Standard rates: AI ${pricingSettings?.payAsYouGo.ai.toFixed(2) || '0.40'}/min • Hybrid ${pricingSettings?.payAsYouGo.hybrid.toFixed(2) || '1.50'}/min • Human ${pricingSettings?.payAsYouGo.human.toFixed(2) || '2.50'}/min

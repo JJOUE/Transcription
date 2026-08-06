@@ -1,7 +1,5 @@
 export const TRANSCRIPTION_MODE_RATES = { ai: 0.40, hybrid: 1.50, human: 2.50 } as const;
 
-export const SPEAKER_SURCHARGE_RATES = { hybrid: 0.25, human: 0.30 } as const;
-
 export const RUSH_SURCHARGE_RATES = { hybrid: 0.50, human: 0.75 } as const;
 
 export type AddOnEligibleTranscriptionMode = keyof typeof RUSH_SURCHARGE_RATES;
@@ -15,11 +13,7 @@ export function transcriptionAddOnRate(
   options: { rushDelivery?: boolean; speakerCount?: number },
 ): number {
   if (!supportsTranscriptionAddOns(mode)) return 0;
-
-  let rate = 0;
-  if (options.rushDelivery === true) rate += RUSH_SURCHARGE_RATES[mode];
-  if (Number(options.speakerCount || 1) >= 5) rate += SPEAKER_SURCHARGE_RATES[mode];
-  return rate;
+  return options.rushDelivery === true ? RUSH_SURCHARGE_RATES[mode] : 0;
 }
 
 
@@ -36,11 +30,13 @@ export function transcriptionAddOnQuote(
   const rushCents = options.rushDelivery === true
     ? Math.round(safeMinutes * RUSH_SURCHARGE_RATES[mode] * 100)
     : 0;
-  const speakerCents = Number(options.speakerCount || 1) >= 5
-    ? Math.round(safeMinutes * SPEAKER_SURCHARGE_RATES[mode] * 100)
-    : 0;
+  // Five or more speakers require a custom quote and never enter automatic Checkout.
+  const speakerCents = 0;
 
   return { rushCents, speakerCents, subtotalCents: rushCents + speakerCents };
 }
 export const PACKAGE_ADD_ON_DISABLED_MESSAGE =
-  'Rush service and recordings with more than four speakers require a separate payment. Please contact support before submitting.';
+  'Rush delivery requires a separate payment. Please contact support before submitting.';
+
+export const SPEAKER_CUSTOM_QUOTE_MESSAGE =
+  'Recordings with more than four speakers require a custom quote.';

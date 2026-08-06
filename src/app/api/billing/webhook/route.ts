@@ -378,6 +378,18 @@ async function processTranscriptionAddOnPayment(session: Stripe.Checkout.Session
     const job = jobSnapshot.data() || {};
     const user = userSnapshot.data() || {};
     if (job.userId !== userId || !['hybrid', 'human'].includes(job.mode)) throw new Error(`Add-on ownership or mode mismatch for ${jobId}`);
+    if (
+      session.metadata?.mode !== job.mode ||
+      session.metadata?.rushDelivery !== 'true' ||
+      job.rushDelivery !== true ||
+      Number(job.speakerCount || 1) >= 5 ||
+      job.multipleSpeakers === true ||
+      Number(job.packageReservedMinutes) !== billingMinutes ||
+      String(job.packageId || '') !== String(session.metadata?.packageId || '') ||
+      Number(job.duration || 0) !== Number(session.metadata?.durationSeconds)
+    ) {
+      throw new Error(`Add-on job metadata mismatch for ${jobId}`);
+    }
     if (job.stripeAddOnCheckoutSessionId !== session.id) throw new Error(`Add-on Checkout Session mismatch for ${jobId}`);
     if (Number(job.addOnSubtotalCents) !== expectedSubtotalCents || job.addOnCurrency !== expectedCurrency) {
       throw new Error(`Stored add-on quote mismatch for ${jobId}`);

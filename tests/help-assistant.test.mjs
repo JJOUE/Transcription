@@ -38,8 +38,8 @@ assert.match(serviceTopic?.answer || '', /AI.*Hybrid.*Human/s, 'all three transc
 const authoritativeSource = await readFile(new URL('../src/lib/help-assistant/authoritative-data.ts', import.meta.url), 'utf8');
 assert.match(authoritativeSource, /open_transcript_upload:\s*'\/upload'/, 'Transcript Workspace URL must be server-defined');
 assert.match(authoritativeSource, /open_document_upload:\s*'\/office\/upload'/, 'Document Workspace URL must be server-defined');
-assert.match(authoritativeSource, /AI Transcription has no speaker surcharge/, 'authoritative data must exclude AI speaker surcharges');
-assert.match(authoritativeSource, /Hybrid and Human recordings with one to four speakers have no extra speaker charge/, 'authoritative data must state the eligible no-surcharge range');
+assert.match(authoritativeSource, /Recordings with more than four speakers require a custom quote/, 'authoritative data must route five or more speakers to a custom quote');
+assert.match(authoritativeSource, /One to four speakers are included/, 'authoritative data must state the included speaker range');
 
 const panelSource = await readFile(new URL('../src/components/ConversationalHelpPanel.tsx', import.meta.url), 'utf8');
 assert.match(panelSource, /OpenAI may temporarily retain API data under its data-retention policies/, 'client disclosure must accurately describe OpenAI retention');

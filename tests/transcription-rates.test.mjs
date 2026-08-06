@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import {
-  SPEAKER_SURCHARGE_RATES,
   TRANSCRIPTION_MODE_RATES,
   RUSH_SURCHARGE_RATES,
   supportsTranscriptionAddOns,
@@ -10,18 +9,18 @@ import {
 } from '../src/lib/billing/transcription-rates.ts';
 
 assert.deepEqual(TRANSCRIPTION_MODE_RATES, { ai: 0.40, hybrid: 1.50, human: 2.50 });
-assert.deepEqual(SPEAKER_SURCHARGE_RATES, { hybrid: 0.25, human: 0.30 });
 assert.deepEqual(RUSH_SURCHARGE_RATES, { hybrid: 0.50, human: 0.75 });
 assert.equal(supportsTranscriptionAddOns('ai'), false);
 assert.equal(supportsTranscriptionAddOns('hybrid'), true);
 assert.equal(supportsTranscriptionAddOns('human'), true);
 assert.equal(transcriptionAddOnRate('ai', { rushDelivery: true, speakerCount: 5 }), 0);
 assert.equal(transcriptionAddOnRate('hybrid', { speakerCount: 4 }), 0);
-assert.equal(transcriptionAddOnRate('hybrid', { speakerCount: 5 }), 0.25);
-assert.equal(transcriptionAddOnRate('human', { rushDelivery: true, speakerCount: 5 }), 1.05);
+assert.equal(transcriptionAddOnRate('hybrid', { speakerCount: 5 }), 0);
+assert.equal(transcriptionAddOnRate('human', { rushDelivery: true, speakerCount: 5 }), 0.75);
 assert.deepEqual(transcriptionAddOnQuote('ai', 60, { rushDelivery: true, speakerCount: 5 }), { rushCents: 0, speakerCents: 0, subtotalCents: 0 });
-assert.deepEqual(transcriptionAddOnQuote('hybrid', 60, { rushDelivery: true, speakerCount: 5 }), { rushCents: 3000, speakerCents: 1500, subtotalCents: 4500 });
-assert.deepEqual(transcriptionAddOnQuote('human', 47, { rushDelivery: true, speakerCount: 5 }), { rushCents: 3525, speakerCents: 1410, subtotalCents: 4935 });
+assert.deepEqual(transcriptionAddOnQuote('hybrid', 60, { rushDelivery: true, speakerCount: 5 }), { rushCents: 3000, speakerCents: 0, subtotalCents: 3000 });
+assert.deepEqual(transcriptionAddOnQuote('human', 47, { rushDelivery: true, speakerCount: 5 }), { rushCents: 3525, speakerCents: 0, subtotalCents: 3525 });
+assert.deepEqual(transcriptionAddOnQuote('human', 47, { rushDelivery: false, speakerCount: 5 }), { rushCents: 0, speakerCents: 0, subtotalCents: 0 });
 
 const routeSource = await readFile(new URL('../src/app/api/transcriptions/[id]/deduct/route.ts', import.meta.url), 'utf8');
 assert.match(routeSource, /supportsTranscriptionAddOns\(mode\)/, 'server deductions must enforce service eligibility');
@@ -33,7 +32,7 @@ assert.ok(
   routeSource.indexOf("packageMinutesUsed > 0 && addOnRate > 0") < routeSource.indexOf('const currentWallet'),
   'package add-ons must be rejected before legacy account credit is read or deducted',
 );
-assert.doesNotMatch(routeSource, /SPEAKER_SURCHARGE_RATES\[mode\].*ai/, 'AI must not receive a speaker surcharge');
+assert.doesNotMatch(routeSource, /speakerCents|speaker surcharge/i, 'deduction route must not calculate automatic speaker charges');
 assert.match(routeSource, /pkg\?\.type === mode/, 'package deductions must remain service-specific');
 assert.match(routeSource, /transcription_billing_\$\{id\}/, 'deduction retries must remain idempotent');
 
@@ -41,6 +40,7 @@ const createRouteSource = await readFile(new URL('../src/app/api/transcriptions/
 assert.match(createRouteSource, /supportsTranscriptionAddOns\(validatedBody\.mode\)/, 'job creation must normalize add-ons by service');
 assert.match(createRouteSource, /rushDelivery: supportsAddOns \? validatedBody\.rushDelivery === true : false/, 'AI rush requests must be cleared');
 assert.match(createRouteSource, /supportsAddOns \? \{ addOnCost: packageAddOnPending \? addOnQuote\.subtotalCents \/ 100 : 0 \} : \{\}/, 'AI jobs must omit add-on cost metadata');
+assert.match(createRouteSource, /code: 'SPEAKER_QUOTE_REQUIRED'/, 'five or more speakers must be blocked for a custom quote before job creation');
 
 const checkoutSource = await readFile(new URL('../src/app/api/transcriptions/[id]/add-on-checkout/route.ts', import.meta.url), 'utf8');
 const webhookSource = await readFile(new URL('../src/app/api/billing/webhook/route.ts', import.meta.url), 'utf8');
@@ -50,6 +50,9 @@ assert.match(checkoutSource, /transcriptionAddOnQuote\(reservation\.mode, reserv
 assert.doesNotMatch(checkoutSource, /automatic_tax|tax_rates/, 'add-on checkout must preserve the existing no-tax Checkout method');
 assert.match(checkoutSource, /idempotencyKey: `transcription-add-ons-\$\{reservation\.reservationId\}`/, 'checkout creation must be idempotent');
 assert.match(checkoutSource, /type: 'transcription-package-add-ons'/, 'checkout metadata must identify package add-ons');
+assert.doesNotMatch(checkoutSource, /5\+ speaker service/, 'Stripe Checkout must contain no automatic speaker line item');
+assert.match(checkoutSource, /rushDelivery: 'true'/, 'Stripe metadata must tie the rush selection to the job');
+assert.match(checkoutSource, /packageId: reservation\.packageId/, 'Stripe metadata must identify the reserved package');
 assert.match(webhookSource, /session\.amount_subtotal !== expectedSubtotalCents/, 'webhook must verify the server subtotal');
 assert.match(webhookSource, /session\.amount_total !== expectedSubtotalCents/, 'webhook must verify the no-tax Stripe total');
 assert.match(uploadSource, /Tax:<\/span><span>Not added/, 'client summary must describe the established no-tax Checkout method');

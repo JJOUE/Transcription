@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
-import { transcriptionAddOnQuote } from '@/lib/billing/transcription-rates';
+import { SPEAKER_CUSTOM_QUOTE_MESSAGE, transcriptionAddOnQuote } from '@/lib/billing/transcription-rates';
 import { releasePackageReservation, reservePackageMinutes } from '@/lib/billing/package-reservations';
 import { isPackageAddOnCheckoutEnabled } from '@/lib/billing/package-add-on-feature';
 
@@ -51,6 +51,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!initialJobSnapshot.exists) return NextResponse.json({ ok: false, error: 'Transcription job not found' }, { status: 404 });
     const initialJob = initialJobSnapshot.data() || {};
     if (initialJob.userId !== decoded.uid) return NextResponse.json({ ok: false, error: 'You do not own this transcription job' }, { status: 403 });
+    if (Number(initialJob.speakerCount || 1) >= 5 || initialJob.multipleSpeakers === true) {
+      return NextResponse.json({ ok: false, code: 'SPEAKER_QUOTE_REQUIRED', error: SPEAKER_CUSTOM_QUOTE_MESSAGE }, { status: 409 });
+    }
     if (!['hybrid', 'human'].includes(initialJob.mode) || !['package-pending-add-on', 'package'].includes(initialJob.billingType)) {
       return NextResponse.json({ ok: false, error: 'This job does not require a package add-on payment' }, { status: 409 });
     }
@@ -92,7 +95,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           expiresAtMillis: millis(job.packageReservationExpiresAt),
           minutes: Number(job.packageReservedMinutes), allocations: job.packageReservationAllocations || [],
           mode: String(job.mode), rushDelivery: job.rushDelivery === true,
-          speakerCount: Number(job.speakerCount || 1), userEmail: user.email,
+          speakerCount: 1, userEmail: user.email, durationSeconds: Number(job.duration || 0),
+          packageId: String(job.packageId || job.packageReservationAllocations?.[0]?.packageId || ''),
         } as const;
       }
 
@@ -103,7 +107,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const reservationId = `${id}-${attempt}`;
       const expiresAt = Timestamp.fromMillis(Date.now() + RESERVATION_MINUTES * 60 * 1000);
       const quote = transcriptionAddOnQuote(String(job.mode), minutes, {
-        rushDelivery: job.rushDelivery === true, speakerCount: Number(job.speakerCount || 1),
+        rushDelivery: job.rushDelivery === true, speakerCount: 1,
       });
       if (quote.subtotalCents <= 0) throw new Error('NO_ADD_ONS');
 
@@ -123,7 +127,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return {
         alreadyPaid: false, reservationId, expiresAtMillis: expiresAt.toMillis(), minutes,
         allocations: reserved.allocations, mode: String(job.mode), rushDelivery: job.rushDelivery === true,
-        speakerCount: Number(job.speakerCount || 1), userEmail: user.email,
+        speakerCount: 1, userEmail: user.email, durationSeconds: Number(job.duration || 0),
+        packageId: String(reserved.allocations[0]?.packageId || ''),
       } as const;
     });
     if (reservation.alreadyPaid) return NextResponse.json({ ok: true, alreadyPaid: true, jobId: id });
@@ -134,9 +139,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
     if (quote.rushCents > 0) lineItems.push({
       price_data: { currency: 'cad', unit_amount: quote.rushCents, product_data: { name: `${reservation.mode === 'hybrid' ? 'Hybrid' : 'Human'} rush service`, description: `${reservation.minutes} audio minutes` } }, quantity: 1,
-    });
-    if (quote.speakerCents > 0) lineItems.push({
-      price_data: { currency: 'cad', unit_amount: quote.speakerCents, product_data: { name: `${reservation.mode === 'hybrid' ? 'Hybrid' : 'Human'} 5+ speaker service`, description: `${reservation.minutes} audio minutes` } }, quantity: 1,
     });
 
     const returnUrl = `${baseUrl(request).replace(/\/$/, '')}/transcriptions`;
@@ -152,7 +154,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         metadata: {
           type: 'transcription-package-add-ons', jobId: id, userId: decoded.uid,
           reservationId: reservation.reservationId, mode: reservation.mode,
-          billingMinutes: String(reservation.minutes), expectedSubtotalCents: String(quote.subtotalCents), expectedCurrency: 'cad',
+          packageId: reservation.packageId, durationSeconds: String(reservation.durationSeconds),
+          rushDelivery: 'true', billingMinutes: String(reservation.minutes),
+          expectedSubtotalCents: String(quote.subtotalCents), expectedCurrency: 'cad',
         },
         payment_intent_data: { metadata: { type: 'transcription-package-add-ons', jobId: id, userId: decoded.uid, reservationId: reservation.reservationId } },
       }, { idempotencyKey: `transcription-add-ons-${reservation.reservationId}` });

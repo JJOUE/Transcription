@@ -4,7 +4,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { rateLimiters } from '@/lib/middleware/rate-limit';
 import { CreateTranscriptionJobSchema, validateData } from '@/lib/validation/schemas';
 import { sendSimpleNotification } from '@/lib/email/simple-email';
-import { PACKAGE_ADD_ON_DISABLED_MESSAGE, supportsTranscriptionAddOns, transcriptionAddOnQuote } from '@/lib/billing/transcription-rates';
+import { PACKAGE_ADD_ON_DISABLED_MESSAGE, SPEAKER_CUSTOM_QUOTE_MESSAGE, supportsTranscriptionAddOns, transcriptionAddOnQuote } from '@/lib/billing/transcription-rates';
 import { packageAvailableMinutes } from '@/lib/billing/package-reservations';
 import { isPackageAddOnCheckoutEnabled } from '@/lib/billing/package-add-on-feature';
 
@@ -113,9 +113,14 @@ export async function POST(request: NextRequest) {
         .reduce((sum: number, pkg: { minutesRemaining?: number; minutesReserved?: number }) => sum + packageAvailableMinutes(pkg), 0)
       : 0;
     const hasSufficientMatchingPackage = matchingPackageMinutes >= billingMinutes;
-    const requestedPaidAddOn = supportsAddOns && (
-      validatedBody.rushDelivery === true || Number(validatedBody.speakerCount || 1) >= 5
-    );
+    const requiresSpeakerQuote = Number(validatedBody.speakerCount || 1) >= 5 || validatedBody.multipleSpeakers === true;
+    if (!isAdminUser && requiresSpeakerQuote) {
+      return NextResponse.json(
+        { error: SPEAKER_CUSTOM_QUOTE_MESSAGE, code: 'SPEAKER_QUOTE_REQUIRED' },
+        { status: 409 }
+      );
+    }
+    const requestedPaidAddOn = supportsAddOns && validatedBody.rushDelivery === true;
 
     const packageAddOnPending = !isAdminUser && hasSufficientMatchingPackage && requestedPaidAddOn;
     if (packageAddOnPending && !isPackageAddOnCheckoutEnabled()) {
@@ -126,7 +131,7 @@ export async function POST(request: NextRequest) {
     }
     const addOnQuote = transcriptionAddOnQuote(validatedBody.mode, billingMinutes, {
       rushDelivery: validatedBody.rushDelivery === true,
-      speakerCount: Number(validatedBody.speakerCount || 1),
+      speakerCount: 1,
     });
 
     // Create the transcription job with server timestamp

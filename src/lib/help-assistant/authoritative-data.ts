@@ -1,5 +1,5 @@
 import { adminDb } from '@/lib/firebase/admin';
-import { RUSH_SURCHARGE_RATES, SPEAKER_SURCHARGE_RATES, TRANSCRIPTION_MODE_RATES } from '@/lib/billing/transcription-rates';
+import { RUSH_SURCHARGE_RATES, TRANSCRIPTION_MODE_RATES } from '@/lib/billing/transcription-rates';
 import type { HelpActionId, ClientHelpAction } from './types';
 
 type AccountFacts = { ai: number; hybrid: number; human: number; trial: number };
@@ -36,7 +36,7 @@ export async function loadApprovedServiceData() {
       document: 'Prepares a finished document from dictation, handwriting, copy typing, instructions, or a supplied template. The result is a document, not a transcript.',
       separation: 'The workspaces are separate. Files and projects do not transfer between them automatically, and they do not share an editor.',
     },
-    speakerRule: { threshold: 'AI Transcription has no speaker surcharge. Hybrid and Human recordings with one to four speakers have no extra speaker charge. More than four speakers may have a surcharge for eligible pay-as-you-go Hybrid or Human work.', perAudioMinute: SPEAKER_SURCHARGE_RATES },
+    speakerRule: { threshold: 'One to four speakers are included. Recordings with more than four speakers require a custom quote.', perAudioMinute: {} },
     rushPerAudioMinute: RUSH_SURCHARGE_RATES,
     packages: 'Package eligibility depends on service type. Package minutes are reduced only by submitted audio duration. Hybrid and Human package add-ons are paid separately through secure checkout.',
     uploads: {

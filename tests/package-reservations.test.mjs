@@ -74,6 +74,8 @@ const reconciliationSource = await readFile(new URL('../src/app/api/admin/reconc
 
 assert.match(checkoutSource, /runTransaction/, 'checkout must reserve in a Firestore transaction');
 assert.match(checkoutSource, /reservePackageMinutes/, 'checkout must use authoritative package availability');
+assert.match(checkoutSource, /code: 'SPEAKER_QUOTE_REQUIRED'/, 'five or more speakers must not enter automatic Checkout');
+assert.doesNotMatch(checkoutSource, /5\+ speaker service/, 'Checkout must charge rush only');
 assert.match(checkoutSource, /packageReservationStatus === 'reserved'/, 'checkout retry must reuse an active reservation');
 assert.match(checkoutSource, /idempotencyKey: `transcription-add-ons-\$\{reservation\.reservationId\}`/, 'Stripe checkout retries must use the stable reservation ID');
 assert.match(checkoutSource, /expires_at:/, 'Stripe session expiry must align with reservation expiry');
@@ -81,6 +83,8 @@ assert.match(checkoutSource, /cancel_url: `\$\{returnUrl\}\?add_on_payment=cance
 assert.doesNotMatch(checkoutSource, /cancel_url:.*release/i, 'a browser cancellation return must not request reservation release');
 assert.match(webhookSource, /checkout\.session\.expired/, 'verified Stripe expiry must be handled');
 assert.match(webhookSource, /session\.payment_status !== 'paid'/, 'Checkout completion must not consume minutes until Stripe reports payment paid');
+assert.match(webhookSource, /session\.metadata\?\.rushDelivery !== 'true'/, 'webhook must verify the job-specific rush selection');
+assert.match(webhookSource, /String\(job\.packageId \|\| ''\) !== String\(session\.metadata\?\.packageId \|\| ''\)/, 'webhook must verify the reserved package identifier');
 assert.match(webhookSource, /releasePackageReservation/, 'verified expiry must release package capacity');
 assert.match(webhookSource, /consumePackageReservation/, 'verified payment must convert reserved minutes to usage');
 assert.match(webhookSource, /payment-reconciliation-required/, 'corrupt paid reservations must be preserved for reconciliation');
