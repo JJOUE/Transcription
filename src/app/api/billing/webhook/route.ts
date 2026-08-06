@@ -359,7 +359,11 @@ async function processTranscriptionAddOnPayment(session: Stripe.Checkout.Session
     console.warn('[WEBHOOK]', requestId, `Ignoring unpaid add-on Checkout completion for ${jobId}`);
     return;
   }
-  if (session.amount_subtotal !== expectedSubtotalCents || session.currency?.toLowerCase() !== expectedCurrency) {
+  if (
+    session.amount_subtotal !== expectedSubtotalCents ||
+    session.amount_total !== expectedSubtotalCents ||
+    session.currency?.toLowerCase() !== expectedCurrency
+  ) {
     throw new Error(`Transcription add-on payment amount mismatch for ${jobId}`);
   }
 

@@ -1874,8 +1874,8 @@ export default function UploadPage() {
                         <div className="flex justify-between"><span>Package minutes used:</span><span>{totalBillingMinutes} minutes</span></div>
                         {rushDelivery && <div className="flex justify-between"><span>Rush service:</span><span>CA${(packageAddOnQuote.rushCents / 100).toFixed(2)}</span></div>}
                         {hasSpeakerSurcharge && <div className="flex justify-between"><span>5+ speaker service:</span><span>CA${(packageAddOnQuote.speakerCents / 100).toFixed(2)}</span></div>}
-                        <div className="flex justify-between"><span>Tax:</span><span>Calculated by Stripe at checkout</span></div>
-                        <div className="flex justify-between border-t border-amber-200 pt-2 font-semibold"><span>Add-on payment subtotal:</span><span>CA${(packageAddOnQuote.subtotalCents / 100).toFixed(2)}</span></div>
+                        <div className="flex justify-between"><span>Tax:</span><span>Not added</span></div>
+                        <div className="flex justify-between border-t border-amber-200 pt-2 font-semibold"><span>Add-on payment total:</span><span>CA${(packageAddOnQuote.subtotalCents / 100).toFixed(2)}</span></div>
                         {packageAddOnBlocked && <p className="border-t border-amber-200 pt-2 font-medium">{PACKAGE_ADD_ON_DISABLED_MESSAGE}</p>}
                       </div>
                     )}

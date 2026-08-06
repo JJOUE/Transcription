@@ -45,11 +45,15 @@ assert.match(createRouteSource, /supportsAddOns \? \{ addOnCost: packageAddOnPen
 const checkoutSource = await readFile(new URL('../src/app/api/transcriptions/[id]/add-on-checkout/route.ts', import.meta.url), 'utf8');
 const webhookSource = await readFile(new URL('../src/app/api/billing/webhook/route.ts', import.meta.url), 'utf8');
 const processSource = await readFile(new URL('../src/app/api/transcriptions/process/route.ts', import.meta.url), 'utf8');
+const uploadSource = await readFile(new URL('../src/app/(protected)/upload/page.tsx', import.meta.url), 'utf8');
 assert.match(checkoutSource, /transcriptionAddOnQuote\(reservation\.mode, reservation\.minutes/, 'Stripe add-on checkout must calculate from the server job reservation');
 assert.doesNotMatch(checkoutSource, /automatic_tax|tax_rates/, 'add-on checkout must preserve the existing no-tax Checkout method');
 assert.match(checkoutSource, /idempotencyKey: `transcription-add-ons-\$\{reservation\.reservationId\}`/, 'checkout creation must be idempotent');
 assert.match(checkoutSource, /type: 'transcription-package-add-ons'/, 'checkout metadata must identify package add-ons');
 assert.match(webhookSource, /session\.amount_subtotal !== expectedSubtotalCents/, 'webhook must verify the server subtotal');
+assert.match(webhookSource, /session\.amount_total !== expectedSubtotalCents/, 'webhook must verify the no-tax Stripe total');
+assert.match(uploadSource, /Tax:<\/span><span>Not added/, 'client summary must describe the established no-tax Checkout method');
+assert.match(uploadSource, /Add-on payment total:/, 'client total must match the amount sent to Stripe');
 assert.match(webhookSource, /stripeAddOnCheckoutSessionId !== session\.id/, 'webhook must verify the stored Checkout Session');
 assert.match(webhookSource, /walletUsed: 0/, 'paid package add-ons must never use legacy account credit');
 assert.match(webhookSource, /consumePackageReservation/, 'webhook must consume the reserved package audio minutes');
