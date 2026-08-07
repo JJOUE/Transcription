@@ -120,7 +120,7 @@ export default function AudioInstructionsDocumentPreparationPage() {
                 in a recording.
               </p>
               <p className="text-white/90">
-                If you only need audio or video converted into text, use AI Transcription instead.
+                If you need a transcript instead, compare AI self-editing, Hybrid Review, and Human Transcription.
                 If you need a document prepared from your audio instructions and supporting files,
                 use Document Workspace.
               </p>
@@ -157,12 +157,12 @@ export default function AudioInstructionsDocumentPreparationPage() {
           <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm mb-12">
             <FileAudio className="h-8 w-8 text-[#b29dd9] mb-4" />
             <h2 className="text-2xl font-bold text-[#003366] mb-4">
-              When to use AI Transcription instead
+              When you need a transcript instead
             </h2>
             <p className="text-gray-700 mb-5">
-              If you only need your audio or video converted into text, use AI Transcription. Use
-              Document Workspace when you need a human-prepared document based on your instructions,
-              notes, scans, handwriting, templates, or reference files.
+              Choose AI Transcription if you are an experienced user who will review and edit the AI-generated transcript yourself.
+              Choose Hybrid Review or Human Transcription when you want us to prepare the transcript for you. Use Document Workspace
+              when you need a human-prepared document based on instructions, notes, scans, handwriting, templates, or reference files.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Link

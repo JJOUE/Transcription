@@ -137,6 +137,16 @@ export default function UploadPage() {
   const { toast } = useToast();
   const router = useRouter();
   const isAdminInternalUser = userData?.role === 'admin';
+  const [professionalEditorAiRate, setProfessionalEditorAiRate] = useState(0.05);
+
+  useEffect(() => {
+    if (!user) { setProfessionalEditorAiRate(0.05); return; }
+    user.getIdToken().then(token => fetch('/api/professional-editor/status', {
+      headers: { Authorization: `Bearer ${token}` }, credentials: 'include', cache: 'no-store',
+    })).then(response => response.ok ? response.json() : null)
+      .then(data => setProfessionalEditorAiRate(data?.aiRate === 0.03 ? 0.03 : 0.05))
+      .catch(() => setProfessionalEditorAiRate(0.05));
+  }, [user]);
 
   useEffect(() => {
     const loadClientDictionary = async () => {
@@ -266,7 +276,7 @@ export default function UploadPage() {
       name: 'AI Transcription',
       description: 'Fast, automated transcription with good accuracy',
       creditsPerMinute: 100, // Legacy support
-      costPerMinute: pricingSettings?.payAsYouGo.ai || 0.40, // CA$ per minute from database
+      costPerMinute: professionalEditorAiRate, // Preview only; the server calculates the charge.
       turnaround: '60 mins',
       icon: '/ai_transcription.jpg'
     },
@@ -548,7 +558,7 @@ export default function UploadPage() {
       const modeDetails = getModeDetails(transcriptionMode as TranscriptionMode);
 
       // Get cost per minute from database settings
-      const costPerMinute = transcriptionMode === 'ai' ? (pricingSettings?.payAsYouGo.ai || 0.40) :
+      const costPerMinute = transcriptionMode === 'ai' ? professionalEditorAiRate :
                              transcriptionMode === 'hybrid' ? (pricingSettings?.payAsYouGo.hybrid || 1.50) :
                              (pricingSettings?.payAsYouGo.human || 2.50);
 

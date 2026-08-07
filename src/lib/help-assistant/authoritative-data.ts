@@ -23,16 +23,18 @@ const actionLabels: Record<HelpActionId, string> = {
 export async function loadApprovedServiceData() {
   const pricingSnapshot = await adminDb.collection('settings').doc('pricing').get();
   const configuredRates = pricingSnapshot.data()?.payAsYouGo as Partial<typeof TRANSCRIPTION_MODE_RATES> | undefined;
-  const rates = { ...TRANSCRIPTION_MODE_RATES, ...configuredRates };
+  // AI pricing is code-controlled because membership is server-authoritative;
+  // retain configurable legacy values only for unchanged Hybrid/Human services.
+  const rates = { ...TRANSCRIPTION_MODE_RATES, ...configuredRates, ai: TRANSCRIPTION_MODE_RATES.ai };
   return {
     currency: 'CAD',
     services: {
-      ai: { name: 'AI Transcription', ratePerAudioMinute: rates.ai, description: 'Automatically generated. Fastest and lowest-cost. The client should review carefully.' },
-      hybrid: { name: 'Hybrid Transcription', ratePerAudioMinute: rates.hybrid, description: 'AI-generated first, then reviewed and corrected by a human. More accurate than AI-only and less expensive than fully Human Transcription.' },
-      human: { name: 'Human Transcription', ratePerAudioMinute: rates.human, description: 'Completed and reviewed by a person, with the highest level of human attention. Best for important, complex, professional, or difficult recordings.' },
+      ai: { name: 'AI Transcription', ratePerAudioMinute: rates.ai, description: 'Best for transcriptionists, professional transcript editors, and experienced users. The client reviews and edits the AI-generated transcript themselves in Transcript Workspace.' },
+      hybrid: { name: 'Hybrid Review', ratePerAudioMinute: rates.hybrid, description: 'AI creates the first draft, then a human reviews and corrects it. Talk to Text Canada finishes the transcript; the client does not need to edit it themselves.' },
+      human: { name: 'Human Transcription', ratePerAudioMinute: rates.human, description: 'A human transcriptionist prepares the transcript from start to finish without relying on AI-generated transcription for the transcription itself. The client receives a professionally prepared transcript.' },
     },
     workspaces: {
-      transcript: 'Creates a transcript from audio or video. It supports AI, Hybrid, and Human Transcription and includes transcript review, editing, formatting, and downloads.',
+      transcript: 'Creates a transcript from audio or video. AI users edit the AI-generated transcript themselves. Hybrid and Human clients receive a transcript prepared for them and can preview, optionally adjust, and download it.',
       document: 'Prepares a finished document from dictation, handwriting, copy typing, instructions, or a supplied template. The result is a document, not a transcript.',
       separation: 'The workspaces are separate. Files and projects do not transfer between them automatically, and they do not share an editor.',
     },

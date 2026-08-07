@@ -6,6 +6,7 @@ import { sendDocumentWorkspaceClientEmail, sendSimpleNotification } from '@/lib/
 import { publicProjectUrl, recordDocumentWorkspaceAudit } from '@/lib/document-workspace/workflow';
 import { consumePackageReservation, releasePackageReservation } from '@/lib/billing/package-reservations';
 import { startTranscriptionProcessing } from '@/lib/transcription/start-processing';
+import { PROFESSIONAL_EDITOR_MEMBERSHIP_TYPE, resolveMembershipUserId, storeProfessionalEditorMembership, subscriptionHasProfessionalEditorPrice } from '@/lib/billing/professional-editor-membership';
 
 // =============================================================================
 // STRIPE WEBHOOK HANDLER - PRODUCTION-READY IMPLEMENTATION
@@ -112,44 +113,53 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // STEP 4: Idempotency check - prevent duplicate event processing
+  // STEP 4: Atomically claim this event. Concurrent deliveries cannot both process it.
   const eventId = event.id;
   const processedEventsRef = adminDb.collection('_webhook_events').doc(eventId);
-
   try {
-    const eventDoc = await processedEventsRef.get();
-    if (eventDoc.exists) {
+    const claimed = await adminDb.runTransaction(async transaction => {
+      const eventDoc = await transaction.get(processedEventsRef);
+      if (eventDoc.exists) {
+        const claim = eventDoc.data() || {};
+        const claimedAtMillis = typeof claim.claimedAt?.toMillis === 'function' ? claim.claimedAt.toMillis() : 0;
+        const staleProcessingClaim = claim.status === 'processing' && claimedAtMillis > 0 && claimedAtMillis < Date.now() - 5 * 60 * 1000;
+        if (!staleProcessingClaim) return false;
+      }
+      transaction.set(processedEventsRef, {
+        eventId, eventType: event.type, status: 'processing', requestId,
+        claimedAt: FieldValue.serverTimestamp(), livemode: event.livemode,
+      });
+      return true;
+    });
+    if (!claimed) {
       console.log('[WEBHOOK]', requestId, '⚠️ Event already processed:', eventId);
-      // Return 200 to acknowledge (already processed successfully)
       return NextResponse.json({
-        received: true,
-        processed: true,
-        cached: true,
-        message: 'Event already processed'
+        received: true, processed: false, cached: true,
+        message: 'Event already claimed or processed',
       });
     }
   } catch (error) {
-    console.error('[WEBHOOK]', requestId, '⚠️ Failed to check idempotency:', error);
-    // Continue processing - don't fail webhook for cache issues
+    console.error('[WEBHOOK]', requestId, '❌ Failed to claim event:', error);
+    return NextResponse.json({ error: 'Unable to claim webhook event' }, { status: 500 });
   }
 
   // STEP 5: Process the event based on type
   try {
     await handleWebhookEvent(event, requestId);
 
-    // STEP 6: Mark event as processed for idempotency
-    try {
-      await processedEventsRef.set({
+    // STEP 6: Atomically complete the claim. Failure returns 500 so Stripe retries.
+    await adminDb.runTransaction(async transaction => {
+      const claim = await transaction.get(processedEventsRef);
+      if (!claim.exists || claim.data()?.requestId !== requestId) throw new Error('WEBHOOK_CLAIM_LOST');
+      transaction.set(processedEventsRef, {
         eventId: event.id,
         eventType: event.type,
+        status: 'processed',
         processedAt: FieldValue.serverTimestamp(),
         requestId,
         livemode: event.livemode,
       });
-    } catch (error) {
-      console.error('[WEBHOOK]', requestId, '⚠️ Failed to mark event as processed:', error);
-      // Don't fail the webhook if we can't mark it processed
-    }
+    });
 
     const duration = Date.now() - startTime;
     console.log('[WEBHOOK]', requestId, `✅ Completed in ${duration}ms`);
@@ -171,6 +181,18 @@ export async function POST(request: NextRequest) {
       stack: error instanceof Error ? error.stack : undefined,
     });
 
+    // Release only this processor's failed claim so Stripe can retry safely.
+    try {
+      await adminDb.runTransaction(async transaction => {
+        const claim = await transaction.get(processedEventsRef);
+        if (claim.exists && claim.data()?.requestId === requestId && claim.data()?.status === 'processing') {
+          transaction.delete(processedEventsRef);
+        }
+      });
+    } catch (releaseError) {
+      console.error('[WEBHOOK]', requestId, '❌ Failed to release webhook claim:', releaseError);
+    }
+
     // Return 500 for processing errors (Stripe will retry)
     return NextResponse.json(
       {
@@ -189,7 +211,17 @@ export async function POST(request: NextRequest) {
 async function handleWebhookEvent(event: Stripe.Event, requestId: string): Promise<void> {
   switch (event.type) {
     case 'checkout.session.completed':
-      await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session, requestId);
+      await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session, requestId, event.id, event.created);
+      break;
+
+    case 'customer.subscription.updated':
+    case 'customer.subscription.deleted':
+      await handleProfessionalEditorSubscription(event.data.object as Stripe.Subscription, event.id, event.created, requestId);
+      break;
+
+    case 'invoice.payment_succeeded':
+    case 'invoice.payment_failed':
+      await handleProfessionalEditorInvoice(event.data.object as Stripe.Invoice, event.id, event.created, requestId, event.type === 'invoice.payment_failed');
       break;
 
     case 'checkout.session.expired':
@@ -214,7 +246,9 @@ async function handleWebhookEvent(event: Stripe.Event, requestId: string): Promi
 // =============================================================================
 async function handleCheckoutSessionCompleted(
   session: Stripe.Checkout.Session,
-  requestId: string
+  requestId: string,
+  eventId: string,
+  eventCreated: number,
 ): Promise<void> {
   console.log('[WEBHOOK]', requestId, 'Processing checkout.session.completed:', {
     sessionId: session.id,
@@ -223,6 +257,19 @@ async function handleCheckoutSessionCompleted(
     paymentStatus: session.payment_status,
     metadata: session.metadata,
   });
+
+  if (session.metadata?.type === PROFESSIONAL_EDITOR_MEMBERSHIP_TYPE) {
+    const userId = session.metadata.userId || session.client_reference_id;
+    const subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
+    if (!userId || !subscriptionId) throw new Error('Professional Editor checkout is missing user or subscription metadata');
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId, { expand: ['items.data.price'] });
+    if (!subscriptionHasProfessionalEditorPrice(subscription)) {
+      console.warn('[WEBHOOK]', requestId, 'Ignoring checkout for unrelated subscription price:', subscriptionId);
+      return;
+    }
+    await storeProfessionalEditorMembership(userId, subscription, eventId, eventCreated);
+    return;
+  }
 
   // Extract metadata
   let userId = session.metadata?.userId;
@@ -291,6 +338,31 @@ async function handleCheckoutSessionCompleted(
   });
 
   console.log('[WEBHOOK]', requestId, '✅ Checkout session processed successfully');
+}
+
+async function handleProfessionalEditorSubscription(subscription: Stripe.Subscription, eventId: string, eventCreated: number, requestId: string) {
+  if (!subscriptionHasProfessionalEditorPrice(subscription)) {
+    console.log('[WEBHOOK]', requestId, 'Ignoring unrelated subscription:', subscription.id);
+    return;
+  }
+  const userId = await resolveMembershipUserId(subscription);
+  if (!userId) throw new Error(`Unable to resolve Professional Editor user for subscription ${subscription.id}`);
+  await storeProfessionalEditorMembership(userId, subscription, eventId, eventCreated);
+}
+
+async function handleProfessionalEditorInvoice(invoice: Stripe.Invoice, eventId: string, eventCreated: number, requestId: string, paymentFailed: boolean) {
+  const invoiceData = invoice as unknown as { subscription?: string | { id?: string }; parent?: { subscription_details?: { subscription?: string | { id?: string } } } };
+  const candidate = invoiceData.subscription || invoiceData.parent?.subscription_details?.subscription;
+  const subscriptionId = typeof candidate === 'string' ? candidate : candidate?.id;
+  if (!subscriptionId) return;
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId, { expand: ['items.data.price'] });
+  if (!subscriptionHasProfessionalEditorPrice(subscription)) return;
+  const userId = await resolveMembershipUserId(subscription);
+  if (!userId) throw new Error(`Unable to resolve Professional Editor user for invoice subscription ${subscription.id}`);
+  await storeProfessionalEditorMembership(
+    userId, subscription, eventId, eventCreated,
+    paymentFailed ? { status: 'payment_failed', delinquent: true, paymentFailed: true } : undefined,
+  );
 }
 
 async function processDocumentWorkspaceQuotePayment(session: Stripe.Checkout.Session, requestId: string): Promise<void> {

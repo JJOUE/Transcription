@@ -121,7 +121,7 @@ export default function DocumentWorkspacePage() {
               Turn audio instructions, notes, templates, and reference files into organized, editable documents.
             </p>
             <p className="text-sm text-gray-500 max-w-3xl mx-auto mb-8">
-              Document Workspace helps professionals turn audio instructions, notes, scanned documents, handwritten pages, transcripts, and typed drafts into clean, downloadable documents. If you only need audio or video converted into text, use AI Transcription instead.
+              Document Workspace helps professionals turn audio instructions, notes, scanned documents, handwritten pages, transcripts, and typed drafts into clean, downloadable documents. If you need a transcript instead, compare AI self-editing, Hybrid Review, and Human Transcription.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">

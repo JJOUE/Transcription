@@ -12,7 +12,7 @@ import { Footer } from '@/components/layout/Footer';
 const serviceChooserCards = [
   {
     title: 'I need audio or video transcribed',
-    text: 'Choose AI, Hybrid, or Human transcription for meetings, interviews, recordings, notes, or video files.',
+    text: 'Choose AI when you will edit the draft yourself, Hybrid when you want us to review and finish it, or Human Transcription from start to finish.',
     actions: [
       {
         label: 'Go to Transcript Workspace',
@@ -112,10 +112,10 @@ function LandingPage() {
 
               <div className="max-w-xl mx-auto lg:mx-0 mb-6 rounded-3xl border border-white/20 bg-white/15 p-5 text-left shadow-lg backdrop-blur-sm">
                 <p className="text-xl font-semibold text-white mb-2">
-                  Open your free account and try AI transcription for free.
+                  AI transcription for transcriptionists and experienced editors.
                 </p>
                 <p className="text-base text-gray-100 mb-5">
-                  Your first 60 minutes of AI transcription are free and include access to the built-in transcript editor. No credit card required.
+                  Review and correct the AI-generated transcript yourself in Transcript Workspace. Your first 60 AI minutes are free. No credit card required.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Button asChild className="bg-[#b29dd9] hover:bg-[#9d87c7] text-white">
@@ -140,7 +140,7 @@ function LandingPage() {
 
               <div className="max-w-xl mx-auto lg:mx-0 mb-8 rounded-3xl bg-white/10 p-5 text-left">
                 <p className="text-lg font-semibold text-white mb-3">
-                  More accurate transcripts. Less time waiting. Built-in transcript editing tools for AI transcription projects.
+                  Need us to finish the transcript? Choose Hybrid Review for AI plus human review, or Human Transcription for preparation by a transcriptionist from start to finish.
                 </p>
                 <p className="text-base text-gray-200">
                   Talk to Text Canada also offers typing services for everyday office needs, including copy typing, handwriting transcription, audio instructions for document preparation, and document preparation.
@@ -325,12 +325,12 @@ function LandingPage() {
                 </div>
                 <h3 className="text-xl font-semibold text-[#003366] mb-4">Transcription Services</h3>
                 <p className="text-gray-600 mb-6">
-                  Audio and video transcription with AI, hybrid, or human review options.
+                  Choose who finishes the transcript: edit an AI-generated transcript yourself, have us review the AI transcript, or choose human transcription from start to finish.
                 </p>
                 <ul className="text-sm text-gray-600 space-y-2">
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />AI, hybrid, and human options</li>
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Editable transcripts</li>
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />PDF, DOCX, TXT, SRT, VTT</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />AI: you edit the AI transcript yourself</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Hybrid: AI + human review; we finish it</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Human: prepared by a transcriptionist from start to finish</li>
                 </ul>
 
                 <Button asChild className="mt-6 w-full bg-[#003366] hover:bg-[#002244] text-white">
@@ -483,7 +483,7 @@ function LandingPage() {
               Document Workspace — Audio Instructions, Notes, Scans and Drafts
             </h2>
             <p className="text-lg text-gray-700 mb-8 max-w-2xl mx-auto">
-              Submit files, notes, handwriting, or audio instructions, then download the completed document from your secure dashboard. If you only need audio or video converted into text, use AI Transcription instead.
+              Submit files, notes, handwriting, or audio instructions, then download the completed document from your secure dashboard. If you need a transcript instead, compare AI, Hybrid, and Human Transcription to choose who will edit and finish it.
             </p>
             <Button
               asChild

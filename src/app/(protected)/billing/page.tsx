@@ -51,6 +51,28 @@ export default function BillingPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const transactionsPerPage = 10;
   const [pricingSettings, setPricingSettings] = useState<PricingSettings | null>(null);
+  const [membership, setMembership] = useState({ active: false, aiRate: 0.05 });
+
+  const loadMembership = React.useCallback(async () => {
+    if (!user) return setMembership({ active: false, aiRate: 0.05 });
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch('/api/professional-editor/status', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
+      const data = response.ok ? await response.json() : null;
+      setMembership({ active: data?.active === true, aiRate: data?.aiRate === 0.03 ? 0.03 : 0.05 });
+    } catch { setMembership({ active: false, aiRate: 0.05 }); }
+  }, [user]);
+
+  useEffect(() => { void loadMembership(); }, [loadMembership]);
+
+  const startMembershipCheckout = async () => {
+    if (!user) return;
+    const token = await user.getIdToken();
+    const response = await fetch('/api/professional-editor/checkout', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+    const data = await response.json();
+    if (!response.ok || !data.url) return toast({ title: 'Membership checkout unavailable', description: data.error, variant: 'destructive' });
+    window.location.assign(data.url);
+  };
 
   // Load pricing settings from database
   useEffect(() => {
@@ -180,7 +202,7 @@ export default function BillingPage() {
           name: 'AI Transcription',
           icon: Zap,
           description: 'Fast automated transcription (60 minute turnaround)',
-          standardRate: pricingSettings?.payAsYouGo.ai || 0.40
+          standardRate: membership.aiRate
         };
       case 'hybrid':
         return {
@@ -267,10 +289,22 @@ export default function BillingPage() {
               <strong>Package minutes:</strong> Cover transcription duration only. Hybrid and Human rush delivery is paid separately through secure checkout. Recordings with more than four speakers require a custom quote.
             </p>
             <p className="text-sm text-gray-500 mt-1">
-              Standard rates: AI ${pricingSettings?.payAsYouGo.ai.toFixed(2) || '0.40'}/min • Hybrid ${pricingSettings?.payAsYouGo.hybrid.toFixed(2) || '1.50'}/min • Human ${pricingSettings?.payAsYouGo.human.toFixed(2) || '2.50'}/min
+              Standard rates: AI ${membership.aiRate.toFixed(2)}/min • Hybrid ${pricingSettings?.payAsYouGo.hybrid.toFixed(2) || '1.50'}/min • Human ${pricingSettings?.payAsYouGo.human.toFixed(2) || '2.50'}/min
             </p>
           </AlertDescription>
         </Alert>
+
+        <Card className="mb-8 border-2 border-[#b29dd9]">
+          <CardHeader><CardTitle>AI + Professional Editor</CardTitle></CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-[#003366]">CA$19.99/month</p>
+            <p className="mt-2">CA$0.03 per AI audio minute and full Transcript Workspace editing tools.</p>
+            <p className="text-sm text-gray-500 mt-2">Your 60 free AI minutes remain separate and include full editor access.</p>
+            <Button className="mt-4" onClick={startMembershipCheckout} disabled={membership.active}>
+              {membership.active ? 'Professional Editor Active' : 'Start Professional Editor Membership'}
+            </Button>
+          </CardContent>
+        </Card>
 
         {/* Account Summary */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -558,7 +592,7 @@ export default function BillingPage() {
                           {amount === '50' ? 'Quick Start' : amount === '200' ? 'Standard' : 'Professional'}
                         </p>
                         <p className="text-xs text-gray-500 mb-4">
-                          ~{Math.floor(parseInt(amount) / (pricingSettings?.payAsYouGo.ai || 0.40))} AI minutes<br/>
+                          ~{Math.floor(parseInt(amount) / membership.aiRate)} AI minutes<br/>
                           ~{Math.floor(parseInt(amount) / (pricingSettings?.payAsYouGo.hybrid || 1.50))} Hybrid minutes<br/>
                           ~{Math.floor(parseInt(amount) / (pricingSettings?.payAsYouGo.human || 2.50))} Human minutes
                         </p>
@@ -579,7 +613,7 @@ export default function BillingPage() {
                   <div className="space-y-1 text-sm text-gray-700">
                     <div className="flex justify-between">
                       <span>AI Transcription:</span>
-                      <span className="font-semibold">CA${(pricingSettings?.payAsYouGo.ai || 0.40).toFixed(2)}/minute</span>
+                      <span className="font-semibold">CA${membership.aiRate.toFixed(2)}/minute</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Hybrid (AI + Human):</span>

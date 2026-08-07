@@ -52,7 +52,7 @@ async function initializePricingSettings() {
     // Create/update pricing settings with default values
     const defaultPricing = {
       payAsYouGo: {
-        ai: 0.40,
+        ai: 0.05,
         hybrid: 1.50,
         human: 2.50
       },
@@ -63,7 +63,7 @@ async function initializePricingSettings() {
 
     console.log('\n✓ Pricing settings initialized successfully!');
     console.log('\nDefault pricing:');
-    console.log('  AI: $0.40/min');
+    console.log('  AI: $0.05/min');
     console.log('  Hybrid: $1.50/min');
     console.log('  Human: $2.50/min');
     console.log('\nYou can now update these from the admin panel at:');

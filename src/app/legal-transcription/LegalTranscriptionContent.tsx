@@ -36,7 +36,7 @@ const faqItems: FAQItem[] = [
   },
   {
     question: 'Is AI transcription appropriate for legal audio?',
-    answer: 'AI transcription can be a strong starting point for legal audio, offering fast turnaround and precise text capture. For important legal material, we recommend Hybrid Review or Human Transcription to add a second layer of accuracy and review.'
+    answer: 'AI Transcription is intended for transcriptionists and experienced users who will review and correct the AI-generated transcript themselves. Clients who want Talk to Text Canada to finish the transcript should choose Hybrid Review or Human Transcription.'
   },
   {
     question: 'Can I download transcripts securely?',
@@ -66,7 +66,7 @@ export function LegalTranscriptionContent() {
             className="bg-[#b29dd9] hover:bg-[#9e7fbd] text-white"
             onClick={() => window.location.href = '/upload'}
           >
-            Start with AI Transcription
+            Compare Transcription Options
           </Button>
           <Button
             size="lg"
@@ -188,7 +188,7 @@ export function LegalTranscriptionContent() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-3">
-                Combine AI speed with human review to support legal accuracy and quality in document workflows.
+                AI transcription followed by human review for accuracy, formatting, speaker labels, and transcript quality. We finish the transcript for you.
               </p>
               <ul className="space-y-1 text-sm text-gray-600">
                 <li>✓ AI speed plus expert review</li>
@@ -202,12 +202,12 @@ export function LegalTranscriptionContent() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Award className="h-5 w-5 text-[#b29dd9]" />
-                Human-Reviewed Legal Transcription
+                Human Transcription
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-3">
-                100% human transcription for legal documentation support, reviewed by experienced transcription professionals.
+                Your audio is transcribed and prepared by a human transcriptionist from start to finish.
               </p>
               <ul className="space-y-1 text-sm text-gray-600">
                 <li>✓ Detailed human review</li>
@@ -271,10 +271,10 @@ export function LegalTranscriptionContent() {
             <div>
               <h3 className="font-semibold text-[#003366] mb-3 flex items-center gap-2">
                 <CheckCircle className="h-5 w-5 text-green-600" />
-                Human Review Available
+                Choose Who Edits the Transcript
               </h3>
               <p className="text-gray-700 text-sm">
-                All transcription modes include options for human review by experienced transcription professionals to ensure quality and reliability.
+                With AI Transcription, you review and edit the AI-generated transcript yourself. With Hybrid Review or Human Transcription, we prepare the finished transcript for you.
               </p>
             </div>
 
@@ -301,7 +301,7 @@ export function LegalTranscriptionContent() {
         <CardHeader>
           <CardTitle className="text-3xl">Ready to Transform Your Legal Transcription?</CardTitle>
           <CardDescription className="text-gray-100 mt-2">
-            Start with AI Transcription for immediate results, or choose Human Review for maximum accuracy.
+            Choose AI if you are comfortable editing the AI-generated transcript yourself, Hybrid Review if you want us to review and finish it, or Human Transcription for human preparation from start to finish.
           </CardDescription>
         </CardHeader>
         <CardContent>

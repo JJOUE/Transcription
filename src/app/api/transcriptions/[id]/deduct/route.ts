@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
-import { TRANSCRIPTION_MODE_RATES, supportsTranscriptionAddOns, transcriptionAddOnRate } from '@/lib/billing/transcription-rates';
+import { authoritativeAiRate, TRANSCRIPTION_MODE_RATES, supportsTranscriptionAddOns, transcriptionAddOnRate } from '@/lib/billing/transcription-rates';
 import { packageAvailableMinutes } from '@/lib/billing/package-reservations';
 
 function billingMinutes(seconds: number) {
@@ -85,7 +85,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       });
       if (packageMinutesUsed > 0 && addOnRate > 0) throw new Error('ADD_ON_CHECKOUT_REQUIRED');
       const addOnCost = minutes * addOnRate;
-      const walletUsed = (remaining * TRANSCRIPTION_MODE_RATES[mode]) + addOnCost;
+      // Membership is read from the server-owned user record inside this atomic
+      // transaction. No browser-provided price or membership state is trusted.
+      const applicableRate = mode === 'ai'
+        ? authoritativeAiRate(user.professionalEditorMembership)
+        : TRANSCRIPTION_MODE_RATES[mode];
+      const walletUsed = (remaining * applicableRate) + addOnCost;
       const currentWallet = Number(user.walletBalance || 0);
       if (currentWallet < walletUsed) throw new Error('PAYMENT_REQUIRED');
 
@@ -126,6 +131,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         freeTrialMinutesUsed,
         packageMinutesUsed,
         walletUsed,
+        applicableRate,
         minutesUsed: minutes,
         billingType,
         costDeducted: packageValueUsed + walletUsed,

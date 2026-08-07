@@ -127,14 +127,24 @@ export function WalletProvider({ children }: WalletProviderProps) {
   const [freeTrialTotal, setFreeTrialTotal] = useState(0);
   // Pricing settings from database
   const [pricingSettings, setPricingSettings] = useState<PricingSettings | null>(null);
+  const [professionalEditorAiRate, setProfessionalEditorAiRate] = useState(0.05);
+
+  useEffect(() => {
+    if (!user) { setProfessionalEditorAiRate(0.05); return; }
+    user.getIdToken().then(token => fetch('/api/professional-editor/status', {
+      headers: { Authorization: `Bearer ${token}` }, credentials: 'include', cache: 'no-store',
+    })).then(response => response.ok ? response.json() : null)
+      .then(data => setProfessionalEditorAiRate(data?.aiRate === 0.03 ? 0.03 : 0.05))
+      .catch(() => setProfessionalEditorAiRate(0.05));
+  }, [user]);
 
   // Mode pricing configuration (from database)
   const MODE_PRICING = pricingSettings ? {
-    ai: { standardRate: pricingSettings.payAsYouGo.ai, name: 'AI Transcription' },
+    ai: { standardRate: professionalEditorAiRate, name: 'AI Transcription' },
     hybrid: { standardRate: pricingSettings.payAsYouGo.hybrid, name: 'Hybrid Review' },
     human: { standardRate: pricingSettings.payAsYouGo.human, name: 'Human Transcription' }
   } : {
-    ai: { standardRate: 0.40, name: 'AI Transcription' },
+    ai: { standardRate: professionalEditorAiRate, name: 'AI Transcription' },
     hybrid: { standardRate: 1.50, name: 'Hybrid Review' },
     human: { standardRate: 2.50, name: 'Human Transcription' }
   };

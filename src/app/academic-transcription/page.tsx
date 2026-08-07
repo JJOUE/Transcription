@@ -57,17 +57,17 @@ const academicUses = [
 const serviceOptions = [
   {
     title: 'AI Transcription',
-    text: 'A faster option for academic audio or video converted into text.',
+    text: 'For transcriptionists and experienced users who want an AI-generated transcript to review and edit themselves in Transcript Workspace.',
     href: '/pricing?service=ai',
   },
   {
     title: 'Hybrid Review',
-    text: 'AI transcript plus human review for clients who want an extra review step.',
+    text: 'AI transcription followed by human review. We finish the transcript for you, so you do not need to edit it yourself.',
     href: '/pricing?service=hybrid',
   },
   {
     title: 'Human Transcription',
-    text: 'Human-prepared transcription for clients who need more careful review.',
+    text: 'A human transcriptionist transcribes and prepares the transcript from start to finish.',
     href: '/pricing?service=human',
   },
   {
@@ -81,7 +81,7 @@ const workflowSteps = [
   'Create your account.',
   'Upload your academic audio or video.',
   'Add speaker count, names, spellings, terminology, or project dictionary terms.',
-  'Review your transcript in Transcript Workspace.',
+  'Edit an AI transcript yourself, or receive a transcript prepared for you through Hybrid Review or Human Transcription.',
   'Save and download your completed transcript.',
 ];
 

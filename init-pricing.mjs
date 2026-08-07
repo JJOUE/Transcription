@@ -41,7 +41,7 @@ async function initializePricing() {
     } else {
       await settingsRef.set({
         payAsYouGo: {
-          ai: 0.40,
+          ai: 0.05,
           hybrid: 1.50,
           human: 2.50
         },
@@ -50,7 +50,7 @@ async function initializePricing() {
 
       console.log('✓ Pricing settings created successfully!');
       console.log('\nDefault pricing:');
-      console.log('  AI: $0.40/min');
+      console.log('  AI: $0.05/min');
       console.log('  Hybrid: $1.50/min');
       console.log('  Human: $2.50/min');
       console.log('\n📝 You can update these from the admin panel at:');

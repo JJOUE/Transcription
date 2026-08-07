@@ -31,13 +31,13 @@ export const metadata: Metadata = {
 
 const transcriptSteps = [
   'Upload your audio or video through your secure workspace.',
-  'Choose AI, Hybrid, or Human transcription where those options are available.',
+  'Choose AI if you will edit the AI-generated transcript yourself, Hybrid if you want us to review and finish it, or Human Transcription from start to finish.',
   'Add the expected speaker count and any project dictionary terms, such as names, places, organizations, acronyms, or preferred spellings.',
   'Select saved client dictionary terms if you want to reuse private terms from past jobs.',
   'Open the completed transcript from your dashboard when it is ready.',
-  'Use Edit Transcript to correct text, rename speakers, adjust speaker labels, and review paragraph blocks.',
-  'Use cleanup tools for filler words, duplicate words, formatting, and timestamp display options without rewriting the transcript meaning.',
-  'Click Save Transcript before downloading, leaving, or closing the workspace.',
+  'For AI Transcription, use Edit Transcript to review and correct the AI-generated text yourself. Hybrid and Human transcripts are prepared for you.',
+  'Optional workspace tools let you adjust speaker labels, formatting, cleanup, and timestamp display without rewriting the transcript meaning.',
+  'If you make changes, click Save Transcript before downloading, leaving, or closing the workspace.',
   'Download your completed transcript in the format you need.',
 ];
 
@@ -156,8 +156,8 @@ export default function GuidePage() {
                   Transcript Workspace
                 </h2>
                 <p className="text-gray-700 max-w-3xl">
-                  Transcript Workspace is where completed transcripts can be opened, reviewed,
-                  corrected, saved, and downloaded.
+                  Transcript Workspace is where AI users review and edit their AI-generated transcript.
+                  Hybrid and Human clients can open, preview, optionally adjust, and download the transcript we prepared for them.
                 </p>
               </div>
               <Link
@@ -220,7 +220,7 @@ export default function GuidePage() {
             <div className="grid gap-6 md:grid-cols-2">
               <div>
                 <h3 className="text-xl font-semibold text-[#003366]">Transcript Workspace</h3>
-                <p className="mt-2 text-gray-700">Converts audio or video into a transcript using AI, Hybrid, or Human Transcription. Eligible transcripts can be reviewed, edited, formatted, and downloaded.</p>
+                <p className="mt-2 text-gray-700">AI users edit the AI-generated transcript themselves. With Hybrid Review or Human Transcription, we prepare the transcript for you. Available transcripts can be opened, previewed, optionally adjusted, and downloaded.</p>
                 <Link href="/upload" className="mt-4 inline-flex font-semibold text-[#003366] underline underline-offset-4">Create a transcript</Link>
               </div>
               <div>

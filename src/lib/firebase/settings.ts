@@ -34,7 +34,7 @@ export const getPricingSettings = async (): Promise<PricingSettings> => {
       // Return defaults if not exists
       return {
         payAsYouGo: {
-          ai: 0.40,
+          ai: 0.05,
           hybrid: 1.50,
           human: 2.50
         }
@@ -77,7 +77,7 @@ export const initializeDefaultSettings = async (): Promise<void> => {
     if (!docSnap.exists()) {
       await setDoc(settingsDocRef, {
         payAsYouGo: {
-          ai: 0.40,
+          ai: 0.05,
           hybrid: 1.50,
           human: 2.50
         },
@@ -106,7 +106,7 @@ export const subscribeToPricingSettings = (
       // Return defaults if not exists
       callback({
         payAsYouGo: {
-          ai: 0.40,
+          ai: 0.05,
           hybrid: 1.50,
           human: 2.50
         }

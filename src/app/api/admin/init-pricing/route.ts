@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Default pricing settings initialized successfully',
       settings: {
-        ai: 0.40,
+        ai: 0.05,
         hybrid: 1.50,
         human: 2.50
       }
