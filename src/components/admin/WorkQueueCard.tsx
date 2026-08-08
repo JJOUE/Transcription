@@ -193,7 +193,7 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
       console.error('Approve error:', error);
       toast({
         title: "Error",
-        description: "Failed to approve transcription. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to approve transcription. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -646,13 +646,13 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
 
               >
                 {job.type === 'office'
-                  ? '🏢 Document Workspace'
+                  ? 'Document Preparation'
                   : job.mode === 'ai'
-                  ? '⚡ AI'
+                  ? 'AI Transcription'
                   : job.mode === 'human'
-                  ? '👤 Human'
+                  ? 'Human Transcription'
                   : job.mode === 'hybrid'
-                  ? '🔄 Hybrid'
+                  ? 'Hybrid Transcription'
                   : 'Unknown'}
               </span>
 
@@ -904,7 +904,7 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
             <Button asChild size="sm" className="bg-[#003366] text-white hover:bg-[#004080]">
               <Link href={`/transcript/${job.id}`}>
                 <FilePenLine className="h-4 w-4 mr-1" />
-                Open Transcript Editor
+                {job.mode === 'hybrid' || job.mode === 'human' ? 'Open Professional Workspace' : 'Open Transcript Editor'}
               </Link>
             </Button>
           )}
@@ -1180,7 +1180,7 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                 <h3 className="text-base sm:text-lg font-semibold text-[#003366]">
                   {job.type === 'office'
                     ? 'Document Workspace Project Details'
-                    : (job.status === 'pending-review' || job.status === 'under-review') ? 'Review AI Transcript' : 'Create Transcript'}
+                    : job.mode === 'hybrid' ? 'Hybrid Professional Review' : job.mode === 'human' ? 'Human Transcription' : 'Create Transcript'}
                 </h3>
                 <Button
                   variant="ghost"
@@ -1415,7 +1415,7 @@ export function WorkQueueCard({ job, userEmail, onComplete }: WorkQueueCardProps
                   <Button asChild variant="outline" className="w-full border-[#003366] text-[#003366] hover:bg-blue-50 sm:w-auto">
                     <Link href={`/transcript/${job.id}`}>
                       <FilePenLine className="h-4 w-4 mr-2" />
-                      Open Full Editor
+                      {job.mode === 'hybrid' || job.mode === 'human' ? 'Open Professional Workspace' : 'Open Full Editor'}
                     </Link>
                   </Button>
                 )}

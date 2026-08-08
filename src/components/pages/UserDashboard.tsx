@@ -472,7 +472,7 @@ export function UserDashboard() {
                             className="bg-white border border-[#003366] text-[#003366] hover:bg-[#003366] hover:text-white shadow-sm"
                           >
                             <Link href={`/transcript/${job.id}`}>
-                              Open Workspace
+                              {job.mode === 'hybrid' || job.mode === 'human' ? 'View Professional Project' : 'Open Workspace'}
                             </Link>
                           </Button>
                         )}
@@ -554,7 +554,7 @@ export function UserDashboard() {
                                   className="bg-white border border-[#003366] text-[#003366] hover:bg-[#003366] hover:text-white shadow-sm"
                                 >
                                   <Link href={`/transcript/${job.id}`}>
-                                    Open Workspace
+                                    {job.mode === 'hybrid' || job.mode === 'human' ? 'View Professional Project' : 'Open Workspace'}
                                   </Link>
                                 </Button>
                               )}

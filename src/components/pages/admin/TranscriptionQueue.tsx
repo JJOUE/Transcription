@@ -312,7 +312,7 @@ export function TranscriptionQueue() {
       console.error('Action error:', error);
       toast({
         title: "Error",
-        description: "Failed to complete action. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to complete action. Please try again.",
         variant: "destructive",
       });
     } finally {

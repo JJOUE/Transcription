@@ -30,8 +30,16 @@ assert.equal(resolve({ ...paidAiJob, billingType: 'ai-free-trial', paymentStatus
 assert.equal(resolveTranscriptCapabilities({ job: paidAiJob, isAdmin: true }).accessLevel, 'full', 'admin receives full access');
 assert.equal(resolve(paidAiJob, { membershipActive: false }).accessLevel, 'standard', 'inactive or expired member returns to standard access');
 assert.equal(resolve({ mode: 'ai' }).accessLevel, 'full', 'ambiguous historical AI job preserves access');
-assert.equal(resolve({ mode: 'hybrid', billingType: 'package' }).accessLevel, 'full', 'Hybrid is not AI-only restricted');
-assert.equal(resolve({ mode: 'human', billingType: 'package' }).accessLevel, 'full', 'Human is not AI-only restricted');
+const hybridDelivery = resolve({ mode: 'hybrid', billingType: 'package', professionalWorkflow: 'managed-delivery' });
+assert.equal(hybridDelivery.accessLevel, 'professional-delivery', 'managed Hybrid work uses professional delivery access');
+assert.equal(hybridDelivery.canEditTranscript, false, 'Hybrid clients do not receive the self-service editor');
+assert.equal(hybridDelivery.canDownload, true, 'Hybrid clients retain completed-file downloads');
+const humanDelivery = resolve({ mode: 'human', billingType: 'package', professionalWorkflow: 'managed-delivery' });
+assert.equal(humanDelivery.accessLevel, 'professional-delivery', 'managed Human work uses professional delivery access');
+assert.equal(humanDelivery.canEditTranscript, false, 'Human clients do not receive the self-service editor');
+assert.equal(resolve({ mode: 'hybrid', billingType: 'package' }).accessLevel, 'full', 'historical Hybrid access is preserved');
+assert.equal(resolve({ mode: 'human', billingType: 'package' }).accessLevel, 'full', 'historical Human access is preserved');
+assert.equal(resolveTranscriptCapabilities({ job: { mode: 'hybrid', professionalWorkflow: 'managed-delivery' }, isAdmin: true }).accessLevel, 'full', 'admin retains Hybrid review tools');
 
 const routeSource = await readFile(new URL('../src/app/api/transcriptions/[id]/transcript/route.ts', import.meta.url), 'utf8');
 assert.match(routeSource, /!capabilities\.canEditTranscript/, 'content save route enforces full editing entitlement');

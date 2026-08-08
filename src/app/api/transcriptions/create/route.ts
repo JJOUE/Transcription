@@ -140,6 +140,11 @@ export async function POST(request: NextRequest) {
       : validatedBody.mode === 'human' ? 'pending-transcription' : 'processing';
     const jobData = {
       ...clientJobFields,
+      ...(validatedBody.mode === 'hybrid' || validatedBody.mode === 'human' ? {
+        serviceCategory: 'professional-transcription',
+        professionalWorkflow: 'managed-delivery',
+        aiGeneratedInitialTranscript: validatedBody.mode === 'hybrid',
+      } : {}),
       rushDelivery: supportsAddOns ? validatedBody.rushDelivery === true : false,
       multipleSpeakers: supportsAddOns
         ? Number(validatedBody.speakerCount || 1) >= 5

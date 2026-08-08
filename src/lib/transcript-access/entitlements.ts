@@ -7,7 +7,7 @@ export const APPROVED_TRANSCRIPT_STYLE_IDS = [
   'clean-read',
 ] as const;
 
-export type TranscriptAccessLevel = 'standard' | 'full';
+export type TranscriptAccessLevel = 'standard' | 'professional-delivery' | 'full';
 export interface TranscriptCapabilities {
   accessLevel: TranscriptAccessLevel;
   reason: 'admin' | 'professional-service' | 'free-trial' | 'active-membership' | 'ai-only' | 'historical-compatibility';
@@ -23,7 +23,13 @@ export interface TranscriptCapabilities {
   effectiveTranscriptStyleId?: string;
 }
 
-type EntitlementJob = { mode?: string; billingType?: string; paymentStatus?: string; freeTrialMinutesUsed?: number };
+type EntitlementJob = {
+  mode?: string;
+  billingType?: string;
+  paymentStatus?: string;
+  freeTrialMinutesUsed?: number;
+  professionalWorkflow?: string;
+};
 const FULL_CAPABILITIES = {
   accessLevel: 'full' as const, canEditTranscript: true, canRenameSpeakers: true, canChangeTimecodes: true,
   canUseSearchReplace: true, canUseAdvancedSpeakerTools: true, canUseFormattingTools: true,
@@ -34,6 +40,11 @@ const STANDARD_CAPABILITIES = {
   canUseSearchReplace: false, canUseAdvancedSpeakerTools: false, canUseFormattingTools: false,
   canChooseTranscriptStyles: false, canDownload: true, allowedTranscriptStyleIds: [AI_STANDARD_TRANSCRIPT_STYLE_ID],
   effectiveTranscriptStyleId: AI_STANDARD_TRANSCRIPT_STYLE_ID,
+};
+const PROFESSIONAL_DELIVERY_CAPABILITIES = {
+  accessLevel: 'professional-delivery' as const, canEditTranscript: false, canRenameSpeakers: false, canChangeTimecodes: false,
+  canUseSearchReplace: false, canUseAdvancedSpeakerTools: false, canUseFormattingTools: false,
+  canChooseTranscriptStyles: false, canDownload: true, allowedTranscriptStyleIds: [AI_STANDARD_TRANSCRIPT_STYLE_ID],
 };
 
 function isExplicitlyClassifiedAiJob(job: EntitlementJob) {
@@ -48,7 +59,15 @@ export function resolveTranscriptCapabilities(input: {
 }): TranscriptCapabilities {
   const { job } = input;
   if (input.isAdmin) return { ...FULL_CAPABILITIES, reason: 'admin' };
-  if (job.mode === 'hybrid' || job.mode === 'human') return { ...FULL_CAPABILITIES, reason: 'professional-service' };
+  if ((job.mode === 'hybrid' || job.mode === 'human') && job.professionalWorkflow === 'managed-delivery') {
+    return { ...PROFESSIONAL_DELIVERY_CAPABILITIES, reason: 'professional-service' };
+  }
+
+  // Professional jobs created before managed delivery retain their established
+  // workspace access rather than losing historical functionality unexpectedly.
+  if (job.mode === 'hybrid' || job.mode === 'human') {
+    return { ...FULL_CAPABILITIES, reason: 'historical-compatibility' };
+  }
 
   // Unknown and legacy records retain established access. Only explicit,
   // server-billed AI jobs receive the new standard-access restriction.

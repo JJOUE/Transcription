@@ -4660,11 +4660,11 @@ export default function TranscriptViewerPage() {
     : transcription.officeCompletedDocumentPath
     ? `/api/document-workspace/${transcription.id}/completed-document`
     : null;
-  const shouldShowFinishedHumanDelivery =
-    transcription.mode === 'human' &&
+  const shouldShowFinishedProfessionalDelivery =
+    (transcription.mode === 'hybrid' || transcription.mode === 'human') &&
     Boolean(deliveredHumanFilePath && deliveredHumanDownloadHref);
 
-  if (shouldShowFinishedHumanDelivery) {
+  if (shouldShowFinishedProfessionalDelivery) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
         <Header />
@@ -4683,7 +4683,9 @@ export default function TranscriptViewerPage() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <CardTitle className="text-2xl text-[#003366]">Finished transcript ready</CardTitle>
-                  <p className="mt-2 text-gray-600">Your completed transcript is ready to download.</p>
+                  <p className="mt-2 text-gray-600">
+                    Your professionally prepared {transcription.mode === 'hybrid' ? 'Hybrid' : 'Human'} transcript is ready to download.
+                  </p>
                 </div>
                 <StatusBadge status="complete" />
               </div>
@@ -4744,6 +4746,44 @@ export default function TranscriptViewerPage() {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (capabilities.accessLevel === 'professional-delivery' && userData?.role !== 'admin') {
+    const isHybrid = transcription.mode === 'hybrid';
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <Header />
+        <main className="container mx-auto max-w-3xl px-4 py-8 flex-1">
+          <Button variant="ghost" onClick={() => router.push('/dashboard')} className="mb-4 hover:bg-gray-100">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Dashboard
+          </Button>
+          <Card className="border border-[#b29dd9] shadow-sm">
+            <CardHeader>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <CardTitle className="text-2xl text-[#003366]">
+                    {isHybrid ? 'Hybrid Transcription' : 'Human Transcription'}
+                  </CardTitle>
+                  <p className="mt-2 text-gray-600">
+                    {isHybrid
+                      ? 'Your AI-generated draft is being professionally reviewed and corrected against the original recording.'
+                      : 'Your recording is being transcribed, formatted, and proofread by a professional transcriptionist without an AI-generated draft.'}
+                  </p>
+                </div>
+                <StatusBadge status={transcription.status} />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-700">
+                The finished transcript will appear here for secure download when professional preparation is complete.
+              </p>
             </CardContent>
           </Card>
         </main>

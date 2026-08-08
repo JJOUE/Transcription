@@ -400,7 +400,11 @@ export const requestFileDeletion = async (
 };
 
 export const approveTranscriptionReview = async (id: string): Promise<void> => {
-  await updateTranscriptionStatus(id, 'complete');
+  const response = await fetch(`/api/admin/transcriptions/${id}/complete`, { method: 'POST' });
+  const result = await response.json();
+  if (!response.ok) {
+    throw new Error(result.error || 'Unable to complete transcription project.');
+  }
 };
 
 export const rejectTranscriptionJob = async (id: string, reason?: string): Promise<void> => {
