@@ -29,12 +29,12 @@ export async function loadApprovedServiceData() {
   return {
     currency: 'CAD',
     services: {
-      ai: { name: 'AI Transcription', ratePerAudioMinute: rates.ai, description: 'Best for transcriptionists, professional transcript editors, and experienced users. The client reviews and edits the AI-generated transcript themselves in Transcript Workspace.' },
+      ai: { name: 'AI Transcription', ratePerAudioMinute: rates.ai, description: 'Self-service AI transcription. Standard access includes the standard transcript style, timecodes, speaker-name changes, and all supported download formats. Transcript Editor Membership adds broader editing tools and multiple transcript styles.' },
       hybrid: { name: 'Hybrid Transcription', ratePerAudioMinute: rates.hybrid, description: 'AI-generated first, then reviewed and corrected against the original audio by a professional transcriptionist. A more affordable professionally reviewed option.' },
       human: { name: 'Human Transcription', ratePerAudioMinute: rates.human, description: 'No AI-generated transcript. A professional transcriptionist types, formats, reviews, and proofreads it from the original audio.' },
     },
     workspaces: {
-      transcript: 'Self-service AI transcription and transcript editing tools. Professional Hybrid and Human Transcription are separate service options.',
+      transcript: 'Self-service AI transcription with the standard transcript style and all supported download formats. Transcript Editor Membership adds broader wording-editing, formatting, and transcript-style tools. Professional Hybrid and Human Transcription are separate service options.',
       document: 'Document Preparation Services create human-prepared documents from dictation, handwriting, copy typing, instructions, or a supplied template. Projects are managed through Document Workspace.',
       separation: 'The workspaces are separate. Files and projects do not transfer between them automatically, and they do not share an editor.',
     },

@@ -38,7 +38,10 @@ export function middleware(request: NextRequest) {
 
   // Redirect to signin if accessing protected route without token
   if ((isProtectedRoute || isDocumentWorkspaceProjectRoute) && !token) {
-    return NextResponse.redirect(new URL('/signin', request.url));
+    const requestedPath = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+    const signInUrl = new URL('/signin', request.url);
+    signInUrl.searchParams.set('next', requestedPath);
+    return NextResponse.redirect(signInUrl);
   }
 
   // Redirect to dashboard if accessing auth pages with token

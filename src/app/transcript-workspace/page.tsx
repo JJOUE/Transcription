@@ -18,12 +18,12 @@ import { Footer } from '@/components/layout/Footer';
 export const metadata: Metadata = {
   title: 'Transcript Workspace | Talk to Text Canada',
   description:
-    "Self-service AI transcription and transcript editing tools, including speakers, timestamps, Search & Replace, formatting, preview, and exports.",
+    "Self-service AI transcription with standard transcript review tools, plus advanced editing tools for Transcript Editor members.",
   metadataBase: new URL('https://www.talktotext.ca'),
   openGraph: {
     title: 'Transcript Workspace | Talk to Text Canada',
     description:
-      "Self-service AI transcription and transcript editing tools, including speakers, timestamps, Search & Replace, formatting, preview, and exports.",
+      "Self-service AI transcription with standard transcript review tools, plus advanced editing tools for Transcript Editor members.",
     url: 'https://www.talktotext.ca/transcript-workspace',
     type: 'website',
   },
@@ -33,7 +33,7 @@ const howItWorks = [
   'Upload your audio or video',
   'Use free, standard, or member-rate AI minutes',
   'Add speaker count and project terms',
-  'Review and edit the AI-generated transcript yourself',
+  'Review the AI-generated transcript using the tools included with your access',
   'Download in the format you need',
 ];
 
@@ -60,11 +60,11 @@ const usageSteps = [
   },
   {
     title: 'Review and edit',
-    text: 'Review the AI-generated transcript and make the corrections, speaker changes, or formatting adjustments you need.',
+    text: 'Review the AI-generated transcript. AI Transcription Only includes the standard transcript template, timecodes, speaker-name changes, and all supported download formats.',
   },
   {
-    title: 'Use cleanup tools',
-    text: 'Use light cleanup tools for filler words, duplicate words, timestamps, and formatting. These tools are designed to help clean the transcript without rewriting the meaning.',
+    title: 'Use membership editing tools',
+    text: 'Transcript Editor members can use broader tools such as Search & Replace, formatting passes, cleanup tools, and additional transcript styles.',
   },
   {
     title: 'Save and download',
@@ -79,7 +79,7 @@ const usageSteps = [
 const features = [
   {
     title: 'Self-service AI transcription',
-    text: 'Receive an AI-generated transcript and use the full workspace to review, edit, format, preview, and export it yourself.',
+    text: 'Receive an AI-generated transcript with the standard template, timecode and speaker-name controls, plus all supported download formats. Broader editing tools and additional transcript styles require Transcript Editor Membership.',
   },
   {
     title: 'Expected speaker count',
@@ -139,15 +139,15 @@ export default function TranscriptWorkspacePage() {
                   Transcript Workspace
                 </h1>
                 <p className="text-lg md:text-xl text-gray-700 mb-8">
-                  Self-service AI transcription and transcript editing tools in one secure workspace.
+                  Self-service AI transcription with standard review tools, plus broader editing features for Transcript Editor members.
                 </p>
                 <p className="text-sm text-gray-600 mb-8">
-                  Need a transcriptionist to review or create the transcript for you? See <Link href="/pricing#professional-transcription" className="font-semibold text-[#003366] underline underline-offset-4">Professional Transcription</Link>.
+                  Need a transcriptionist to review or create the transcript for you? See <Link href="/professional-transcription" className="font-semibold text-[#003366] underline underline-offset-4">Professional Transcription</Link>.
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Link
-                    href="/upload"
+                    href="/upload?mode=ai"
                     className="inline-flex items-center justify-center rounded-md bg-[#003366] px-6 py-3 font-semibold text-white hover:bg-[#00264d]"
                   >
                     Start a Transcript
@@ -173,12 +173,12 @@ export default function TranscriptWorkspacePage() {
                   <div className="flex items-center justify-between border-b border-gray-100 pb-4 mb-4">
                     <div>
                       <p className="text-sm font-semibold text-[#003366]">Transcript Workspace</p>
-                      <p className="text-xs text-gray-500">Edit, format, preview, export</p>
+                      <p className="text-xs text-gray-500">Standard access and membership tools</p>
                     </div>
                     <ShieldCheck className="h-7 w-7 text-[#b29dd9]" />
                   </div>
                   <div className="space-y-3">
-                    {['Speaker Tools', 'Timestamp Tools', 'Light Grammar Pass', 'Export Options'].map((item) => (
+                    {['DOCX, PDF, TXT, SRT and VTT downloads', 'Timecode controls', 'Speaker-name changes', 'Membership editing tools'].map((item) => (
                       <div key={item} className="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3">
                         <span className="text-sm font-medium text-gray-700">{item}</span>
                         <CheckCircle className="h-4 w-4 text-[#003366]" />
@@ -197,8 +197,7 @@ export default function TranscriptWorkspacePage() {
               <div>
                 <h2 className="text-3xl font-bold mb-3">See how Transcript Workspace works</h2>
                 <p className="text-white/90">
-                  A short walkthrough video will appear here showing upload, editing, speaker tools,
-                  cleanup tools, and download options.
+                  A short walkthrough video will appear here showing standard AI transcript review and the broader tools available with Transcript Editor Membership.
                 </p>
               </div>
               <div className="rounded-xl border border-white/30 bg-white/10 p-8 text-center">
@@ -264,7 +263,7 @@ export default function TranscriptWorkspacePage() {
           <div className="grid lg:grid-cols-2 gap-8 mb-14">
             <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
               <BookOpen className="mb-4 h-8 w-8 text-[#b29dd9]" />
-              <h2 className="text-2xl font-bold text-[#003366] mb-4">Editing tools</h2>
+              <h2 className="text-2xl font-bold text-[#003366] mb-4">Transcript Editor Membership tools</h2>
               <ul className="space-y-3 text-sm text-gray-700">
                 {editingTools.map((tool) => (
                   <li key={tool} className="flex gap-3">
@@ -330,11 +329,11 @@ export default function TranscriptWorkspacePage() {
             <FileText className="mx-auto mb-4 h-10 w-10 text-white" />
             <h2 className="text-3xl font-bold mb-3">Ready to start a transcript?</h2>
             <p className="text-white/90 mb-6">
-              Upload your file, create an AI transcript, and use the full editor and export tools in your secure workspace.
+              Upload your file and review the standard transcript, with the same supported download formats available to both options. Transcript Editor Membership adds broader editing tools and multiple transcript styles. The 60-minute AI trial continues to include full editor access.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/upload"
+                href="/upload?mode=ai"
                 className="inline-flex items-center justify-center rounded-md bg-white px-6 py-3 font-semibold text-[#003366] hover:bg-gray-100"
               >
                 Start a Transcript

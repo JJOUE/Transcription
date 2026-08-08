@@ -57,17 +57,17 @@ const serviceOptions = [
   {
     title: 'AI Transcription',
     text: 'For transcriptionists and experienced users who want an AI-generated transcript to review and edit themselves in Transcript Workspace.',
-    href: '/pricing?service=ai',
+    href: '/upload?mode=ai',
   },
   {
     title: 'Hybrid Transcription',
     text: 'AI-generated first, then reviewed and corrected against the original audio by a professional transcriptionist. A more affordable professionally reviewed option.',
-    href: '/pricing?service=hybrid',
+    href: '/upload?mode=hybrid',
   },
   {
     title: 'Human Transcription',
     text: 'No AI-generated transcript. A professional transcriptionist types, formats, reviews, and proofreads the transcript from the original audio.',
-    href: '/pricing?service=human',
+    href: '/upload?mode=human',
   },
   {
     title: 'Document Preparation Services',
@@ -109,16 +109,16 @@ export default function BusinessTranscriptionPage() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/signin"
+                href="/professional-transcription"
                 className="inline-flex items-center justify-center rounded-md bg-[#003366] px-6 py-3 font-semibold text-white hover:bg-[#00264d]"
               >
-                Start a Transcription Project
+                Choose Professional Transcription
               </Link>
               <Link
-                href="/pricing"
+                href="/transcript-workspace"
                 className="inline-flex items-center justify-center rounded-md border border-[#003366] px-6 py-3 font-semibold text-[#003366] hover:bg-[#003366] hover:text-white"
               >
-                View Pricing
+                Explore Self-Service AI
               </Link>
               <Link
                 href="/contact"
@@ -272,16 +272,16 @@ export default function BusinessTranscriptionPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/signin"
+                href="/professional-transcription"
                 className="inline-flex items-center justify-center rounded-md bg-white px-6 py-3 font-semibold text-[#003366] hover:bg-gray-100"
               >
-                Start a Transcription Project
+                Choose Professional Transcription
               </Link>
               <Link
-                href="/pricing"
+                href="/transcript-workspace"
                 className="inline-flex items-center justify-center rounded-md border border-white px-6 py-3 font-semibold text-white hover:bg-white hover:text-[#003366]"
               >
-                View Pricing
+                Explore Self-Service AI
               </Link>
               <Link
                 href="/contact"

@@ -72,7 +72,7 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/pricing?service=human"
+                  href="/professional-transcription#human"
                   className={`transition-colors ${
                     isLightFooter ? "hover:text-[#003366]" : "hover:text-white"
                   }`}
@@ -82,7 +82,7 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/pricing?service=hybrid"
+                  href="/professional-transcription#hybrid"
                   className={`transition-colors ${
                     isLightFooter ? "hover:text-[#003366]" : "hover:text-white"
                   }`}

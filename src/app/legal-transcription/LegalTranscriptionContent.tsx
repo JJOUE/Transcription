@@ -58,23 +58,23 @@ export function LegalTranscriptionContent() {
           Legal Transcription Services Built for Canadian Legal Workflows
         </h1>
         <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
-          Professional transcription for legal hearings, statements, interviews, audio instructions for document preparation, and law office workflows. Backed by experienced legal transcription specialists and modern AI tools.
+          Professional transcription for legal hearings, statements, interviews, audio instructions for document preparation, and law office workflows. AI is used only when you select AI Transcription or Hybrid Transcription.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button
             size="lg"
             className="bg-[#b29dd9] hover:bg-[#9e7fbd] text-white"
-            onClick={() => window.location.href = '/upload'}
+            onClick={() => window.location.href = '/professional-transcription'}
           >
-            Compare Transcription Options
+            Professional Transcription
           </Button>
           <Button
             size="lg"
             variant="outline"
             className="border-[#003366] text-[#003366] hover:bg-[#003366] hover:text-white"
-            onClick={() => window.location.href = '/pricing'}
+            onClick={() => window.location.href = '/transcript-workspace'}
           >
-            View Pricing & Services
+            Self-Service AI
           </Button>
         </div>
       </div>
@@ -309,9 +309,9 @@ export function LegalTranscriptionContent() {
             <Button
               size="lg"
               className="bg-white text-[#003366] hover:bg-gray-100"
-              onClick={() => window.location.href = '/upload'}
+              onClick={() => window.location.href = '/professional-transcription'}
             >
-              Upload Your First File
+              Choose Professional Transcription
             </Button>
             <Button
               size="lg"

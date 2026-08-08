@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Upload, FileAudio, FileVideo, FileText, X, AlertCircle } from 'lucide-react';
@@ -60,6 +60,8 @@ const expectedSpeakerCountOptions: Array<{
 ];
 
 export default function UploadPage() {
+  const searchParams = useSearchParams();
+  const requestedMode = searchParams.get('mode');
   const [uploadedFiles, setUploadedFiles] = useState<UploadFile[]>([]);
   const [transcriptionMode, setTranscriptionMode] = useState('ai');
   const [transcriptionLanguage, setTranscriptionLanguage] = useState('en');
@@ -107,6 +109,12 @@ export default function UploadPage() {
   // Add-on options
   const [rushDelivery, setRushDelivery] = useState(false);
   const [packageAddOnCheckoutEnabled, setPackageAddOnCheckoutEnabled] = useState(false);
+
+  useEffect(() => {
+    if (requestedMode === 'ai' || requestedMode === 'hybrid' || requestedMode === 'human') {
+      setTranscriptionMode(requestedMode);
+    }
+  }, [requestedMode]);
 
   useEffect(() => {
     fetch('/api/transcriptions/add-on-capability', { credentials: 'include', cache: 'no-store' })
@@ -274,7 +282,7 @@ export default function UploadPage() {
     {
       id: 'ai',
       name: 'AI Transcription',
-      description: 'Fast, automated transcription with good accuracy',
+      description: 'Self-service AI transcription with the standard transcript style, timecodes, speaker-name controls, and all supported download formats',
       creditsPerMinute: 100, // Legacy support
       costPerMinute: professionalEditorAiRate, // Preview only; the server calculates the charge.
       turnaround: '60 mins',
@@ -283,7 +291,7 @@ export default function UploadPage() {
     {
       id: 'hybrid',
       name: 'Hybrid Transcription',
-      description: 'AI transcription reviewed by human experts',
+      description: 'AI-generated first, then reviewed and corrected by a professional transcriptionist',
       creditsPerMinute: 150, // Legacy support
       costPerMinute: pricingSettings?.payAsYouGo.hybrid || 1.50, // CA$ per minute from database
       turnaround: '3-5 days',
@@ -292,7 +300,7 @@ export default function UploadPage() {
     {
       id: 'human',
       name: 'Human Transcription',
-      description: 'Professional human transcription for the highest review level',
+      description: 'No AI-generated transcript; transcribed by a professional from the original audio',
       creditsPerMinute: 200, // Legacy support
       costPerMinute: pricingSettings?.payAsYouGo.human || 2.50, // CA$ per minute from database
       turnaround: '3-5 days',
@@ -1125,17 +1133,22 @@ export default function UploadPage() {
           {/* Transcription Mode */}
           <Card className="border-0 shadow-sm">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold text-[#003366]">
-                Choose Transcription Mode
-              </CardTitle>
+              <CardTitle className="text-lg font-semibold text-[#003366]">Choose Your Transcription Service</CardTitle>
+              <p className="text-sm text-gray-600 mt-2">Choose self-service AI or a professionally prepared transcript.</p>
             </CardHeader>
             <CardContent>
-              <RadioGroup value={transcriptionMode} onValueChange={setTranscriptionMode} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                {transcriptionModes.map((mode) => (
+              <RadioGroup value={transcriptionMode} onValueChange={setTranscriptionMode} className="space-y-8">
+                <section aria-labelledby="self-service-heading">
+                  <div className="mb-4">
+                    <h3 id="self-service-heading" className="text-sm font-bold uppercase text-[#003366]">Self-Service</h3>
+                    <p className="mt-1 text-sm text-gray-600">AI Transcription Only includes standard review tools. Transcript Editor Membership adds broader editing and format options.</p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 md:gap-6">
+                    {transcriptionModes.filter(mode => mode.id === 'ai').map((mode) => (
                   <Label
                     htmlFor={mode.id}
                     key={mode.id}
-                    className={`cursor-pointer border rounded-lg p-4 md:p-6 flex flex-col transition-colors min-h-[200px] md:min-h-[250px] ${
+                    className={`cursor-pointer border rounded-lg p-4 md:p-6 flex flex-col transition-colors min-h-[200px] ${
                       transcriptionMode === mode.id
                         ? 'border-[#b29dd9] ring-2 ring-[#b29dd9] bg-[#b29dd9]/5'
                         : 'border-gray-200 hover:border-[#b29dd9] hover:bg-gray-50'
@@ -1173,7 +1186,50 @@ export default function UploadPage() {
                       </div>
                     </div>
                   </Label>
-                ))}
+                    ))}
+                  </div>
+                </section>
+
+                <section aria-labelledby="professional-heading">
+                  <div className="mb-4">
+                    <h3 id="professional-heading" className="text-sm font-bold uppercase text-[#003366]">Professional Transcription</h3>
+                    <p className="mt-1 text-sm text-gray-600">Choose professional review of an AI-generated draft or transcription created by a person from the original audio.</p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
+                    {transcriptionModes.filter(mode => mode.id !== 'ai').map((mode) => (
+                      <Label
+                        htmlFor={mode.id}
+                        key={mode.id}
+                        className={`cursor-pointer border rounded-lg p-4 md:p-6 flex flex-col transition-colors min-h-[200px] ${
+                          transcriptionMode === mode.id
+                            ? 'border-[#b29dd9] ring-2 ring-[#b29dd9] bg-[#b29dd9]/5'
+                            : 'border-gray-200 hover:border-[#b29dd9] hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3 mb-4">
+                          <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0">
+                            <Image src={mode.icon} alt={mode.name} width={48} height={48} className="w-full h-full object-cover" />
+                          </div>
+                          <h3 className="font-semibold text-[#003366] text-lg flex-1">{mode.name}</h3>
+                          <RadioGroupItem value={mode.id} id={mode.id} className="flex-shrink-0" />
+                        </div>
+                        <div className="flex-1 flex flex-col justify-between">
+                          <p className="text-gray-600 mb-6 leading-relaxed">{mode.description}</p>
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-gray-700">Cost/min:</span>
+                              <span className="text-sm font-semibold text-[#b29dd9]">CA${mode.costPerMinute.toFixed(2)}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-gray-700">Turnaround time:</span>
+                              <span className="text-sm text-gray-600 font-medium">{mode.turnaround}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </Label>
+                    ))}
+                  </div>
+                </section>
               </RadioGroup>
             </CardContent>
           </Card>

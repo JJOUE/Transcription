@@ -20,7 +20,7 @@ const serviceChooserCards = [
       },
       {
         label: 'Professional Transcription',
-        href: '/pricing#professional-transcription',
+        href: '/professional-transcription',
       },
     ],
   },
@@ -176,8 +176,8 @@ function LandingPage() {
                   size="lg"
                   className="bg-[#b29dd9] hover:bg-[#9d87c7] text-white text-lg px-15 py-4"
                 >
-                  <Link href="/upload">
-                    Start a Project
+                  <Link href="/upload?mode=ai">
+                    Start an AI Transcript
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
@@ -187,7 +187,7 @@ function LandingPage() {
                   size="lg"
                   className="border-2 border-white !bg-white !text-[#003366] hover:!bg-gray-50 hover:!text-[#003366] text-lg px-8 py-4 font-medium opacity-100"
                 >
-                  <Link href="/contact">Tell us what you need help with</Link>
+                  <Link href="/professional-transcription">Choose Professional Transcription</Link>
                 </Button>
               </div>
 
@@ -329,11 +329,11 @@ function LandingPage() {
                 </div>
                 <h3 className="text-xl font-semibold text-[#003366] mb-4">Transcript Workspace</h3>
                 <p className="text-gray-600 mb-6">
-                  Self-service AI transcription and full transcript editing tools, including speakers, timestamps, Search &amp; Replace, formatting, preview, and exports.
+                  Self-service AI transcription with the standard transcript template and all supported download formats. Transcript Editor Membership adds broader editing, Search &amp; Replace, formatting, and template options.
                 </p>
                 <ul className="text-sm text-gray-600 space-y-2">
                   <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />AI transcription you review yourself</li>
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Transcript Editor membership and tools</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Optional Transcript Editor Membership tools</li>
                   <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />DOCX, PDF, TXT, SRT and VTT exports</li>
                 </ul>
 

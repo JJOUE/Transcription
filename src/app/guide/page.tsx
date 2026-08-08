@@ -91,10 +91,10 @@ export default function GuidePage() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/upload"
+                href="/upload?mode=ai"
                 className="inline-flex items-center justify-center rounded-md bg-[#003366] px-6 py-3 font-semibold text-white hover:bg-[#00264d]"
               >
-                Start a Project
+                Start AI Transcription
               </Link>
               <Link
                 href="/signin"
@@ -156,8 +156,8 @@ export default function GuidePage() {
                   Transcript Workspace
                 </h2>
                 <p className="text-gray-700 max-w-3xl">
-                  Self-service AI transcription and transcript editing tools, including speaker tools,
-                  timestamps, Search &amp; Replace, formatting, preview, and exports.
+                  AI Transcription Only includes the standard transcript template, timecodes, speaker-name changes,
+                  and all supported download formats. Transcript Editor Membership adds broader editing tools and multiple transcript styles.
                 </p>
               </div>
               <Link
@@ -220,13 +220,13 @@ export default function GuidePage() {
             <div className="grid gap-6 md:grid-cols-3">
               <div>
                 <h3 className="text-xl font-semibold text-[#003366]">Transcript Workspace</h3>
-                <p className="mt-2 text-gray-700">Self-service AI transcription and full transcript editing and export tools.</p>
-                <Link href="/upload" className="mt-4 inline-flex font-semibold text-[#003366] underline underline-offset-4">Create an AI transcript</Link>
+                <p className="mt-2 text-gray-700">Self-service AI transcription with the standard transcript template and all supported download formats. Broader editing tools and multiple transcript styles require Transcript Editor Membership; the 60-minute AI trial retains full editor access.</p>
+                <Link href="/upload?mode=ai" className="mt-4 inline-flex font-semibold text-[#003366] underline underline-offset-4">Create an AI transcript</Link>
               </div>
               <div>
                 <h3 className="text-xl font-semibold text-[#003366]">Professional Transcription</h3>
                 <p className="mt-2 text-gray-700">Hybrid Transcription starts with AI and is professionally reviewed. Human Transcription is created from the original audio without an AI-generated draft.</p>
-                <Link href="/pricing#professional-transcription" className="mt-4 inline-flex font-semibold text-[#003366] underline underline-offset-4">Compare professional options</Link>
+                <Link href="/professional-transcription" className="mt-4 inline-flex font-semibold text-[#003366] underline underline-offset-4">Choose Hybrid or Human</Link>
               </div>
               <div>
                 <h3 className="text-xl font-semibold text-[#003366]">Document Preparation Services</h3>

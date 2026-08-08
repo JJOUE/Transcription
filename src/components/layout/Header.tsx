@@ -29,6 +29,7 @@ const PUBLIC_NOTICE_ROUTES = [
   '/legal-transcription',
   '/pricing',
   '/privacy',
+  '/professional-transcription',
   '/terms',
   '/transcript-workspace',
 ];
@@ -75,7 +76,7 @@ export function Header() {
               Transcript Workspace
             </Link>
             <Link
-              href="/pricing#professional-transcription"
+              href="/professional-transcription"
               className="text-gray-600 hover:text-[#003366] transition-colors"
             >
               Professional Transcription

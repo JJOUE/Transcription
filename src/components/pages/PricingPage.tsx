@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { ProfessionalTranscriptionComparison } from '@/components/pages/ProfessionalTranscriptionComparison';
 import { usePackages } from '@/contexts/PackageContext';
 import { TranscriptionPackage } from '@/lib/firebase/packages';
 import { PricingSettings, getPricingSettings } from '@/lib/firebase/settings';
@@ -284,7 +285,7 @@ const getTypeInfo = (type: string) => {
             asChild
             className="bg-[#72629E] hover:bg-[#5D5186] text-white px-8 py-3"
           >
-            <Link href="/signup">
+            <Link href="/office/upload">
               Start a Document Project
             </Link>
           </Button>
@@ -299,8 +300,8 @@ const getTypeInfo = (type: string) => {
         <h3 className="text-2xl font-bold text-[#003366] mb-4">AI Transcription Only</h3>
         <div className="text-4xl font-bold text-[#b29dd9]">CA$0.05</div>
         <div className="text-gray-600 mb-4">per audio minute</div>
-        <p className="text-gray-600">Best for transcriptionists and professional users who want a fast AI-generated draft to review and edit themselves.</p>
-        <p className="text-sm text-gray-500 mt-3">You receive the AI-generated transcript and review/edit it yourself in Transcript Workspace.</p>
+        <p className="text-gray-600">Best for transcriptionists and professional users who want a fast AI-generated draft with standard review tools.</p>
+        <p className="text-sm text-gray-500 mt-3">Includes the standard transcript template, timecode controls, speaker-name changes, basic review, and all supported download formats.</p>
       </CardContent></Card>
       <Card className="border-0 shadow-lg"><CardContent className="p-8 text-center">
         <h3 className="text-2xl font-bold text-[#003366] mb-4">Transcript Editor Membership</h3>
@@ -308,6 +309,30 @@ const getTypeInfo = (type: string) => {
         <div className="text-2xl font-bold text-[#003366] mt-3">CA$0.03/audio minute</div>
         <p className="text-gray-600 mt-4">Full Transcript Workspace editing tools plus a lower AI transcription rate.</p>
       </CardContent></Card>
+    </div>
+
+    <div className="mt-8 overflow-x-auto rounded-lg border border-gray-200 bg-white">
+      <table className="w-full min-w-[620px] text-left text-sm">
+        <thead className="bg-gray-50 text-[#003366]">
+          <tr>
+            <th className="p-4 font-semibold">Feature</th>
+            <th className="p-4 font-semibold">AI Transcription Only</th>
+            <th className="p-4 font-semibold">Transcript Editor Membership</th>
+          </tr>
+        </thead>
+        <tbody className="text-gray-700">
+          <tr className="border-t border-gray-200">
+            <td className="p-4 font-medium">Download formats</td>
+            <td className="p-4">DOCX, PDF, TXT, SRT and VTT</td>
+            <td className="p-4">DOCX, PDF, TXT, SRT and VTT</td>
+          </tr>
+          <tr className="border-t border-gray-200">
+            <td className="p-4 font-medium">Transcript templates/styles</td>
+            <td className="p-4">Standard only</td>
+            <td className="p-4">Multiple styles/templates</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
     <div className="mt-8 p-6 bg-green-50 border border-green-200 rounded-2xl text-center">
       <strong>60 free AI transcription minutes</strong>
@@ -397,7 +422,7 @@ const getTypeInfo = (type: string) => {
                                     : 'bg-[#003366] hover:bg-[#002244]'
                                 } text-white`}
                               >
-                                <Link href="/signup">Sign Up Now</Link>
+                                <Link href={`/upload?mode=${type}`}>Choose {type === 'ai' ? 'AI Transcription' : type === 'hybrid' ? 'Hybrid Transcription' : 'Human Transcription'}</Link>
                               </Button>
                             </CardContent>
                           </Card>
@@ -440,6 +465,9 @@ const getTypeInfo = (type: string) => {
                 <p className="text-xs text-gray-400 mt-2">
                   You edit the AI transcript yourself in Transcript Workspace.
                 </p>
+                <Button asChild className="mt-6 bg-[#003366] text-white hover:bg-[#002244]">
+                  <Link href="/upload?mode=ai">Start AI Transcription</Link>
+                </Button>
               </CardContent>
             </Card>
 
@@ -458,6 +486,9 @@ const getTypeInfo = (type: string) => {
                 <p className="text-xs text-gray-400 mt-2">
                   We finish the transcript for you—you do not need to edit it yourself.
                 </p>
+                <Button asChild className="mt-6 bg-[#003366] text-white hover:bg-[#002244]">
+                  <Link href="/upload?mode=hybrid">Choose Hybrid</Link>
+                </Button>
               </CardContent>
             </Card>
 
@@ -476,19 +507,24 @@ const getTypeInfo = (type: string) => {
                 <p className="text-xs text-gray-400 mt-2">
                   We prepare the transcript for you without relying on AI-generated transcription.
                 </p>
+                <Button asChild className="mt-6 bg-[#003366] text-white hover:bg-[#002244]">
+                  <Link href="/upload?mode=human">Choose Human</Link>
+                </Button>
               </CardContent>
             </Card>
           </div>
 
-          <div className="text-center">
+          <ProfessionalTranscriptionComparison compact />
+
+          <div className="mt-8 text-center">
             <Button
               asChild
               variant="outline"
               className="mx-auto"
             >
-              <Link href="/signup">
+              <Link href="/professional-transcription">
                 <CreditCard className="h-4 w-4 mr-2" />
-                Sign Up to Get Started
+                Compare Professional Transcription
               </Link>
             </Button>
           </div>
@@ -587,12 +623,12 @@ const getTypeInfo = (type: string) => {
         </div>
       </section>
 
-      {/* Features Comparison */}
+      {/* High-level service category overview; detailed product comparisons appear above. */}
       <section className="py-24 bg-gray-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-[#003366] mb-4">
-              Compare Features
+              Compare Service Categories
             </h2>
           </div>
 
