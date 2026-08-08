@@ -3,16 +3,41 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserMenu } from './UserMenu';
 import { AdminMenu } from './AdminMenu';
 import { BRANDING_CONFIG } from '@/config/branding';
 
+const SHOW_SITE_UPDATE_NOTICE = true;
+
+const PUBLIC_NOTICE_ROUTES = [
+  '/',
+  '/about',
+  '/academic-transcription',
+  '/audio-instructions-document-preparation',
+  '/business-transcription',
+  '/confidentiality',
+  '/contact',
+  '/copy-typing-services',
+  '/document-workspace',
+  '/feedback',
+  '/guide',
+  '/handwriting-transcription',
+  '/legal-intake',
+  '/legal-transcription',
+  '/pricing',
+  '/privacy',
+  '/terms',
+  '/transcript-workspace',
+];
+
 export function Header() {
   const { user, userData } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+  const showSiteUpdateNotice = SHOW_SITE_UPDATE_NOTICE && PUBLIC_NOTICE_ROUTES.includes(pathname);
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-[9999]">
@@ -115,6 +140,12 @@ export function Header() {
           </div>
         </div>
       </div>
+      {showSiteUpdateNotice && (
+        <div className="border-t border-[#cfc4e8] bg-[#f4f0fa] px-4 py-2 text-center text-sm leading-5 text-[#003366]" role="status">
+          <span className="font-semibold">Talk to Text Canada is currently updating its online services and client workspaces.</span>{' '}
+          All services remain available while we make these improvements. Some service names, pricing displays, or workspace options may change during this update.
+        </div>
+      )}
     </header>
   );
 }
