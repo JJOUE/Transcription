@@ -32,8 +32,8 @@ function membershipPeriodEndMillis(value: unknown): number | null {
  * Authoritative AI rate selector. Callers must pass server-read membership data;
  * browser-provided status or pricing values are never accepted.
  *
- * Professional Editor entitlement enforcement is intentionally deferred.
- * Current owner access is preserved to avoid breaking existing transcripts.
+ * This same server-verified membership state is also used by the transcript
+ * capability resolver; browser-provided membership state is never accepted.
  */
 export function isProfessionalEditorMembershipActive(
   membership: ProfessionalEditorMembershipState | null | undefined,

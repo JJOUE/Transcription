@@ -83,9 +83,23 @@ describe('project ownership and protected workflow fields', () => {
     });
   }
 
-  test('owner may edit transcript content', async () => {
+  for (const [label, update] of [
+    ['transcript content', { transcript: 'Client-edited transcript text' }],
+    ['timestamped transcript content', { timestampedTranscript: [{ text: 'Edited segment' }] }],
+    ['transcript style', { transcriptStyleId: 'formal-interview' }],
+    ['speaker names', { speakerNames: { S1: 'Edited Speaker' } }],
+    ['timestamp frequency', { timestampFrequency: 60 }],
+  ]) {
+    test(`owner cannot directly change ${label}`, async () => {
+      await assertFails(updateDoc(doc(ownerDb(), 'transcriptions/project-one'), {
+        ...update, updatedAt: new Date(),
+      }));
+    });
+  }
+
+  test('owner may still update permitted project metadata', async () => {
     await assertSucceeds(updateDoc(doc(ownerDb(), 'transcriptions/project-one'), {
-      transcript: 'Client-edited transcript text', updatedAt: new Date(),
+      projectName: 'Updated project name', specialInstructions: 'Updated instructions', updatedAt: new Date(),
     }));
   });
 

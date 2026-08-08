@@ -83,6 +83,7 @@ export interface TranscriptionJob {
   timestampedTranscript?: TranscriptSegment[]; // New field for timestamped data
   terminologyIssues?: TerminologyIssue[]; // Safe post-transcription terminology review flags
   timestampFrequency?: 30 | 60 | 300 | 'none'; // Transcript display/export timestamp preference
+  transcriptStyleId?: 'standard-speaker-paragraph' | 'speaker-own-line' | 'question-answer' | 'formal-interview' | 'clean-read';
   transcriptStoragePath?: string; // Path to transcript in Storage (for large files)
   speechmaticsJobId?: string; // Speechmatics job ID for tracking
   segmentCount?: number; // Number of timestamped segments (for large files stored in Storage)

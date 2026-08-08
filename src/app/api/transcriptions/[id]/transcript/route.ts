@@ -1,6 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { getStorage } from 'firebase-admin/storage';
+import { FieldValue } from 'firebase-admin/firestore';
+import { AI_STANDARD_TRANSCRIPT_STYLE_ID, APPROVED_TRANSCRIPT_STYLE_IDS, resolveTranscriptCapabilities, transcriptStyleAllowed } from '@/lib/transcript-access/entitlements';
+import { isProfessionalEditorMembershipActive } from '@/lib/billing/transcription-rates';
+
+async function authorizeTranscript(request: NextRequest, id: string) {
+  const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '') || request.cookies.get('auth-token')?.value;
+  if (!token) throw new Error('AUTH_REQUIRED');
+  const decoded = await adminAuth.verifyIdToken(token);
+  const [jobSnapshot, userSnapshot] = await Promise.all([
+    adminDb.collection('transcriptions').doc(id).get(),
+    adminDb.collection('users').doc(decoded.uid).get(),
+  ]);
+  if (!jobSnapshot.exists) throw new Error('NOT_FOUND');
+  const job = jobSnapshot.data() || {};
+  const user = userSnapshot.data() || {};
+  const isAdmin = user.role === 'admin';
+  if (job.userId !== decoded.uid && !isAdmin) throw new Error('FORBIDDEN');
+  return {
+    job,
+    capabilities: resolveTranscriptCapabilities({
+      job,
+      isAdmin,
+      membershipActive: isProfessionalEditorMembershipActive(user.professionalEditorMembership),
+    }),
+  };
+}
 
 export async function PUT(
   request: NextRequest,
@@ -9,50 +35,17 @@ export async function PUT(
   try {
     const { id } = await params;
 
-    // Get auth token from Authorization header
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
-
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-
-    // Verify the token
-    const decodedToken = await adminAuth.verifyIdToken(token);
-    const userId = decodedToken.uid;
-
-    // Get the transcription document
-    const transcriptionDoc = await adminDb.collection('transcriptions').doc(id).get();
-
-    if (!transcriptionDoc.exists) {
-      return NextResponse.json(
-        { error: 'Transcription not found' },
-        { status: 404 }
-      );
-    }
-
-    const transcriptionData = transcriptionDoc.data();
-
-    // Check if user owns this transcription
-    if (transcriptionData?.userId !== userId) {
-      // Check if user is admin
-      const userDoc = await adminDb.collection('users').doc(userId).get();
-      const userData = userDoc.data();
-
-      if (userData?.role !== 'admin') {
-        return NextResponse.json(
-          { error: 'You do not have permission to update this transcription' },
-          { status: 403 }
-        );
-      }
+    const { job: transcriptionData, capabilities } = await authorizeTranscript(request, id);
+    if (!capabilities.canEditTranscript) {
+      return NextResponse.json({ error: 'Transcript content editing requires a Transcript Editor Membership' }, { status: 403 });
     }
 
     // Get the updated transcript data from request body
     const body = await request.json();
     const { timestampedTranscript, transcript } = body;
+    if (typeof transcript !== 'string' || (timestampedTranscript !== undefined && !Array.isArray(timestampedTranscript))) {
+      return NextResponse.json({ error: 'Invalid transcript update' }, { status: 400 });
+    }
 
     console.log('[API PUT] Received update request:', {
       transcriptionId: id,
@@ -66,11 +59,12 @@ export async function PUT(
     const transcriptStoragePath = transcriptionData?.transcriptStoragePath;
 
     if (!transcriptStoragePath) {
-      console.error('[API PUT] No transcriptStoragePath found in transcription document');
-      return NextResponse.json(
-        { error: 'Transcript not stored in Storage' },
-        { status: 404 }
-      );
+      await adminDb.collection('transcriptions').doc(id).update({
+        transcript,
+        timestampedTranscript,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      return NextResponse.json({ success: true, message: 'Transcript updated successfully' });
     }
 
     console.log('[API PUT] Updating Storage file:', transcriptStoragePath);
@@ -120,6 +114,47 @@ export async function PUT(
       },
       { status: 500 }
     );
+  }
+}
+
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const { capabilities } = await authorizeTranscript(request, id);
+    const body = await request.json();
+    const keys = Object.keys(body);
+    if (keys.length === 0 || keys.some(key => !['speakerNames', 'timestampFrequency', 'transcriptStyleId'].includes(key))) {
+      return NextResponse.json({ error: 'Unsupported transcript metadata update' }, { status: 400 });
+    }
+    const updates: Record<string, unknown> = { updatedAt: FieldValue.serverTimestamp() };
+    if ('speakerNames' in body) {
+      if (!capabilities.canRenameSpeakers || !body.speakerNames || typeof body.speakerNames !== 'object' || Array.isArray(body.speakerNames)) {
+        return NextResponse.json({ error: 'Invalid speaker names' }, { status: 403 });
+      }
+      const entries = Object.entries(body.speakerNames);
+      if (entries.length > 100 || entries.some(([key, value]) => !key || typeof value !== 'string' || value.length > 120)) {
+        return NextResponse.json({ error: 'Invalid speaker names' }, { status: 400 });
+      }
+      updates.speakerNames = body.speakerNames;
+    }
+    if ('timestampFrequency' in body) {
+      if (!capabilities.canChangeTimecodes || !['none', 30, 60, 300].includes(body.timestampFrequency)) {
+        return NextResponse.json({ error: 'Invalid timestamp frequency' }, { status: 400 });
+      }
+      updates.timestampFrequency = body.timestampFrequency;
+    }
+    if ('transcriptStyleId' in body) {
+      if (typeof body.transcriptStyleId !== 'string' || !APPROVED_TRANSCRIPT_STYLE_IDS.includes(body.transcriptStyleId as typeof APPROVED_TRANSCRIPT_STYLE_IDS[number]) || !transcriptStyleAllowed(capabilities, body.transcriptStyleId)) {
+        return NextResponse.json({ error: 'This transcript style requires a Transcript Editor Membership' }, { status: 403 });
+      }
+      updates.transcriptStyleId = capabilities.accessLevel === 'standard' ? AI_STANDARD_TRANSCRIPT_STYLE_ID : body.transcriptStyleId;
+    }
+    await adminDb.collection('transcriptions').doc(id).update(updates);
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    const status = message === 'AUTH_REQUIRED' ? 401 : message === 'NOT_FOUND' ? 404 : message === 'FORBIDDEN' ? 403 : 500;
+    return NextResponse.json({ error: status === 500 ? 'Unable to update transcript metadata' : message }, { status });
   }
 }
 

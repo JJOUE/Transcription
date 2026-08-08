@@ -14,6 +14,7 @@
     "test:firestore-rules": "npm --prefix tests run test:firestore-rules",
     "test:help-assistant": "node tests/help-assistant.test.mjs",
     "test:transcription-rates": "node tests/transcription-rates.test.mjs",
+    "test:transcript-entitlements": "node tests/transcript-entitlements.test.mjs",
     "test:package-reservations": "node tests/package-reservations.test.mjs",
     "test:rate-limit": "node tests/rate-limit.test.js",
     "verify:storage": "bash scripts/verify-storage.sh",

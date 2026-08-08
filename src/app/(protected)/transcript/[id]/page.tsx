@@ -41,12 +41,13 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
-import { getTranscriptionById, requestFileDeletion, updateTranscriptionStatus, TranscriptionJob, TranscriptSegment } from '@/lib/firebase/transcriptions';
+import { getTranscriptionById, requestFileDeletion, TranscriptionJob, TranscriptSegment } from '@/lib/firebase/transcriptions';
 import { Timestamp } from 'firebase/firestore';
 import { formatTime, formatDuration } from '@/lib/utils';
 import { AudioPlayer, AudioPlayerRef } from '@/components/ui/AudioPlayer';
 import { formatTranscriptMechanically } from '@/lib/utils/transcript-processor';
 import { formatRetentionLabel, isRetentionDeleted } from '@/lib/utils/retention';
+import { AI_STANDARD_TRANSCRIPT_STYLE_ID, type TranscriptCapabilities } from '@/lib/transcript-access/entitlements';
 
 // Types for Speechmatics transcript data
 interface SpeechmaticsAlternative {
@@ -70,6 +71,14 @@ type TranscriptData = string | SpeechmaticsTranscript | unknown;
 type TimestampFrequency = 30 | 60 | 300 | 'none';
 type ExportFormat = 'pdf' | 'docx' | 'docx-speaker-tab' | 'docx-speaker-space' | 'txt' | 'srt' | 'vtt';
 type SplitSpeakerApplyScope = 'single-segment' | 'forward-in-block';
+
+const PENDING_STANDARD_CAPABILITIES: TranscriptCapabilities = {
+  accessLevel: 'standard', reason: 'ai-only', canEditTranscript: false, canRenameSpeakers: true,
+  canChangeTimecodes: true, canUseSearchReplace: false, canUseAdvancedSpeakerTools: false,
+  canUseFormattingTools: false, canChooseTranscriptStyles: false, canDownload: true,
+  allowedTranscriptStyleIds: [AI_STANDARD_TRANSCRIPT_STYLE_ID],
+  effectiveTranscriptStyleId: AI_STANDARD_TRANSCRIPT_STYLE_ID,
+};
 
 type CleanupOptionKey =
   | 'removeUm'
@@ -251,6 +260,7 @@ export default function TranscriptViewerPage() {
   const { user, userData } = useAuth();
   const { toast } = useToast();
   const [transcription, setTranscription] = useState<TranscriptionJob | null>(null);
+  const [capabilities, setCapabilities] = useState<TranscriptCapabilities>(PENDING_STANDARD_CAPABILITIES);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [requestingFileDeletion, setRequestingFileDeletion] = useState(false);
@@ -330,8 +340,28 @@ export default function TranscriptViewerPage() {
   const [showUnsavedLeavePrompt, setShowUnsavedLeavePrompt] = useState(false);
   const pendingLeaveActionRef = useRef<(() => void) | null>(null);
 
-  const handleTimestampFrequencyChange = (value: string) => {
-    setTimestampFrequency(normalizeTimestampFrequency(value === 'none' ? 'none' : Number(value)));
+  const updateTranscriptMetadata = async (updates: Record<string, unknown>) => {
+    if (!user || !id) throw new Error('Authentication required');
+    const token = await user.getIdToken();
+    const response = await fetch(`/api/transcriptions/${id}/transcript`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(updates),
+    });
+    if (!response.ok) throw new Error((await response.json()).error || 'Unable to update transcript settings');
+  };
+
+  const handleTimestampFrequencyChange = async (value: string) => {
+    const nextFrequency = normalizeTimestampFrequency(value === 'none' ? 'none' : Number(value));
+    const previousFrequency = timestampFrequency;
+    setTimestampFrequency(nextFrequency);
+    try {
+      await updateTranscriptMetadata({ timestampFrequency: nextFrequency });
+      setTranscription(prev => prev ? { ...prev, timestampFrequency: nextFrequency } : prev);
+    } catch (metadataError) {
+      setTimestampFrequency(previousFrequency);
+      toast({ title: 'Timecode update failed', description: metadataError instanceof Error ? metadataError.message : 'Unable to update timecodes.', variant: 'destructive' });
+    }
   };
 
   const audioPlayerRef = useRef<AudioPlayerRef>(null);
@@ -383,6 +413,20 @@ export default function TranscriptViewerPage() {
         setError('Transcription not found');
         return;
       }
+
+      const token = await user?.getIdToken();
+      const capabilitiesResponse = await fetch(`/api/transcriptions/${id}/capabilities`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        cache: 'no-store',
+      });
+      if (!capabilitiesResponse.ok) throw new Error('Unable to verify transcript access');
+      const resolvedCapabilities = await capabilitiesResponse.json() as TranscriptCapabilities;
+      setCapabilities(resolvedCapabilities);
+      setSelectedTranscriptStyle(
+        resolvedCapabilities.canChooseTranscriptStyles
+          ? (transcriptionData.transcriptStyleId || DEFAULT_TRANSCRIPT_STYLE_ID)
+          : AI_STANDARD_TRANSCRIPT_STYLE_ID
+      );
 
       // Check if user owns this transcription or is admin
       if (transcriptionData.userId !== user?.uid && userData?.role !== 'admin') {
@@ -1157,6 +1201,13 @@ export default function TranscriptViewerPage() {
 
   const saveEdits = async () => {
     if (!transcription) return false;
+    if (!capabilities.canEditTranscript) {
+      toast({
+        title: 'Transcript Editor Membership required',
+        description: 'Full transcript editing tools are available with a Transcript Editor Membership.'
+      });
+      return false;
+    }
 
     try {
       setSaving(true);
@@ -1174,41 +1225,14 @@ export default function TranscriptViewerPage() {
 
         console.log('[Save] Updated segments count:', Object.keys(editedSegments).length);
 
-        // Save via API if using Storage, otherwise save to Firestore
-        if (transcription.transcriptStoragePath) {
-          console.log('[Save] Saving to Storage via API...');
-          const token = await user?.getIdToken();
-          const response = await fetch(`/api/transcriptions/${transcription.id}/transcript`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              timestampedTranscript: draftTimestampedTranscript,
-              transcript: draftPlainTranscript
-            })
-          });
-
-          if (!response.ok) {
-            const error = await response.json();
-            console.error('[Save] Storage save failed:', error);
-            throw new Error('Failed to save transcript to Storage');
-          }
-          console.log('[Save] Successfully saved to Storage');
-
-          await updateTranscriptionStatus(transcription.id!, transcription.status, {
-            timestampFrequency
-          });
-        } else {
-          console.log('[Save] Saving to Firestore...');
-          await updateTranscriptionStatus(transcription.id!, transcription.status, {
-            timestampedTranscript: draftTimestampedTranscript,
-            transcript: draftPlainTranscript,
-            timestampFrequency
-          });
-          console.log('[Save] Successfully saved to Firestore');
-        }
+        const token = await user?.getIdToken();
+        const response = await fetch(`/api/transcriptions/${transcription.id}/transcript`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ timestampedTranscript: draftTimestampedTranscript, transcript: draftPlainTranscript })
+        });
+        if (!response.ok) throw new Error((await response.json()).error || 'Failed to save transcript');
+        await updateTranscriptMetadata({ timestampFrequency });
 
         // Update local state
         setTranscription(prev => prev ? {
@@ -1235,10 +1259,14 @@ export default function TranscriptViewerPage() {
       } else if (!draftTimestampedTranscript && draftPlainTranscript.trim()) {
         console.log('[Save] Saving legacy plain text...');
         // Legacy plain text editing (fallback)
-        await updateTranscriptionStatus(transcription.id!, transcription.status, {
-          transcript: draftPlainTranscript.trim(),
-          timestampFrequency
+        const token = await user?.getIdToken();
+        const response = await fetch(`/api/transcriptions/${transcription.id}/transcript`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ transcript: draftPlainTranscript.trim() })
         });
+        if (!response.ok) throw new Error((await response.json()).error || 'Failed to save transcript');
+        await updateTranscriptMetadata({ timestampFrequency });
 
         setTranscription(prev => prev ? {
           ...prev,
@@ -1249,9 +1277,7 @@ export default function TranscriptViewerPage() {
 
       } else {
         console.log('[Save] Saving transcript metadata...');
-        await updateTranscriptionStatus(transcription.id!, transcription.status, {
-          timestampFrequency
-        });
+        await updateTranscriptMetadata({ timestampFrequency });
         setTranscription(prev => prev ? { ...prev, timestampFrequency } : null);
       }
 
@@ -1472,11 +1498,14 @@ export default function TranscriptViewerPage() {
 
   const exportTranscript = async (format: ExportFormat, draftForExport = getDraftTranscriptForExport()) => {
     if (!transcription) return;
+    const effectiveTranscriptStyle = capabilities.canChooseTranscriptStyles
+      ? selectedTranscriptStyle
+      : AI_STANDARD_TRANSCRIPT_STYLE_ID;
 
     if (format === 'txt') {
       const styledText = formatTranscriptSegmentsForStyle(
         draftForExport.timestampedTranscript,
-        selectedTranscriptStyle,
+        effectiveTranscriptStyle,
         getFormattedSpeakerDisplayName
       ) || draftForExport.plainTranscript;
       const blob = new Blob([styledText], { type: 'text/plain;charset=utf-8' });
@@ -1512,14 +1541,14 @@ export default function TranscriptViewerPage() {
           speakerNames,
           getSpeakerColor,
           getSpeakerDisplayName: getFormattedSpeakerDisplayName,
-          transcriptStyleId: selectedTranscriptStyle,
+          transcriptStyleId: effectiveTranscriptStyle,
         });
       } else if (format === 'docx' || format === 'docx-speaker-tab' || format === 'docx-speaker-space') {
         await exportTranscriptDOCX(templateData, {
           timestampFrequency,
           speakerNames,
           getSpeakerDisplayName: getFormattedSpeakerDisplayName,
-          transcriptStyleId: selectedTranscriptStyle,
+          transcriptStyleId: effectiveTranscriptStyle,
           speakerLabelLayout: format === 'docx-speaker-tab'
             ? 'tab-hanging'
             : format === 'docx-speaker-space'
@@ -2730,6 +2759,7 @@ export default function TranscriptViewerPage() {
 
   // Update speaker name
   const updateSpeakerName = async (speaker: string, newName: string) => {
+    if (!capabilities.canRenameSpeakers) return;
     const normalizedName = normalizeSpeakerDisplayName(newName);
     const updatedNames = {
       ...speakerNames,
@@ -2746,18 +2776,7 @@ export default function TranscriptViewerPage() {
     if (!transcription || !user) return;
 
     try {
-      // Save via API if using Storage, otherwise save to Firestore
-      if (transcription.transcriptStoragePath) {
-        // For large transcripts, we need to update Firestore metadata directly
-        await updateTranscriptionStatus(transcription.id!, transcription.status, {
-          speakerNames: updatedNames
-        });
-      } else {
-        // Small transcript - save directly to Firestore
-        await updateTranscriptionStatus(transcription.id!, transcription.status, {
-          speakerNames: updatedNames
-        });
-      }
+      await updateTranscriptMetadata({ speakerNames: updatedNames });
     } catch (error) {
       console.error('Error saving speaker name:', error);
       toast({
@@ -3436,6 +3455,7 @@ export default function TranscriptViewerPage() {
   // Save speaker segment changes to database
   const saveSpeakerSegmentChanges = async () => {
     if (!transcription?.timestampedTranscript || !user) return;
+    if (!capabilities.canUseAdvancedSpeakerTools) return;
 
     try {
       setSaving(true);
@@ -3446,36 +3466,14 @@ export default function TranscriptViewerPage() {
         speakerNames
       };
 
-      // If transcript is stored in Storage (large file), we need to use the API endpoint
-      if (transcription.transcriptStoragePath) {
-        console.log('[Save] Saving large transcript via API endpoint');
-        const token = await user.getIdToken();
-
-        const response = await fetch(`/api/transcriptions/${transcription.id}/transcript`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to save transcript to Storage');
-        }
-
-        // Persist speaker metadata to Firestore as well
-        await updateTranscriptionStatus(transcription.id!, transcription.status, {
-          speakerNames
-        });
-      } else {
-        // Small transcript - save directly to Firestore
-        console.log('[Save] Saving transcript to Firestore');
-        await updateTranscriptionStatus(transcription.id!, transcription.status, {
-          timestampedTranscript: transcription.timestampedTranscript,
-          speakerNames
-        });
-      }
+      const token = await user.getIdToken();
+      const response = await fetch(`/api/transcriptions/${transcription.id}/transcript`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) throw new Error((await response.json()).error || 'Failed to save speaker changes');
+      await updateTranscriptMetadata({ speakerNames });
 
       setIsEditingSpeakerSegments(false);
       setSpeakerSegmentsDirty(false);
@@ -5339,7 +5337,7 @@ export default function TranscriptViewerPage() {
                 <section aria-labelledby="choose-style-heading">
                   <h3 id="choose-style-heading" className="text-sm font-semibold text-[#003366]">Choose a style</h3>
                   <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                    {TRANSCRIPT_STYLE_PRESETS.map(style => {
+                    {TRANSCRIPT_STYLE_PRESETS.filter(style => capabilities.canChooseTranscriptStyles || style.id === AI_STANDARD_TRANSCRIPT_STYLE_ID).map(style => {
                       const selected = selectedTranscriptStyle === style.id;
                       const firstLabel = style.questionAnswerMode ? 'Q' : 'SPEAKER 1';
                       const secondLabel = style.questionAnswerMode ? 'A' : 'SPEAKER 2';
@@ -5351,7 +5349,7 @@ export default function TranscriptViewerPage() {
                           key={style.id}
                           type="button"
                           aria-pressed={selected}
-                          onClick={() => setSelectedTranscriptStyle(style.id)}
+                          onClick={() => capabilities.canChooseTranscriptStyles && setSelectedTranscriptStyle(style.id)}
                           className={`min-w-0 rounded-md border p-3 text-left transition-colors ${
                             selected
                               ? 'border-[#003366] bg-blue-50 ring-2 ring-[#003366]/20'
@@ -5419,7 +5417,8 @@ export default function TranscriptViewerPage() {
                     <div className="mt-3 rounded-md border border-gray-200 bg-gray-50 p-4 text-sm text-gray-800">
                       <p className="text-center text-xs font-bold underline">TRANSCRIPT</p>
                       {(() => {
-                        const style = TRANSCRIPT_STYLE_PRESETS.find(item => item.id === selectedTranscriptStyle) || TRANSCRIPT_STYLE_PRESETS[0];
+                        const effectiveStyleId = capabilities.canChooseTranscriptStyles ? selectedTranscriptStyle : AI_STANDARD_TRANSCRIPT_STYLE_ID;
+                        const style = TRANSCRIPT_STYLE_PRESETS.find(item => item.id === effectiveStyleId) || TRANSCRIPT_STYLE_PRESETS[0];
                         const label = style.questionAnswerMode ? 'Q' : 'SPEAKER 1';
                         return style.speakerPlacement === 'own-line' ? (
                           <div className="mt-4">
@@ -5674,6 +5673,7 @@ export default function TranscriptViewerPage() {
                   </div>
                 </section>
 
+                {capabilities.canUseFormattingTools && (<>
                 <section className="space-y-3 border-t pt-4">
                   <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
                     Formatting & Punctuation Pass
@@ -5832,6 +5832,8 @@ export default function TranscriptViewerPage() {
                   </div>
                 </section>
 
+                </>)}
+
                 <section className="space-y-3 border-t pt-4">
                   <div className="flex items-center justify-between gap-3">
                     <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
@@ -5842,7 +5844,7 @@ export default function TranscriptViewerPage() {
                     </span>
                   </div>
 
-                  <div className="space-y-2 rounded-lg border border-red-200 bg-red-50/50 p-3">
+                  {capabilities.canUseAdvancedSpeakerTools && (<div className="space-y-2 rounded-lg border border-red-200 bg-red-50/50 p-3">
                     <p className="text-sm font-medium text-red-800">Remove Speaker</p>
                     <p className="text-xs text-gray-600">
                       For interpreted transcripts, you can remove the original-language speaker and keep the interpreter’s English version. Review carefully before saving.
@@ -5887,20 +5889,26 @@ export default function TranscriptViewerPage() {
                     {!isEditing && (
                       <p className="text-xs text-gray-500">Click Edit Transcript before removing a speaker.</p>
                     )}
-                  </div>
+                  </div>)}
 
                   {speakerCount > 0 ? (
                     <div className="space-y-3">
-                      {!isEditing && (
+                      {!isEditing && capabilities.canEditTranscript && (
                         <p className="rounded-md border border-blue-200 bg-blue-50 p-2 text-xs text-blue-900">
                           Click Edit Transcript before changing speaker names or merging speakers.
+                        </p>
+                      )}
+                      {!capabilities.canEditTranscript && (
+                        <p className="rounded-md border border-blue-200 bg-blue-50 p-2 text-xs text-blue-900">
+                          You can rename speaker labels. Speaker merging and reassignment require Transcript Editor Membership.
                         </p>
                       )}
                       <div className="space-y-2">
                         {orderedSpeakers.map((speaker) => {
                           const draftName = getSidebarSpeakerNameDraft(speaker);
                           const savedDisplayName = getSpeakerDisplayName(speaker);
-                          const canApplySpeakerName = isEditing && draftName.trim().length > 0 && draftName.trim() !== savedDisplayName;
+                          const canRenameNow = isEditing || capabilities.accessLevel === 'standard';
+                          const canApplySpeakerName = canRenameNow && draftName.trim().length > 0 && draftName.trim() !== savedDisplayName;
 
                           return (
                           <div key={`workspace-speaker-${speaker}`} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
@@ -5936,11 +5944,11 @@ export default function TranscriptViewerPage() {
                                       setSidebarSpeakerNameDraft(speaker, savedDisplayName);
                                     }
                                   }}
-                                  disabled={saving || !isEditing}
+                                  disabled={saving || !canRenameNow}
                                   className="w-full rounded-md border border-blue-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
                                   placeholder="Type any speaker name"
                                 />
-                                {!isEditing && (
+                                {!canRenameNow && (
                                   <p className="text-xs text-gray-500">
                                     Click Edit Transcript to type or apply a custom name.
                                   </p>
@@ -5974,7 +5982,7 @@ export default function TranscriptViewerPage() {
                                     setSidebarSpeakerNameDraft(speaker, preset);
                                     updateSpeakerName(speaker, preset);
                                   }}
-                                  disabled={saving || !isEditing}
+                                  disabled={saving || !canRenameNow}
                                   className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
                                 >
                                   <option value="">Select preset</option>
@@ -6011,7 +6019,7 @@ export default function TranscriptViewerPage() {
                         </p>
                       </div>
 
-                      <div className="space-y-2 rounded-lg border border-gray-200 p-3">
+                      {capabilities.canUseAdvancedSpeakerTools && (<div className="space-y-2 rounded-lg border border-gray-200 p-3">
                         <p className="text-sm font-medium text-gray-700">Merge speakers</p>
                         <div className="grid grid-cols-1 gap-2">
                           <select
@@ -6058,7 +6066,7 @@ export default function TranscriptViewerPage() {
                             Click Edit Transcript to merge speakers.
                           </p>
                         )}
-                      </div>
+                      </div>)}
 
                       <div className="space-y-2">
                         {!isEditingSpeakerSegments ? (
@@ -6233,7 +6241,7 @@ export default function TranscriptViewerPage() {
                           </div>
 
                           <div className="flex flex-wrap items-center gap-2">
-                            {!isEditing ? (
+                            {!isEditing && capabilities.canEditTranscript ? (
                               <Button
                                 type="button"
                                 variant="outline"
@@ -6244,7 +6252,7 @@ export default function TranscriptViewerPage() {
                                 <Edit3 className="h-4 w-4 mr-2" />
                                 Edit Transcript
                               </Button>
-                            ) : (
+                            ) : isEditing ? (
                               <>
                                 <Button
                                   type="button"
@@ -6277,7 +6285,7 @@ export default function TranscriptViewerPage() {
                                   Discard Changes
                                 </Button>
                               </>
-                            )}
+                            ) : null}
 
                             {isEditing && (
                               <Button
@@ -6383,9 +6391,14 @@ export default function TranscriptViewerPage() {
                         )}
                       </div>
 
-                      {!isEditing && (
+                      {!isEditing && capabilities.canEditTranscript && (
                         <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
                           Read-only view. Click Edit Transcript to make changes.
+                        </div>
+                      )}
+                      {!capabilities.canEditTranscript && (
+                        <div className="mb-4 rounded-md border border-[#b29dd9] bg-[#f7f4fb] p-3 text-sm text-[#003366]">
+                          Full transcript editing tools are available with a Transcript Editor Membership. You can still rename speakers, change timecodes, and download in every supported format.
                         </div>
                       )}
                       {isEditing && hasUnsavedTranscriptDraft && (

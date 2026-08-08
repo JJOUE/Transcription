@@ -37,8 +37,6 @@ service cloud.firestore {
 
     function clientProjectUpdateOnly() {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-        'transcript', 'timestampedTranscript', 'speakerNames',
-        'timestampFrequency', 'transcriptStyleId',
         'clientName', 'projectName', 'providerName', 'patientName',
         'location', 'recordingTime', 'specialInstructions',
         'projectDictionaryTerms', 'includeFiller', 'expectedSpeakerCount',
@@ -100,9 +98,9 @@ service cloud.firestore {
       // Project creation is handled by authenticated server routes.
       allow create: if isAdmin();
 
-      // Owners may edit transcript content and explicitly client-owned metadata.
-      // All workflow, billing, quote, delivery, assignment, and audit state is
-      // omitted from this allowlist and can only be written by admin/server code.
+      // Owners may update only explicitly client-owned project metadata.
+      // Transcript content, editor settings, workflow, billing, quote, delivery,
+      // assignment, and audit state can only be written by admin/server code.
       allow update: if isAdmin() ||
                        (isSignedIn() && resource.data.userId == request.auth.uid &&
                         clientProjectUpdateOnly() && validClientDeletionRequest());
