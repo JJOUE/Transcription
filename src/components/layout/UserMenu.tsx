@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { User, CreditCard, Settings, LogOut, Upload, BarChart3, MessageCircle, HelpCircle } from 'lucide-react';
+import { CreditCard, Settings, LogOut, Upload, BarChart3, MessageCircle, HelpCircle, FileText } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,7 +64,13 @@ export function UserMenu() {
         <DropdownMenuItem asChild>
           <Link href="/upload" className="flex items-center text-gray-900 hover:bg-gray-100">
             <Upload className="mr-2 h-4 w-4 text-gray-600" />
-            Upload
+            Start a Transcription
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/office/upload" className="flex items-center text-gray-900 hover:bg-gray-100">
+            <FileText className="mr-2 h-4 w-4 text-gray-600" />
+            Document Preparation
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>

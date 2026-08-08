@@ -111,7 +111,7 @@ export default function HandwritingTranscriptionPage() {
               </p>
               <p className="text-white/90">
                 If you need handwritten notes, scans, images, or PDFs converted into clean typed
-                text, Document Workspace can help.
+                text, Document Preparation Services can help. Your project is managed securely through Document Workspace.
               </p>
             </div>
 
@@ -169,7 +169,7 @@ export default function HandwritingTranscriptionPage() {
                 href="/pricing#document-workspace"
                 className="inline-flex items-center justify-center rounded-md bg-[#003366] px-5 py-2 font-semibold text-white hover:bg-[#00264d]"
               >
-                View Document Workspace pricing
+                View Document Preparation pricing
               </Link>
             </div>
           </div>
@@ -195,7 +195,7 @@ export default function HandwritingTranscriptionPage() {
             <h2 className="text-2xl font-bold text-[#003366] mb-4">Related services</h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { href: '/document-workspace', label: 'Document Workspace', icon: FileText },
+                { href: '/document-workspace', label: 'Document Preparation Services', icon: FileText },
                 { href: '/copy-typing-services', label: 'Copy Typing Services', icon: FileText },
                 { href: '/guide', label: 'Client Guide', icon: CheckCircle },
                 { href: '/contact', label: 'Contact Us', icon: Upload },
@@ -228,7 +228,7 @@ export default function HandwritingTranscriptionPage() {
                 href="/document-workspace"
                 className="inline-flex items-center justify-center rounded-md bg-white px-6 py-3 font-semibold text-[#003366] hover:bg-gray-100"
               >
-                Learn About Document Workspace
+                Learn About Document Preparation Services
               </Link>
               <Link
                 href="/pricing#document-workspace"

@@ -31,8 +31,7 @@ function AboutPage() {
               About Talk To Text Canada
             </h1>
             <p className="text-xl text-gray-300 mb-8 max-w-3xl mx-auto">
-              Canadian transcription, audio instructions for document preparation, copy typing,
-              handwriting transcription, and document preparation for professionals.
+              Self-service Transcript Workspace tools, Professional Transcription, and human Document Preparation Services for Canadian professionals.
             </p>
           </div>
         </div>
@@ -47,8 +46,8 @@ function AboutPage() {
                 Our Mission
               </h2>
               <p className="text-lg text-gray-600 mb-6">
-                At Talk To Text Canada, our mission is to make professional transcription
-                and document preparation easier to access, with secure upload and download,
+                At Talk To Text Canada, our mission is to make self-service AI transcription, professional transcription,
+                and human document preparation easier to access, with secure upload and download,
                 clear service options, and practical human support where needed.
               </p>
               <p className="text-lg text-gray-600">
@@ -68,8 +67,8 @@ function AboutPage() {
                   <div className="text-lg text-gray-600">Files Processed</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-5xl font-bold text-[#003366] mb-4">99.5%</div>
-                  <div className="text-lg text-gray-600">Accuracy Rate</div>
+                  <div className="text-5xl font-bold text-[#003366] mb-4">27+</div>
+                  <div className="text-lg text-gray-600">Years Combined Experience</div>
                 </div>
                 <div className="text-center">
                   <div className="text-5xl font-bold text-[#003366] mb-4">500+</div>
@@ -209,8 +208,8 @@ function AboutPage() {
                 Practical Transcription Tools
               </h3>
               <p className="text-gray-600">
-                AI tools support fast transcription and draft creation while clients can
-                choose human review when a file needs extra attention.
+                AI is used only when a client selects AI Transcription or Hybrid Transcription.
+                Human Transcription and human-only document preparation do not use AI to generate the work.
               </p>
             </div>
 

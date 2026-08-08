@@ -18,12 +18,12 @@ import { Footer } from '@/components/layout/Footer';
 export const metadata: Metadata = {
   title: 'Transcript Workspace | Talk to Text Canada',
   description:
-    "Upload, edit, review, and download transcripts using Talk to Text Canada's secure Transcript Workspace with speaker tools, cleanup tools, timestamps, dictionaries, and export options.",
+    "Self-service AI transcription and transcript editing tools, including speakers, timestamps, Search & Replace, formatting, preview, and exports.",
   metadataBase: new URL('https://www.talktotext.ca'),
   openGraph: {
     title: 'Transcript Workspace | Talk to Text Canada',
     description:
-      "Upload, edit, review, and download transcripts using Talk to Text Canada's secure Transcript Workspace with speaker tools, cleanup tools, timestamps, dictionaries, and export options.",
+      "Self-service AI transcription and transcript editing tools, including speakers, timestamps, Search & Replace, formatting, preview, and exports.",
     url: 'https://www.talktotext.ca/transcript-workspace',
     type: 'website',
   },
@@ -31,9 +31,9 @@ export const metadata: Metadata = {
 
 const howItWorks = [
   'Upload your audio or video',
-  'Choose AI self-editing, Hybrid Review, or Human Transcription',
+  'Use free, standard, or member-rate AI minutes',
   'Add speaker count and project terms',
-  'Edit AI yourself, or receive a transcript prepared through Hybrid or Human service',
+  'Review and edit the AI-generated transcript yourself',
   'Download in the format you need',
 ];
 
@@ -59,8 +59,8 @@ const usageSteps = [
     text: 'When your transcript is ready, open it in Transcript Workspace from your dashboard.',
   },
   {
-    title: 'Edit when needed',
-    text: 'AI users review and correct the AI-generated transcript themselves. Hybrid and Human clients receive a prepared transcript and may optionally make adjustments.',
+    title: 'Review and edit',
+    text: 'Review the AI-generated transcript and make the corrections, speaker changes, or formatting adjustments you need.',
   },
   {
     title: 'Use cleanup tools',
@@ -78,8 +78,8 @@ const usageSteps = [
 
 const features = [
   {
-    title: 'Choose who edits the transcript',
-    text: 'With AI, you edit the AI-generated transcript yourself. With Hybrid, we review and finish the AI draft. With Human Transcription, a transcriptionist prepares it from start to finish.',
+    title: 'Self-service AI transcription',
+    text: 'Receive an AI-generated transcript and use the full workspace to review, edit, format, preview, and export it yourself.',
   },
   {
     title: 'Expected speaker count',
@@ -139,7 +139,10 @@ export default function TranscriptWorkspacePage() {
                   Transcript Workspace
                 </h1>
                 <p className="text-lg md:text-xl text-gray-700 mb-8">
-                  AI users review and edit their AI-generated transcript here. Hybrid and Human clients can preview, optionally adjust, and download the transcript prepared for them.
+                  Self-service AI transcription and transcript editing tools in one secure workspace.
+                </p>
+                <p className="text-sm text-gray-600 mb-8">
+                  Need a transcriptionist to review or create the transcript for you? See <Link href="/pricing#professional-transcription" className="font-semibold text-[#003366] underline underline-offset-4">Professional Transcription</Link>.
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4">
@@ -170,7 +173,7 @@ export default function TranscriptWorkspacePage() {
                   <div className="flex items-center justify-between border-b border-gray-100 pb-4 mb-4">
                     <div>
                       <p className="text-sm font-semibold text-[#003366]">Transcript Workspace</p>
-                      <p className="text-xs text-gray-500">Review when needed, preview, export</p>
+                      <p className="text-xs text-gray-500">Edit, format, preview, export</p>
                     </div>
                     <ShieldCheck className="h-7 w-7 text-[#b29dd9]" />
                   </div>
@@ -194,7 +197,7 @@ export default function TranscriptWorkspacePage() {
               <div>
                 <h2 className="text-3xl font-bold mb-3">See how Transcript Workspace works</h2>
                 <p className="text-white/90">
-                  A short walkthrough video will appear here showing upload, optional editing, speaker tools,
+                  A short walkthrough video will appear here showing upload, editing, speaker tools,
                   cleanup tools, and download options.
                 </p>
               </div>
@@ -214,8 +217,7 @@ export default function TranscriptWorkspacePage() {
                 How to use Transcript Workspace
               </h2>
               <p className="text-gray-700 max-w-2xl mx-auto">
-                AI users follow these steps to review and edit their draft. Hybrid and Human clients can use the workspace to preview,
-                optionally adjust, and download the transcript prepared for them.
+                Follow these steps to create, review, edit, save, and download your AI-generated transcript.
               </p>
             </div>
 
@@ -316,8 +318,7 @@ export default function TranscriptWorkspacePage() {
               <h3 className="text-2xl font-bold text-[#003366] mb-4">Designed for real review work</h3>
               <p className="text-gray-700 mb-4">
                 Transcript Workspace supports legal, business, academic, and professional transcription
-                workflows where AI users can review and correct their draft, while Hybrid and Human
-                clients can preview, optionally adjust, and export the transcript prepared for them.
+                workflows where clients want to review and correct an AI-generated draft themselves.
               </p>
               <p className="text-gray-700">
                 Built on 27 years of combined legal documentation and transcription experience.
@@ -329,8 +330,7 @@ export default function TranscriptWorkspacePage() {
             <FileText className="mx-auto mb-4 h-10 w-10 text-white" />
             <h2 className="text-3xl font-bold mb-3">Ready to start a transcript?</h2>
             <p className="text-white/90 mb-6">
-              Upload your file, choose the review level you need, and manage the finished transcript
-              in your secure workspace.
+              Upload your file, create an AI transcript, and use the full editor and export tools in your secure workspace.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link

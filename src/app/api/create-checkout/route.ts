@@ -104,7 +104,7 @@ async function createCheckoutSession(request: NextRequest, decodedToken: any) {
         type: packageType,
         name: typeof catalogPackage.name === 'string' && catalogPackage.name.trim()
           ? catalogPackage.name.trim()
-          : `${packageType === 'ai' ? 'AI Transcription' : packageType === 'hybrid' ? 'Hybrid Review' : 'Human Transcription'} - ${minutes} minutes`,
+          : `${packageType === 'ai' ? 'AI Transcription' : packageType === 'hybrid' ? 'Hybrid Transcription' : 'Human Transcription'} - ${minutes} minutes`,
         minutes,
         rate,
         price,

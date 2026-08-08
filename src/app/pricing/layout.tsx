@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Pricing | Talk to Text Canada',
   description:
-    'View pricing for AI transcription, hybrid review, human transcription, and Document Workspace services, including document preparation and custom quote options.',
+    'Compare Transcript Workspace AI pricing, Professional Hybrid and Human Transcription, and Document Preparation Services.',
 };
 
 export default function PricingLayout({

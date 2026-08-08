@@ -282,7 +282,7 @@ export default function UploadPage() {
     },
     {
       id: 'hybrid',
-      name: 'Hybrid Review',
+      name: 'Hybrid Transcription',
       description: 'AI transcription reviewed by human experts',
       creditsPerMinute: 150, // Legacy support
       costPerMinute: pricingSettings?.payAsYouGo.hybrid || 1.50, // CA$ per minute from database

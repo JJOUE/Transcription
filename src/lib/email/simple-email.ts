@@ -91,7 +91,7 @@ export async function sendSimpleNotification(
     const serviceLabel = notification.mode === 'ai'
       ? 'AI Transcription'
       : notification.mode === 'hybrid'
-        ? 'Hybrid Review'
+        ? 'Hybrid Transcription'
         : 'Human Transcription';
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://talktotext.ca';
     const adminQueueUrl = `${appUrl.replace(/\/$/, '')}/admin`;
@@ -261,8 +261,8 @@ export async function sendDocumentWorkspaceClientEmail(
     ? businessBcc
     : undefined;
   const copy = {
-    'quote-ready': { subject: 'Your project quote is ready', heading: 'Your Document Workspace quote is ready to review.' },
-    'payment-requested': { subject: 'Payment requested for your project', heading: 'Payment has been requested for your approved Document Workspace quote.' },
+    'quote-ready': { subject: 'Your project quote is ready', heading: 'Your Document Preparation Services quote is ready to review.' },
+    'payment-requested': { subject: 'Payment requested for your project', heading: 'Payment has been requested for your approved Document Preparation Services quote.' },
     'payment-received-ready': {
       subject: 'Your completed project is ready',
       heading: notification.total === 0
@@ -270,7 +270,7 @@ export async function sendDocumentWorkspaceClientEmail(
         : 'Payment has been received and your completed project is ready.',
     },
   }[notification.kind];
-  const text = `${copy.heading}\n\nProject reference: ${notification.projectId}\nService: ${notification.serviceLabel || 'Document Workspace'}${notification.total == null ? '' : `\nTotal: CA$${notification.total.toFixed(2)}`}\n\nSign in to your secure dashboard to review the project:\n${notification.dashboardUrl}\n\nNo files are attached to this email.`;
+  const text = `${copy.heading}\n\nProject reference: ${notification.projectId}\nService: ${notification.serviceLabel || 'Document Preparation Services'}${notification.total == null ? '' : `\nTotal: CA$${notification.total.toFixed(2)}`}\n\nThis project is managed securely through your Document Workspace. Sign in to review it:\n${notification.dashboardUrl}\n\nNo files are attached to this email.`;
 
   try {
     const response = await fetch('https://api.resend.com/emails', {

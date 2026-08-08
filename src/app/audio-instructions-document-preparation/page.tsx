@@ -73,7 +73,7 @@ export default function AudioInstructionsDocumentPreparationPage() {
         <section className="bg-white border-b">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
             <p className="text-sm font-semibold text-[#b29dd9] uppercase tracking-wide mb-3">
-              Document Workspace
+              Document Preparation Services
             </p>
             <h1 className="text-4xl md:text-5xl font-bold text-[#003366] mb-6">
               Audio Instructions for Document Preparation
@@ -120,7 +120,7 @@ export default function AudioInstructionsDocumentPreparationPage() {
                 in a recording.
               </p>
               <p className="text-white/90">
-                If you need a transcript instead, compare AI self-editing, Hybrid Review, and Human Transcription.
+                If you need a transcript instead, compare self-service AI Transcription with Professional Hybrid or Human Transcription.
                 If you need a document prepared from your audio instructions and supporting files,
                 use Document Workspace.
               </p>
@@ -161,7 +161,7 @@ export default function AudioInstructionsDocumentPreparationPage() {
             </h2>
             <p className="text-gray-700 mb-5">
               Choose AI Transcription if you are an experienced user who will review and edit the AI-generated transcript yourself.
-              Choose Hybrid Review or Human Transcription when you want us to prepare the transcript for you. Use Document Workspace
+              Choose Hybrid Transcription or Human Transcription when you want Professional Transcription. Use Document Workspace
               when you need a human-prepared document based on instructions, notes, scans, handwriting, templates, or reference files.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
@@ -206,7 +206,7 @@ export default function AudioInstructionsDocumentPreparationPage() {
                 href="/pricing#document-workspace"
                 className="inline-flex items-center justify-center rounded-md bg-[#003366] px-5 py-2 font-semibold text-white hover:bg-[#00264d]"
               >
-                View Document Workspace pricing
+                View Document Preparation pricing
               </Link>
             </div>
           </div>
@@ -233,11 +233,11 @@ export default function AudioInstructionsDocumentPreparationPage() {
             <h2 className="text-2xl font-bold text-[#003366] mb-4">Related services</h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { href: '/document-workspace', label: 'Document Workspace', icon: FileText },
+                { href: '/document-workspace', label: 'Document Preparation Services', icon: FileText },
                 { href: '/copy-typing-services', label: 'Copy Typing Services', icon: FileText },
                 { href: '/handwriting-transcription', label: 'Handwriting Transcription', icon: FileText },
                 { href: '/transcript-workspace', label: 'Transcript Workspace', icon: FileAudio },
-                { href: '/pricing#document-workspace', label: 'Document Workspace Pricing', icon: ShieldCheck },
+                { href: '/pricing#document-workspace', label: 'Document Preparation Pricing', icon: ShieldCheck },
                 { href: '/pricing?service=ai', label: 'AI Transcription Pricing', icon: FileAudio },
                 { href: '/guide', label: 'Client Guide', icon: CheckCircle },
                 { href: '/contact', label: 'Contact Us', icon: Upload },
@@ -270,7 +270,7 @@ export default function AudioInstructionsDocumentPreparationPage() {
                 href="/document-workspace"
                 className="inline-flex items-center justify-center rounded-md bg-white px-6 py-3 font-semibold text-[#003366] hover:bg-gray-100"
               >
-                Learn About Document Workspace
+                Learn About Document Preparation Services
               </Link>
               <Link
                 href="/pricing#document-workspace"

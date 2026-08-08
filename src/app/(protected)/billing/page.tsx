@@ -206,7 +206,7 @@ export default function BillingPage() {
         };
       case 'hybrid':
         return {
-          name: 'Hybrid Review',
+          name: 'Hybrid Transcription',
           icon: Users,
           description: 'AI + Human review (3-5 business days)',
           standardRate: pricingSettings?.payAsYouGo.hybrid || 1.50
@@ -295,13 +295,13 @@ export default function BillingPage() {
         </Alert>
 
         <Card className="mb-8 border-2 border-[#b29dd9]">
-          <CardHeader><CardTitle>AI + Professional Editor</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Transcript Editor Membership</CardTitle></CardHeader>
           <CardContent>
             <p className="text-2xl font-bold text-[#003366]">CA$19.99/month</p>
             <p className="mt-2">CA$0.03 per AI audio minute and full Transcript Workspace editing tools.</p>
             <p className="text-sm text-gray-500 mt-2">Your 60 free AI minutes remain separate and include full editor access.</p>
             <Button className="mt-4" onClick={startMembershipCheckout} disabled={membership.active}>
-              {membership.active ? 'Professional Editor Active' : 'Start Professional Editor Membership'}
+              {membership.active ? 'Transcript Editor Membership Active' : 'Start Transcript Editor Membership'}
             </Button>
           </CardContent>
         </Card>

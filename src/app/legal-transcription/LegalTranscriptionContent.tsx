@@ -24,11 +24,11 @@ interface FAQItem {
 const faqItems: FAQItem[] = [
   {
     question: 'Are your transcripts court-certified?',
-    answer: 'Our transcripts are professional-quality transcriptions created using AI and human expertise. They are not court-certified court reporter transcripts. For certified court reporting, please hire a certified court reporter. Our human-reviewed transcriptions are suitable for legal documentation, evidence files, and office workflows.'
+    answer: 'The preparation method depends on the service selected. AI Transcription is self-service, Hybrid Transcription uses AI followed by professional audio review, and Human Transcription is created from the original audio without an AI-generated draft. These are not court-certified court reporter transcripts. For certified court reporting, please hire a certified court reporter.'
   },
   {
     question: 'Is human review available for legal transcripts?',
-    answer: 'Yes. We offer Human Transcription mode for legal audio. Our transcribers are experienced with legal documentation and can review terminology, proper names, and formal language to support professional legal workflows.'
+    answer: 'Yes. Hybrid Transcription includes professional review of an AI-generated first transcript. Human Transcription is typed, formatted, reviewed against the original recording, and proofread by a professional transcriptionist without an AI-generated draft.'
   },
   {
     question: 'Do you support legal hearings and administrative proceedings?',
@@ -36,7 +36,7 @@ const faqItems: FAQItem[] = [
   },
   {
     question: 'Is AI transcription appropriate for legal audio?',
-    answer: 'AI Transcription is intended for transcriptionists and experienced users who will review and correct the AI-generated transcript themselves. Clients who want Talk to Text Canada to finish the transcript should choose Hybrid Review or Human Transcription.'
+    answer: 'AI Transcription is intended for users who will review and correct the AI-generated transcript themselves. Clients who want Professional Transcription should choose Hybrid Transcription for AI plus professional review, or Human Transcription for work created from the original audio without an AI-generated draft.'
   },
   {
     question: 'Can I download transcripts securely?',
@@ -183,12 +183,12 @@ export function LegalTranscriptionContent() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5 text-[#b29dd9]" />
-                Hybrid AI + Human Review
+                Hybrid Transcription
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-3">
-                AI transcription followed by human review for accuracy, formatting, speaker labels, and transcript quality. We finish the transcript for you.
+                AI-generated first, then reviewed and corrected against the original audio by a professional transcriptionist. This is the more affordable professionally reviewed option.
               </p>
               <ul className="space-y-1 text-sm text-gray-600">
                 <li>✓ AI speed plus expert review</li>
@@ -207,7 +207,7 @@ export function LegalTranscriptionContent() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-3">
-                Your audio is transcribed and prepared by a human transcriptionist from start to finish.
+                No AI-generated transcript. Your recording is typed, formatted, reviewed against the original audio, speaker formatted, paragraph formatted, and proofread by a professional transcriptionist.
               </p>
               <ul className="space-y-1 text-sm text-gray-600">
                 <li>✓ Detailed human review</li>
@@ -274,7 +274,7 @@ export function LegalTranscriptionContent() {
                 Choose Who Edits the Transcript
               </h3>
               <p className="text-gray-700 text-sm">
-                With AI Transcription, you review and edit the AI-generated transcript yourself. With Hybrid Review or Human Transcription, we prepare the finished transcript for you.
+                With AI Transcription, you review and edit the AI-generated transcript yourself. Hybrid Transcription combines AI with professional audio review. Human Transcription is created from the original audio without an AI-generated draft.
               </p>
             </div>
 
@@ -301,7 +301,7 @@ export function LegalTranscriptionContent() {
         <CardHeader>
           <CardTitle className="text-3xl">Ready to Transform Your Legal Transcription?</CardTitle>
           <CardDescription className="text-gray-100 mt-2">
-            Choose AI if you are comfortable editing the AI-generated transcript yourself, Hybrid Review if you want us to review and finish it, or Human Transcription for human preparation from start to finish.
+            Choose Transcript Workspace for self-service AI transcription, Hybrid Transcription for a more affordable professionally reviewed transcript, or Human Transcription for human-only preparation from the original audio.
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -18,7 +18,7 @@ import { Footer } from '@/components/layout/Footer';
 export const metadata: Metadata = {
   title: 'Help & Guide | Talk to Text Canada',
   description:
-    'A beginner-friendly guide to using Talk to Text Canada for transcription, Transcript Workspace, Document Workspace, uploads, pricing, retention, and downloads.',
+    'A beginner-friendly guide to Transcript Workspace, Professional Transcription, Document Preparation Services, uploads, pricing, retention, and downloads.',
   metadataBase: new URL('https://www.talktotext.ca'),
   openGraph: {
     title: 'Guide | Talk to Text Canada',
@@ -31,11 +31,11 @@ export const metadata: Metadata = {
 
 const transcriptSteps = [
   'Upload your audio or video through your secure workspace.',
-  'Choose AI if you will edit the AI-generated transcript yourself, Hybrid if you want us to review and finish it, or Human Transcription from start to finish.',
+  'Use your free AI minutes, standard AI transcription, or the member AI rate.',
   'Add the expected speaker count and any project dictionary terms, such as names, places, organizations, acronyms, or preferred spellings.',
   'Select saved client dictionary terms if you want to reuse private terms from past jobs.',
   'Open the completed transcript from your dashboard when it is ready.',
-  'For AI Transcription, use Edit Transcript to review and correct the AI-generated text yourself. Hybrid and Human transcripts are prepared for you.',
+  'Use Edit Transcript to review and correct the AI-generated text yourself.',
   'Optional workspace tools let you adjust speaker labels, formatting, cleanup, and timestamp display without rewriting the transcript meaning.',
   'If you make changes, click Save Transcript before downloading, leaving, or closing the workspace.',
   'Download your completed transcript in the format you need.',
@@ -156,8 +156,8 @@ export default function GuidePage() {
                   Transcript Workspace
                 </h2>
                 <p className="text-gray-700 max-w-3xl">
-                  Transcript Workspace is where AI users review and edit their AI-generated transcript.
-                  Hybrid and Human clients can open, preview, optionally adjust, and download the transcript we prepared for them.
+                  Self-service AI transcription and transcript editing tools, including speaker tools,
+                  timestamps, Search &amp; Replace, formatting, preview, and exports.
                 </p>
               </div>
               <Link
@@ -184,11 +184,11 @@ export default function GuidePage() {
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between mb-8">
               <div>
                 <h2 className="text-3xl font-bold text-[#003366] mb-3">
-                  Document Workspace
+                  Document Preparation Services
                 </h2>
                 <p className="text-gray-700 max-w-3xl">
-                  Document Workspace is for human-prepared documents from audio instructions, copy
-                  typing, handwriting transcription, notes, files, and references.
+                  Human-prepared documents from dictation, copy typing, handwriting, templates, notes,
+                  files, and references. Projects are managed securely through Document Workspace.
                 </p>
               </div>
               <Link
@@ -216,20 +216,25 @@ export default function GuidePage() {
           </div>
 
           <div id="workspace-comparison" className="scroll-mt-24 rounded-2xl border border-[#ddd3ed] bg-[#f7f4fb] p-8 shadow-sm mb-12">
-            <h2 className="text-3xl font-bold text-[#003366] mb-4">Compare the Workspaces</h2>
-            <div className="grid gap-6 md:grid-cols-2">
+            <h2 className="text-3xl font-bold text-[#003366] mb-4">Compare Services and Workspaces</h2>
+            <div className="grid gap-6 md:grid-cols-3">
               <div>
                 <h3 className="text-xl font-semibold text-[#003366]">Transcript Workspace</h3>
-                <p className="mt-2 text-gray-700">AI users edit the AI-generated transcript themselves. With Hybrid Review or Human Transcription, we prepare the transcript for you. Available transcripts can be opened, previewed, optionally adjusted, and downloaded.</p>
-                <Link href="/upload" className="mt-4 inline-flex font-semibold text-[#003366] underline underline-offset-4">Create a transcript</Link>
+                <p className="mt-2 text-gray-700">Self-service AI transcription and full transcript editing and export tools.</p>
+                <Link href="/upload" className="mt-4 inline-flex font-semibold text-[#003366] underline underline-offset-4">Create an AI transcript</Link>
               </div>
               <div>
-                <h3 className="text-xl font-semibold text-[#003366]">Document Workspace</h3>
-                <p className="mt-2 text-gray-700">Prepares a finished document from dictation, handwriting, copy typing, instructions, or a supplied template. The final product is a document, not a transcript.</p>
+                <h3 className="text-xl font-semibold text-[#003366]">Professional Transcription</h3>
+                <p className="mt-2 text-gray-700">Hybrid Transcription starts with AI and is professionally reviewed. Human Transcription is created from the original audio without an AI-generated draft.</p>
+                <Link href="/pricing#professional-transcription" className="mt-4 inline-flex font-semibold text-[#003366] underline underline-offset-4">Compare professional options</Link>
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-[#003366]">Document Preparation Services</h3>
+                <p className="mt-2 text-gray-700">Human document preparation from dictation, handwriting, copy typing, instructions, or a supplied template. Projects are managed through Document Workspace.</p>
                 <Link href="/office/upload" className="mt-4 inline-flex font-semibold text-[#003366] underline underline-offset-4">Prepare a finished document</Link>
               </div>
             </div>
-            <p className="mt-6 rounded-md border border-[#cfc2e6] bg-white p-4 text-sm text-gray-700">The workspaces are separate. A project, file, or editor in one workspace does not transfer to the other automatically.</p>
+            <p className="mt-6 rounded-md border border-[#cfc2e6] bg-white p-4 text-sm text-gray-700">AI is used only when you select AI Transcription or Hybrid Transcription. Human Transcription and human-only Document Preparation Services do not use AI to generate the work.</p>
           </div>
 
           <div className="grid lg:grid-cols-2 gap-8 mb-12">

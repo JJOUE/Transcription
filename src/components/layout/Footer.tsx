@@ -87,7 +87,7 @@ export function Footer() {
                     isLightFooter ? "hover:text-[#003366]" : "hover:text-white"
                   }`}
                 >
-                  Hybrid Review
+                  Professional Transcription
                 </Link>
               </li>
               <li>
@@ -97,7 +97,7 @@ export function Footer() {
                     isLightFooter ? "hover:text-[#003366]" : "hover:text-white"
                   }`}
                 >
-                  Document Workspace Pricing
+                  Document Preparation Services
                 </Link>
               </li>
               <li>

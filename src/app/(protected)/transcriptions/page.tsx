@@ -122,7 +122,7 @@ export default function TranscriptionsPage() {
 
       // Convert mode to display name for filtering
       const modeDisplayName = transcription.mode === 'ai' ? 'AI Transcription' :
-                             transcription.mode === 'hybrid' ? 'Hybrid Review' :
+                             transcription.mode === 'hybrid' ? 'Hybrid Transcription' :
                              transcription.mode === 'human' ? 'Human Transcription' : transcription.mode;
       const matchesMode = modeFilter === 'all' || modeDisplayName === modeFilter;
 
@@ -298,7 +298,7 @@ export default function TranscriptionsPage() {
                   <SelectContent>
                     <SelectItem value="all">All Modes</SelectItem>
                     <SelectItem value="AI Transcription">AI Transcription</SelectItem>
-                    <SelectItem value="Hybrid Review">Hybrid Review</SelectItem>
+                    <SelectItem value="Hybrid Transcription">Hybrid Transcription</SelectItem>
                     <SelectItem value="Human Transcription">Human Transcription</SelectItem>
                   </SelectContent>
                 </Select>
@@ -369,7 +369,7 @@ export default function TranscriptionsPage() {
                         <span className="text-gray-600 font-medium">Mode:</span>
                         <p className="text-[#003366]">
                           {transcription.mode === 'ai' ? 'AI Transcription' :
-                           transcription.mode === 'hybrid' ? 'Hybrid Review' :
+                           transcription.mode === 'hybrid' ? 'Hybrid Transcription' :
                            transcription.mode === 'human' ? 'Human Transcription' : transcription.mode}
                         </p>
                       </div>
@@ -599,7 +599,7 @@ export default function TranscriptionsPage() {
                 </div>
                 <div className="text-sm text-gray-600">
                   <strong>Mode:</strong> {deleteTarget.mode === 'ai' ? 'AI Transcription' :
-                    deleteTarget.mode === 'hybrid' ? 'Hybrid Review' :
+                    deleteTarget.mode === 'hybrid' ? 'Hybrid Transcription' :
                     deleteTarget.mode === 'human' ? 'Human Transcription' : deleteTarget.mode}
                 </div>
                 <div className="text-sm text-gray-600">

@@ -16,12 +16,12 @@ import { Footer } from '@/components/layout/Footer';
 export const metadata: Metadata = {
   title: 'Academic Transcription Services Canada | Talk to Text Canada',
   description:
-    'Canadian academic transcription services for research interviews, lectures, seminars, academic discussions, and educational audio or video files. AI, hybrid, and human transcription options available.',
+    'Canadian academic transcription with self-service AI, professionally reviewed Hybrid Transcription, and human-only transcription options.',
   metadataBase: new URL('https://www.talktotext.ca'),
   openGraph: {
     title: 'Academic Transcription Services Canada | Talk to Text Canada',
     description:
-      'Canadian academic transcription services for research interviews, lectures, seminars, academic discussions, and educational audio or video files. AI, hybrid, and human transcription options available.',
+      'Canadian academic transcription with self-service AI, professionally reviewed Hybrid Transcription, and human-only transcription options.',
     url: 'https://www.talktotext.ca/academic-transcription',
     type: 'website',
   },
@@ -61,18 +61,18 @@ const serviceOptions = [
     href: '/pricing?service=ai',
   },
   {
-    title: 'Hybrid Review',
-    text: 'AI transcription followed by human review. We finish the transcript for you, so you do not need to edit it yourself.',
+    title: 'Hybrid Transcription',
+    text: 'AI-generated first, then reviewed and corrected against the original audio by a professional transcriptionist. A more affordable professionally reviewed option.',
     href: '/pricing?service=hybrid',
   },
   {
     title: 'Human Transcription',
-    text: 'A human transcriptionist transcribes and prepares the transcript from start to finish.',
+    text: 'No AI-generated transcript. A professional transcriptionist types, formats, reviews, and proofreads the transcript from the original audio.',
     href: '/pricing?service=human',
   },
   {
-    title: 'Document Workspace',
-    text: 'Use this if you need a human-prepared document from audio instructions, notes, handwriting, or files.',
+    title: 'Document Preparation Services',
+    text: 'Human-prepared documents from dictation, notes, handwriting, or files, managed through Document Workspace.',
     href: '/document-workspace',
   },
 ];
@@ -81,7 +81,7 @@ const workflowSteps = [
   'Create your account.',
   'Upload your academic audio or video.',
   'Add speaker count, names, spellings, terminology, or project dictionary terms.',
-  'Edit an AI transcript yourself, or receive a transcript prepared for you through Hybrid Review or Human Transcription.',
+  'Edit an AI transcript yourself, or choose Professional Transcription through Hybrid or Human Transcription.',
   'Save and download your completed transcript.',
 ];
 
@@ -100,7 +100,7 @@ export default function AcademicTranscriptionPage() {
               Academic Transcription Services in Canada
             </h1>
             <p className="text-lg md:text-xl text-gray-700 max-w-3xl mx-auto mb-4">
-              Upload academic audio or video files, choose AI, Hybrid, or Human transcription, and
+              Upload academic audio or video files, choose self-service AI or Professional Hybrid or Human Transcription, and
               download your completed transcript securely.
             </p>
             <p className="text-sm text-gray-500 max-w-3xl mx-auto mb-8">
@@ -141,8 +141,8 @@ export default function AcademicTranscriptionPage() {
                 researchers, professors, universities, and academic professionals.
               </p>
               <p className="text-white/90">
-                Use Transcript Workspace when you need audio or video converted into a transcript.
-                Use Document Workspace when you need a human-prepared document from audio
+                Use Transcript Workspace for self-service AI transcription and editing. Choose Professional Transcription for Hybrid or Human service.
+                Use Document Preparation Services when you need a human-prepared document from audio
                 instructions, notes, files, scans, handwriting, templates, or references.
               </p>
             </div>
@@ -242,9 +242,9 @@ export default function AcademicTranscriptionPage() {
                 { href: '/transcript-workspace', label: 'Transcript Workspace', icon: FileAudio },
                 { href: '/pricing', label: 'Transcription Pricing', icon: ShieldCheck },
                 { href: '/pricing?service=ai', label: 'AI Transcription Pricing', icon: FileAudio },
-                { href: '/pricing?service=hybrid', label: 'Hybrid Review Pricing', icon: CheckCircle },
+                { href: '/pricing?service=hybrid', label: 'Hybrid Transcription Pricing', icon: CheckCircle },
                 { href: '/pricing?service=human', label: 'Human Transcription Pricing', icon: Users },
-                { href: '/document-workspace', label: 'Document Workspace', icon: FileText },
+                { href: '/document-workspace', label: 'Document Preparation Services', icon: FileText },
                 { href: '/guide', label: 'Client Guide', icon: CheckCircle },
                 { href: '/contact', label: 'Contact Us', icon: Upload },
               ].map((item) => {

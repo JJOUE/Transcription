@@ -141,11 +141,11 @@ export function WalletProvider({ children }: WalletProviderProps) {
   // Mode pricing configuration (from database)
   const MODE_PRICING = pricingSettings ? {
     ai: { standardRate: professionalEditorAiRate, name: 'AI Transcription' },
-    hybrid: { standardRate: pricingSettings.payAsYouGo.hybrid, name: 'Hybrid Review' },
+    hybrid: { standardRate: pricingSettings.payAsYouGo.hybrid, name: 'Hybrid Transcription' },
     human: { standardRate: pricingSettings.payAsYouGo.human, name: 'Human Transcription' }
   } : {
     ai: { standardRate: professionalEditorAiRate, name: 'AI Transcription' },
-    hybrid: { standardRate: 1.50, name: 'Hybrid Review' },
+    hybrid: { standardRate: 1.50, name: 'Hybrid Transcription' },
     human: { standardRate: 2.50, name: 'Human Transcription' }
   };
 

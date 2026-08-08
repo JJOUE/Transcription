@@ -669,7 +669,8 @@ export default function OfficeUploadPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-[#003366] mb-2">Document Workspace</h1>
+          <h1 className="text-4xl font-bold text-[#003366] mb-2">Document Preparation Services</h1>
+          <p className="text-sm text-gray-500 mb-3">Projects are managed securely through your Document Workspace.</p>
           <p className="text-lg text-gray-600">
             Upload audio instructions, documents, scans, handwriting, or reference files for preparation.
           </p>

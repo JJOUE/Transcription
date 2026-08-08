@@ -95,7 +95,7 @@ export function UserDashboard() {
 
   const packageTypeLabel = (type: 'ai' | 'hybrid' | 'human') => ({
     ai: 'AI Transcription Package',
-    hybrid: 'Hybrid Review Package',
+    hybrid: 'Hybrid Transcription Package',
     human: 'Human Transcription Package',
   })[type];
 
@@ -376,7 +376,7 @@ export function UserDashboard() {
                 >
                   <Link href="/office/upload">
                     <FileText className="mr-2 h-4 w-4" />
-                    Document Workspace
+                    Document Preparation Services
                   </Link>
                 </Button>
                 
@@ -451,7 +451,7 @@ export function UserDashboard() {
                         <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
                           <span>
                             {job.mode === 'ai' ? 'AI Transcription' :
-                             job.mode === 'hybrid' ? 'Hybrid Review' :
+                             job.mode === 'hybrid' ? 'Hybrid Transcription' :
                              job.mode === 'human' ? 'Human Transcription' : job.mode}
                           </span>
                           <span>{Math.ceil(job.duration / 60)} min</span>
@@ -509,7 +509,7 @@ export function UserDashboard() {
                                   {job.mode === 'ai'
                                     ? 'AI Transcription'
                                     : job.mode === 'hybrid'
-                                    ? 'Hybrid Review'
+                                    ? 'Hybrid Transcription'
                                     : job.mode === 'human'
                                     ? 'Human Transcription'
                                     : job.mode}
@@ -573,7 +573,7 @@ export function UserDashboard() {
                   {/* Document Workspace Projects Section */}
                   <div className="pt-2 border-t border-gray-100 mt-6">
                     <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-                      Document Workspace Projects
+                      Document Preparation Projects
                     </h3>
                   </div>
 
@@ -668,8 +668,8 @@ export function UserDashboard() {
                   {!jobsLoading && officeJobs.length === 0 && (
                     <div className="text-center py-8 text-gray-500">
                       <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                      <p className="text-lg font-medium mb-2">No Document Workspace projects yet</p>
-                      <p className="text-sm">Start a new Document Workspace project to get started!</p>
+                      <p className="text-lg font-medium mb-2">No Document Preparation projects yet</p>
+                      <p className="text-sm">Start a new Document Preparation project to get started.</p>
                     </div>
                   )}
                 </div>

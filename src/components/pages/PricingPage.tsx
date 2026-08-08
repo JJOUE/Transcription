@@ -39,10 +39,12 @@ export function PricingPage() {
     const tabMap: Record<string, string> = {
       ai: 'ai',
       hybrid: 'hybrid',
+      'professional-transcription': 'hybrid',
       human: 'human',
       dictation: 'dictation',
       documents: 'dictation',
       'document-workspace': 'dictation',
+      'document-preparation-services': 'dictation',
     };
 
     if (value && tabMap[value]) {
@@ -106,7 +108,7 @@ const getTypeInfo = (type: string) => {
   switch (type) {
     case 'ai':
       return {
-        title: 'AI Transcription Packages',
+        title: 'Transcript Workspace',
         subtitle: 'For transcriptionists and experienced users who will review and edit the AI-generated transcript themselves',
         icon: Zap,
         label: 'AI Transcription'
@@ -114,10 +116,10 @@ const getTypeInfo = (type: string) => {
 
     case 'hybrid':
       return {
-        title: 'Hybrid Transcription Packages',
-        subtitle: 'AI transcription plus human review—we finish the transcript for you',
+        title: 'Hybrid Transcription',
+        subtitle: 'Lower-cost human-reviewed transcription: AI-generated first, then reviewed and corrected by a professional transcriptionist',
         icon: Users,
-        label: 'Hybrid (AI + Human)'
+        label: 'Hybrid Transcription'
       };
 
     case 'human':
@@ -130,10 +132,10 @@ const getTypeInfo = (type: string) => {
 
     case 'dictation':
       return {
-        title: 'Document Workspace Pricing',
+        title: 'Document Preparation Services',
         subtitle: 'Document preparation from audio instructions, copy typing, handwriting transcription, and document formatting',
         icon: FileText,
-        label: 'Document Workspace'
+        label: 'Document Preparation'
       };
 
     default:
@@ -161,7 +163,7 @@ const getTypeInfo = (type: string) => {
             Pricing for Transcription & Document Services
           </h1>
           <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-            Choose AI transcription, hybrid review, human transcription, audio instructions for document preparation, copy typing, handwriting transcription, or document preparation.
+            Compare self-service Transcript Workspace, Professional Transcription, and Document Preparation Services.
             Save with bundled packages or pay as you go.
           </p>
         </div>
@@ -179,19 +181,19 @@ const getTypeInfo = (type: string) => {
               <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-4 mb-12">
                 <TabsTrigger value="ai" className="flex items-center justify-center">
                   <Zap className="h-4 w-4 mr-2" />
-                  AI Transcription
+                  Transcript Workspace
                 </TabsTrigger>
                 <TabsTrigger value="hybrid" className="flex items-center justify-center">
                   <Users className="h-4 w-4 mr-2" />
-                  Hybrid (AI + Human)
+                  Hybrid Transcription
                 </TabsTrigger>
                 <TabsTrigger value="human" className="flex items-center justify-center">
                   <Check className="h-4 w-4 mr-2" />
-                  100% Human
+                  Human Transcription
                 </TabsTrigger>
                 <TabsTrigger value="dictation" className="flex items-center justify-center">
                   <FileText className="h-4 w-4 mr-2" />
-                  Document Workspace
+                  Document Preparation
                 </TabsTrigger>
               </TabsList>
 
@@ -199,7 +201,7 @@ const getTypeInfo = (type: string) => {
                 <TabsContent
                   key={type}
                   value={type}
-                  id={type === 'dictation' ? 'document-workspace' : type}
+                  id={type === 'dictation' ? 'document-workspace' : type === 'hybrid' ? 'professional-transcription' : type}
                 >
                   {type === 'dictation' ? (
                   <div className="max-w-5xl mx-auto">
@@ -207,11 +209,11 @@ const getTypeInfo = (type: string) => {
                       <CardContent className="p-10">
                         <div className="text-center mb-10">
                           <h3 className="text-3xl font-bold text-[#003366] mb-4">
-                            Document Workspace
+                            Document Preparation Services
                           </h3>
                           
                           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                            Document preparation from audio instructions, notes, handwriting, scans, PDFs, or drafts.
+                            Human document preparation from dictation, notes, handwriting, templates, scans, PDFs, or drafts. Projects are managed through Document Workspace.
                           </p>
                         </div>
                         
@@ -301,10 +303,10 @@ const getTypeInfo = (type: string) => {
         <p className="text-sm text-gray-500 mt-3">You receive the AI-generated transcript and review/edit it yourself in Transcript Workspace.</p>
       </CardContent></Card>
       <Card className="border-0 shadow-lg"><CardContent className="p-8 text-center">
-        <h3 className="text-2xl font-bold text-[#003366] mb-4">AI + Professional Editor</h3>
+        <h3 className="text-2xl font-bold text-[#003366] mb-4">Transcript Editor Membership</h3>
         <div className="text-4xl font-bold text-[#b29dd9]">CA$19.99<span className="text-base text-gray-600">/month</span></div>
         <div className="text-2xl font-bold text-[#003366] mt-3">CA$0.03/audio minute</div>
-        <p className="text-gray-600 mt-4">For professional transcript editors who review and correct AI-generated transcripts themselves. Full Transcript Workspace tools plus a lower AI rate.</p>
+        <p className="text-gray-600 mt-4">Full Transcript Workspace editing tools plus a lower AI transcription rate.</p>
       </CardContent></Card>
     </div>
     <div className="mt-8 p-6 bg-green-50 border border-green-200 rounded-2xl text-center">
@@ -444,14 +446,14 @@ const getTypeInfo = (type: string) => {
             <Card className="border-0 shadow-lg">
               <CardContent className="p-8 text-center">
                 <h3 className="text-xl font-semibold text-[#003366] mb-4">
-                  Hybrid Review
+                  Hybrid Transcription
                 </h3>
                 <div className="text-3xl font-bold text-[#b29dd9] mb-1">
                   CA${(pricingSettings?.payAsYouGo.hybrid || 1.50).toFixed(2)}
                 </div>
                 <div className="text-gray-600">per audio minute</div>
                 <p className="text-sm text-gray-500 mt-4">
-                  AI transcription followed by human review for accuracy, formatting, speaker labels, and transcript quality.
+                  AI-generated first, then reviewed and corrected against the original audio by a professional transcriptionist.
                 </p>
                 <p className="text-xs text-gray-400 mt-2">
                   We finish the transcript for you—you do not need to edit it yourself.
@@ -469,7 +471,7 @@ const getTypeInfo = (type: string) => {
                 </div>
                 <div className="text-gray-600">per audio minute</div>
                 <p className="text-sm text-gray-500 mt-4">
-                  Your audio is transcribed and prepared by a human transcriptionist from start to finish.
+                  No AI-generated transcript. A professional transcriptionist transcribes, formats, reviews, and proofreads the transcript from the original audio.
                 </p>
                 <p className="text-xs text-gray-400 mt-2">
                   We prepare the transcript for you without relying on AI-generated transcription.
@@ -599,19 +601,19 @@ const getTypeInfo = (type: string) => {
               <thead>
                 <tr className="bg-[#003366] text-white">
                   <th className="p-4 text-left">Feature</th>
-                  <th className="p-4 text-center">AI</th>
-                  <th className="p-4 text-center">Hybrid</th>
-                  <th className="p-4 text-center">Human</th>
-                  <th className="p-4 text-center">Document Workspace</th>
+                  <th className="p-4 text-center">Transcript Workspace</th>
+                  <th className="p-4 text-center">Hybrid Transcription</th>
+                  <th className="p-4 text-center">Human Transcription</th>
+                  <th className="p-4 text-center">Document Preparation</th>
                 </tr>
               </thead>
               <tbody>
                 <tr className="border-b">
-                  <td className="p-4 font-semibold">Accuracy</td>
-                  <td className="p-4 text-center">95%+</td>
-                  <td className="p-4 text-center">98%+</td>
-                  <td className="p-4 text-center">99%+</td>
-                  <td className="p-4 text-center">Document preparation</td>
+                  <td className="p-4 font-semibold">Preparation method</td>
+                  <td className="p-4 text-center">AI-generated; client reviewed</td>
+                  <td className="p-4 text-center">AI + professional audio review</td>
+                  <td className="p-4 text-center">Human transcribed from original audio</td>
+                  <td className="p-4 text-center">Human document preparation</td>
                 </tr>
                 <tr className="border-b bg-gray-50">
                   <td className="p-4 font-semibold">Turnaround Time</td>
@@ -657,7 +659,7 @@ const getTypeInfo = (type: string) => {
                 </tr>
                 <tr className="border-b bg-gray-50">
                   <td className="p-4 font-semibold">Pay As You Go Price</td>
-                  <td className="p-4 text-center">CA$0.05/min (CA$0.03/min with Professional Editor)</td>
+                  <td className="p-4 text-center">CA$0.05/min (CA$0.03/min with Transcript Editor Membership)</td>
                   <td className="p-4 text-center">CA${(pricingSettings?.payAsYouGo.hybrid || 1.50).toFixed(2)}/min</td>
                   <td className="p-4 text-center">CA${(pricingSettings?.payAsYouGo.human || 2.50).toFixed(2)}/min</td>
                   <td className="p-4 text-center">Starting at CA$2.50/page</td>
@@ -693,8 +695,8 @@ const getTypeInfo = (type: string) => {
               </h3>
               <p className="text-gray-600">
                 AI Transcription gives transcriptionists and experienced users an AI-generated transcript to review and edit themselves.
-                Hybrid Review combines AI transcription with human review, and we finish the transcript for you.
-                Human Transcription is completed by a human transcriptionist from start to finish, and we prepare the transcript for you.
+                Hybrid Transcription is AI-generated first, then reviewed and corrected against the original audio by a professional transcriptionist.
+                Human Transcription does not use an AI-generated draft; a professional transcriptionist creates and reviews it from the original audio.
               </p>
             </div>
 

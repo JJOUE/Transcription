@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     if (!token) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     const decoded = await adminAuth.verifyIdToken(token);
     const priceId = professionalEditorPriceId();
-    if (!priceId) return NextResponse.json({ error: 'Professional Editor membership checkout is not configured.' }, { status: 503 });
+    if (!priceId) return NextResponse.json({ error: 'Transcript Editor Membership checkout is not configured.' }, { status: 503 });
     const snapshot = await adminDb.collection('users').doc(decoded.uid).get();
     if (!snapshot.exists) return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
     const user = snapshot.data() || {};
@@ -29,6 +29,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ sessionId: session.id, url: session.url });
   } catch (error) {
     console.error('[Professional Editor Checkout] Failed:', error);
-    return NextResponse.json({ error: 'Unable to start Professional Editor membership checkout.' }, { status: 500 });
+    return NextResponse.json({ error: 'Unable to start Transcript Editor Membership checkout.' }, { status: 500 });
   }
 }

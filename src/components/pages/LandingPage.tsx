@@ -12,11 +12,15 @@ import { Footer } from '@/components/layout/Footer';
 const serviceChooserCards = [
   {
     title: 'I need audio or video transcribed',
-    text: 'Choose AI when you will edit the draft yourself, Hybrid when you want us to review and finish it, or Human Transcription from start to finish.',
+    text: 'Use Transcript Workspace for self-service AI transcription and editing. Choose Professional Transcription when you want a transcriptionist to review or create the transcript for you.',
     actions: [
       {
-        label: 'Go to Transcript Workspace',
+        label: 'Explore Transcript Workspace',
         href: '/transcript-workspace',
+      },
+      {
+        label: 'Professional Transcription',
+        href: '/pricing#professional-transcription',
       },
     ],
   },
@@ -140,10 +144,10 @@ function LandingPage() {
 
               <div className="max-w-xl mx-auto lg:mx-0 mb-8 rounded-3xl bg-white/10 p-5 text-left">
                 <p className="text-lg font-semibold text-white mb-3">
-                  Need us to finish the transcript? Choose Hybrid Review for AI plus human review, or Human Transcription for preparation by a transcriptionist from start to finish.
+                  Need us to finish the transcript? Professional Transcription includes Hybrid Transcription for AI plus professional review, and Human Transcription created from the original audio without an AI-generated draft.
                 </p>
                 <p className="text-base text-gray-200">
-                  Talk to Text Canada also offers typing services for everyday office needs, including copy typing, handwriting transcription, audio instructions for document preparation, and document preparation.
+                  Document Preparation Services include dictation, copy typing, handwriting transcription, templates, formatting, proofreading, and other supported document preparation. Projects are managed securely through Document Workspace.
                 </p>
               </div>
 
@@ -323,14 +327,14 @@ function LandingPage() {
                 <div className="w-16 h-16 bg-[#b29dd9] rounded-full flex items-center justify-center mx-auto mb-6">
                   <Image src="/images/AI.svg" alt="AI Transcription" width={48} height={48} className="w-12 h-12" />
                 </div>
-                <h3 className="text-xl font-semibold text-[#003366] mb-4">Transcription Services</h3>
+                <h3 className="text-xl font-semibold text-[#003366] mb-4">Transcript Workspace</h3>
                 <p className="text-gray-600 mb-6">
-                  Choose who finishes the transcript: edit an AI-generated transcript yourself, have us review the AI transcript, or choose human transcription from start to finish.
+                  Self-service AI transcription and full transcript editing tools, including speakers, timestamps, Search &amp; Replace, formatting, preview, and exports.
                 </p>
                 <ul className="text-sm text-gray-600 space-y-2">
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />AI: you edit the AI transcript yourself</li>
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Hybrid: AI + human review; we finish it</li>
-                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Human: prepared by a transcriptionist from start to finish</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />AI transcription you review yourself</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />Transcript Editor membership and tools</li>
+                  <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2" />DOCX, PDF, TXT, SRT and VTT exports</li>
                 </ul>
 
                 <Button asChild className="mt-6 w-full bg-[#003366] hover:bg-[#002244] text-white">
@@ -367,7 +371,7 @@ function LandingPage() {
             <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
               <CardContent className="p-8 text-center">
                 <div className="w-16 h-16 bg-[#b29dd9] rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Image src="/images/Hybrid.svg" alt="Hybrid Review" width={56} height={56} className="w-14 h-14" />
+                  <Image src="/images/Hybrid.svg" alt="Hybrid Transcription" width={56} height={56} className="w-14 h-14" />
                 </div>
                 <h3 className="text-xl font-semibold text-[#003366] mb-4">Copy Typing</h3>
                 <p className="text-gray-600 mb-6">
@@ -480,10 +484,10 @@ function LandingPage() {
               <FileText className="h-8 w-8 text-[#b29dd9]" />
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-[#003366] mb-4">
-              Document Workspace — Audio Instructions, Notes, Scans and Drafts
+              Document Preparation Services
             </h2>
             <p className="text-lg text-gray-700 mb-8 max-w-2xl mx-auto">
-              Submit files, notes, handwriting, or audio instructions, then download the completed document from your secure dashboard. If you need a transcript instead, compare AI, Hybrid, and Human Transcription to choose who will edit and finish it.
+              Submit dictation, notes, handwriting, templates, scans, or drafts for human document preparation, formatting, proofreading, and review. Projects are managed securely through Document Workspace.
             </p>
             <Button
               asChild
@@ -491,7 +495,7 @@ function LandingPage() {
               className="bg-[#003366] hover:bg-[#002244] text-white text-lg px-12 py-4"
             >
               <Link href="/document-workspace">
-                Explore Document Workspace
+                Explore Document Preparation Services
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>

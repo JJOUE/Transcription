@@ -4,12 +4,12 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 
 export const metadata: Metadata = {
-  title: 'Document Workspace | Talk to Text Canada',
+  title: 'Document Preparation Services | Talk to Text Canada',
   description:
     'Document preparation support from audio instructions, notes, scanned documents, handwriting, audio, video, and typed drafts, with completed document download through Talk to Text Canada.',
   metadataBase: new URL('https://www.talktotext.ca'),
   openGraph: {
-    title: 'Document Workspace | Talk to Text Canada',
+    title: 'Document Preparation Services | Talk to Text Canada',
     description:
       'Document preparation support from audio instructions, notes, scanned documents, handwriting, audio, video, and typed drafts, with completed document download through Talk to Text Canada.',
     url: 'https://www.talktotext.ca/document-workspace',
@@ -58,8 +58,8 @@ const usageSteps = [
     text: 'Sign in or create an account to access your secure workspace.',
   },
   {
-    title: 'Start a Document Workspace project',
-    text: 'Choose Document Workspace and select the type of support you need: audio instructions for document preparation, copy typing, handwriting transcription, or document preparation from notes or files.',
+    title: 'Start a document preparation project',
+    text: 'Choose the support you need, then manage the project securely through Document Workspace.',
   },
   {
     title: 'Upload your file',
@@ -110,18 +110,21 @@ export default function DocumentWorkspacePage() {
         <section className="bg-white border-b">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
             <p className="text-sm font-semibold text-[#b29dd9] uppercase tracking-wide mb-3">
-              Document Workspace
+              Human document preparation and typing support
             </p>
 
             <h1 className="text-4xl md:text-5xl font-bold text-[#003366] mb-6">
-              Document Workspace
+              Document Preparation Services
             </h1>
 
             <p className="text-lg md:text-xl text-gray-700 max-w-3xl mx-auto mb-6">
               Turn audio instructions, notes, templates, and reference files into organized, editable documents.
             </p>
             <p className="text-sm text-gray-500 max-w-3xl mx-auto mb-8">
-              Document Workspace helps professionals turn audio instructions, notes, scanned documents, handwritten pages, transcripts, and typed drafts into clean, downloadable documents. If you need a transcript instead, compare AI self-editing, Hybrid Review, and Human Transcription.
+              Dictation, copy typing, handwriting transcription, templates, formatting, proofreading, and other supported document preparation services. Projects are managed securely through Document Workspace.
+            </p>
+            <p className="text-sm text-gray-500 max-w-3xl mx-auto mb-8">
+              Human-only document preparation does not use AI to generate the work. AI is used only when you select an AI-based or AI-assisted service.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -152,7 +155,7 @@ export default function DocumentWorkspacePage() {
         <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="rounded-2xl bg-[#003366] text-white p-8 mb-12">
             <h2 className="text-2xl font-bold mb-3">
-              See how Document Workspace works
+              See how Document Preparation Services work
             </h2>
             <div className="mt-6 rounded-xl border border-white/30 bg-white/10 p-8 text-center">
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-white/40">
@@ -169,11 +172,10 @@ export default function DocumentWorkspacePage() {
           <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm mb-12">
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold text-[#003366] mb-3">
-                How to use Document Workspace
+                How to use Document Preparation Services
               </h2>
               <p className="text-gray-700 max-w-2xl mx-auto">
-                Use Document Workspace to submit audio instructions for document preparation, copy
-                typing, handwriting transcription, or document preparation from notes or files.
+                Submit audio instructions, copy typing, handwriting, templates, notes, or files, then manage the project through your Document Workspace.
               </p>
             </div>
 
@@ -293,10 +295,10 @@ export default function DocumentWorkspacePage() {
             <div className="space-y-5">
               <div className="border-b border-gray-200 pb-5">
                 <h3 className="font-semibold text-[#003366] mb-2">
-                  Is Document Workspace the same as transcription?
+                  Are Document Preparation Services the same as transcription?
                 </h3>
                 <p className="text-gray-700 text-sm">
-                  No. Transcription turns audio into text. Document Workspace supports document
+                  No. Transcription turns audio into transcript text. Document Preparation Services support human-prepared
                   preparation from audio instructions, notes, scanned documents, handwriting, typed
                   drafts, and reference files.
                 </p>

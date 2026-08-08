@@ -30,17 +30,18 @@ export async function loadApprovedServiceData() {
     currency: 'CAD',
     services: {
       ai: { name: 'AI Transcription', ratePerAudioMinute: rates.ai, description: 'Best for transcriptionists, professional transcript editors, and experienced users. The client reviews and edits the AI-generated transcript themselves in Transcript Workspace.' },
-      hybrid: { name: 'Hybrid Review', ratePerAudioMinute: rates.hybrid, description: 'AI creates the first draft, then a human reviews and corrects it. Talk to Text Canada finishes the transcript; the client does not need to edit it themselves.' },
-      human: { name: 'Human Transcription', ratePerAudioMinute: rates.human, description: 'A human transcriptionist prepares the transcript from start to finish without relying on AI-generated transcription for the transcription itself. The client receives a professionally prepared transcript.' },
+      hybrid: { name: 'Hybrid Transcription', ratePerAudioMinute: rates.hybrid, description: 'AI-generated first, then reviewed and corrected against the original audio by a professional transcriptionist. A more affordable professionally reviewed option.' },
+      human: { name: 'Human Transcription', ratePerAudioMinute: rates.human, description: 'No AI-generated transcript. A professional transcriptionist types, formats, reviews, and proofreads it from the original audio.' },
     },
     workspaces: {
-      transcript: 'Creates a transcript from audio or video. AI users edit the AI-generated transcript themselves. Hybrid and Human clients receive a transcript prepared for them and can preview, optionally adjust, and download it.',
-      document: 'Prepares a finished document from dictation, handwriting, copy typing, instructions, or a supplied template. The result is a document, not a transcript.',
+      transcript: 'Self-service AI transcription and transcript editing tools. Professional Hybrid and Human Transcription are separate service options.',
+      document: 'Document Preparation Services create human-prepared documents from dictation, handwriting, copy typing, instructions, or a supplied template. Projects are managed through Document Workspace.',
       separation: 'The workspaces are separate. Files and projects do not transfer between them automatically, and they do not share an editor.',
     },
     speakerRule: { threshold: 'One to four speakers are included. Recordings with more than four speakers require a custom quote.', perAudioMinute: {} },
     rushPerAudioMinute: RUSH_SURCHARGE_RATES,
     packages: 'Package eligibility depends on service type. Package minutes are reduced only by submitted audio duration. Hybrid and Human package add-ons are paid separately through secure checkout.',
+    aiUse: 'AI is used only for AI Transcription and Hybrid Transcription. Human Transcription and human-only Document Preparation Services do not use AI to generate the work.',
     uploads: {
       transcript: { accepted: ['audio', 'video'], route: '/upload' },
       document: { accepted: ['audio', 'video', 'DOC', 'DOCX', 'PDF', 'TXT', 'JPG', 'PNG', 'HEIC'], maxPrimaryFile: '1 GB', maxTemplate: '50 MB', route: '/office/upload' },

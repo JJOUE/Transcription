@@ -111,7 +111,7 @@ export default function CopyTypingServicesPage() {
               </p>
               <p className="text-white/90">
                 If you need a document recreated, cleaned up, or prepared in an editable format,
-                Document Workspace can help.
+                Document Preparation Services can help. Your project is managed securely through Document Workspace.
               </p>
             </div>
 
@@ -169,7 +169,7 @@ export default function CopyTypingServicesPage() {
                 href="/pricing#document-workspace"
                 className="inline-flex items-center justify-center rounded-md bg-[#003366] px-5 py-2 font-semibold text-white hover:bg-[#00264d]"
               >
-                View Document Workspace pricing
+                View Document Preparation pricing
               </Link>
             </div>
           </div>
@@ -194,14 +194,14 @@ export default function CopyTypingServicesPage() {
           <div className="rounded-2xl bg-gradient-to-r from-[#003366] to-[#b29dd9] text-white p-8 text-center">
             <h2 className="text-3xl font-bold mb-3">Ready to Start a Copy Typing Project?</h2>
             <p className="text-white/90 mb-6">
-              Use Document Workspace to submit your file, instructions, and any reference material.
+              Use Document Workspace to submit your file, instructions, and any reference material for human copy typing and document preparation. AI is not used to generate human-only copy typing work.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/document-workspace"
                 className="inline-flex items-center justify-center rounded-md bg-white px-6 py-3 font-semibold text-[#003366] hover:bg-gray-100"
               >
-                Learn About Document Workspace
+                Learn About Document Preparation Services
               </Link>
               <Link
                 href="/guide"
